@@ -1,4 +1,5 @@
 using System.IO;
+using TwelveMoons.Core.Config;
 using TwelveMoons.Core;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -24,6 +25,7 @@ namespace TwelveMoons.EditorTools
 
             var gameEntryObject = new GameObject("GameEntry");
             var gameEntry = gameEntryObject.AddComponent<GameEntry>();
+            gameEntryObject.AddComponent<ConfigManager>();
 
             var canvas = CreateCanvas();
             var deskRoot = CreateUiRoot("DeskRoot", canvas.transform);

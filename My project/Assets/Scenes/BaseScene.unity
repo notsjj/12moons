@@ -394,6 +394,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1183544579}
   - component: {fileID: 1183544578}
+  - component: {fileID: 1183544580}
   m_Layer: 0
   m_Name: GameEntry
   m_TagString: Untagged
@@ -416,6 +417,21 @@ MonoBehaviour:
   deskRoot: {fileID: 1475648168}
   cityRoot: {fileID: 1059017705}
   showDeskOnStart: 1
+--- !u!114 &1183544580
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1183544577}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 166ff21d96214b169f289f607f9171cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Config.ConfigManager
+  relativeConfigDirectory: Configs
+  loadOnAwake: 1
+  preloadTables: []
 --- !u!4 &1183544579
 Transform:
   m_ObjectHideFlags: 0

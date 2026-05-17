@@ -1,0 +1,9 @@
+[
+  {
+    "DisasterId": "disaster_flood_01",
+    "DisasterName": "Flood",
+    "TotalRound": 18,
+    "Description": "Demo disaster data for config loader tests.",
+    "Remark": "Demo JSON config"
+  }
+]
