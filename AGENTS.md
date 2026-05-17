@@ -19,3 +19,4 @@
 9. 建筑不触发剧情，只产出资源/道具或降低阵营质疑度。
 10. 支线任务由 StoryConfig 的 TriggerTaskId 在剧情结束后触发，SideEventConfig 不直接触发任务。
 11. 不要把阶段号写进长期维护的脚本名、类名、命名空间、运行时 API 或 GameObject 名称中；阶段号只能用于 Prompt、说明文档、临时 Editor 菜单或临时测试入口。
+12. 不要提前创建后续阶段的 UI、GameObject、按钮、占位面板或绑定入口。只有当前阶段明确需要的 UI 才能创建；InventoryPanel、SharedActorSlot、公文按钮、报纸按钮、城区按钮等必须等对应阶段再创建。后续阶段输出 Unity 搭建说明时，只列当前阶段新增或需要调整的 GameObject，不再一次性列完整最终 UI 树。
