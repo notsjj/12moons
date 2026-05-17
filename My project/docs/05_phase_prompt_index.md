@@ -1,0 +1,25 @@
+# Codex Phase Prompt Index
+
+每次只复制一个阶段 Prompt 给 Codex。
+
+- [阶段 0：Unity 项目结构、插件、基础场景](../prompts/phase_00_project_setup.md)
+- [阶段 1：配置表读取系统](../prompts/phase_01_config_loader.md)
+- [阶段 2：运行时数据系统](../prompts/phase_02_runtime_data.md)
+- [阶段 3：资源/道具系统与物品栏](../prompts/phase_03_inventory_items.md)
+- [阶段 4：阵营质疑度系统](../prompts/phase_04_suspicion_system.md)
+- [阶段 5：回合系统 + 灾难阶段判断](../prompts/phase_05_round_disaster_stage.md)
+- [阶段 6：任务系统 + 任务阶段系统](../prompts/phase_06_task_stage_system.md)
+- [阶段 7：剧情系统](../prompts/phase_07_story_system.md)
+- [阶段 8：信件系统与信件区域](../prompts/phase_08_letter_area.md)
+- [阶段 9：桌面 UI 框架](../prompts/phase_09_desk_ui.md)
+- [阶段 10：公文系统：显示、选择、结算](../prompts/phase_10_document_system.md)
+- [阶段 11：公文抽取系统](../prompts/phase_11_document_draw.md)
+- [阶段 12：后续公文激活系统](../prompts/phase_12_followup_document.md)
+- [阶段 13：城区摄像机移动系统](../prompts/phase_13_city_camera.md)
+- [阶段 14：城区点位系统](../prompts/phase_14_city_points.md)
+- [阶段 15：建筑解锁与建筑点击系统](../prompts/phase_15_building_system.md)
+- [阶段 16：支线事件系统](../prompts/phase_16_side_events.md)
+- [阶段 17：报纸/回合结算系统](../prompts/phase_17_newspaper_settlement.md)
+- [阶段 18：3 回合完整测试流程](../prompts/phase_18_three_round_test.md)
+- [阶段 19：扩展到 18 回合](../prompts/phase_19_expand_to_18_rounds.md)
+- [阶段 20：UI 动画、音效、存档、Debug 工具](../prompts/phase_20_polish_save_debug.md)
