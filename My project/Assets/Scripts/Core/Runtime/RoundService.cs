@@ -1,0 +1,104 @@
+using System;
+using TwelveMoons.Core.Config;
+using UnityEngine;
+
+namespace TwelveMoons.Core.Runtime
+{
+    public sealed class RoundService : MonoBehaviour
+    {
+        [Header("Dependencies")]
+        [SerializeField] private ConfigManager configManager;
+        [SerializeField] private RuntimeDataService runtimeDataService;
+
+        private DisasterStageResolver disasterStageResolver;
+
+        public event Action RoundChanged;
+
+        public int CurrentRound => runtimeDataService != null ? runtimeDataService.Data.CurrentRound : 0;
+
+        public int TotalRound => runtimeDataService != null ? runtimeDataService.Data.TotalRound : 0;
+
+        public DisasterStageDefinition CurrentDisasterStage =>
+            runtimeDataService != null
+                ? ResolveDisasterStage(runtimeDataService.Data.CurrentRound)
+                : null;
+
+        private void Awake()
+        {
+            if (configManager == null)
+            {
+                configManager = FindFirstObjectByType<ConfigManager>();
+            }
+
+            if (runtimeDataService == null)
+            {
+                runtimeDataService = FindFirstObjectByType<RuntimeDataService>();
+            }
+
+            LoadDisasterStageConfig();
+        }
+
+        private void Start()
+        {
+            RoundChanged?.Invoke();
+        }
+
+        public void Refresh()
+        {
+            LoadDisasterStageConfig();
+            RoundChanged?.Invoke();
+        }
+
+        public bool NextRound()
+        {
+            if (runtimeDataService == null)
+            {
+                Debug.LogWarning("RoundService missing RuntimeDataService.", this);
+                return false;
+            }
+
+            var advanced = runtimeDataService.Data.TryAdvanceRound();
+            RoundChanged?.Invoke();
+            return advanced;
+        }
+
+        public void RestartInitialDisaster()
+        {
+            if (runtimeDataService == null)
+            {
+                Debug.LogWarning("RoundService missing RuntimeDataService.", this);
+                return;
+            }
+
+            runtimeDataService.CreateNewGameWithInitialDisaster();
+            RoundChanged?.Invoke();
+        }
+
+        public DisasterStageDefinition ResolveDisasterStage(int round)
+        {
+            if (runtimeDataService == null)
+            {
+                return null;
+            }
+
+            if (disasterStageResolver == null)
+            {
+                LoadDisasterStageConfig();
+            }
+
+            return disasterStageResolver?.Resolve(runtimeDataService.Data.DisasterId, round);
+        }
+
+        private void LoadDisasterStageConfig()
+        {
+            if (configManager != null && configManager.TryGetTable("DisasterStageConfig", out var table))
+            {
+                disasterStageResolver = new DisasterStageResolver(table);
+                return;
+            }
+
+            disasterStageResolver = new DisasterStageResolver(null);
+            Debug.LogWarning("RoundService cannot load DisasterStageConfig.", this);
+        }
+    }
+}

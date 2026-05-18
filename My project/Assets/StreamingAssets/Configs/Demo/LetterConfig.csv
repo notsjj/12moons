@@ -1,0 +1,5 @@
+LetterId,Title,SenderName,BodyText,Remark
+letter_noble_low_01,A Quiet Noble Note,Noble Council,The council records your restraint with guarded approval.,Demo low suspicion letter
+letter_academy_low_01,Academy Thanks,Academy Archive,Your recent decisions have reduced doubt among the academy.,Demo low suspicion letter
+letter_church_low_01,Church Candle,Church Envoy,The chapel sends thanks for easing its worries.,Demo low suspicion letter
+letter_civilian_low_01,Lower City Thanks,Lower City Residents,The lower city has noticed that the council listened.,Demo low suspicion letter

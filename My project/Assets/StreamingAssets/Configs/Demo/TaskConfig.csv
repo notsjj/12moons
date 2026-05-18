@@ -1,0 +1,5 @@
+TaskId,TaskName,TaskType,Description,StartRound,EndRound,SuccessScore,FailScore,SuccessResultText,FailResultText,ShowInTaskPanel,Remark
+task_punish_noble_01,Noble Inquiry,Faction,High noble suspicion penalty task,,,,,,,true,Demo high suspicion task
+task_punish_academy_01,Academy Inquiry,Faction,High academy suspicion penalty task,,,,,,,true,Demo high suspicion task
+task_punish_church_01,Church Inquiry,Faction,High church suspicion penalty task,,,,,,,true,Demo high suspicion task
+task_punish_civilian_01,Civilian Inquiry,Faction,High civilian suspicion penalty task,,,,,,,true,Demo high suspicion task

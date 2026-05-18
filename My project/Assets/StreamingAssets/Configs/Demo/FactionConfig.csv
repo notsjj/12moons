@@ -1,0 +1,5 @@
+FactionId,FactionName,InitSuspicion,MaxSuspicion,LowSuspicionThreshold,LowSuspicionLetterId,HighSuspicionThreshold,PunishTaskId,Remark
+noble,Noble,50,100,20,letter_noble_low_01,90,task_punish_noble_01,Demo faction for suspicion testing
+academy,Academy,50,100,20,letter_academy_low_01,90,task_punish_academy_01,Demo faction for suspicion testing
+church,Church,50,100,20,letter_church_low_01,90,task_punish_church_01,Demo faction for suspicion testing
+civilian,Civilian,50,100,20,letter_civilian_low_01,90,task_punish_civilian_01,Demo faction for suspicion testing

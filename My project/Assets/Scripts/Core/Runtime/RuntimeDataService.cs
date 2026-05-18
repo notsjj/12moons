@@ -32,9 +32,10 @@ namespace TwelveMoons.Core.Runtime
             var totalRound = GetDisasterTotalRound(disasterId);
             Data.Reset(disasterId, totalRound);
             InitializeConfiguredItems();
+            InitializeConfiguredFactions();
 
             Debug.Log(
-                $"Runtime data initialized. Disaster={Data.DisasterId}, Round={Data.CurrentRound}/{Data.TotalRound}, Items={Data.Items.Count}.",
+                $"Runtime data initialized. Disaster={Data.DisasterId}, Round={Data.CurrentRound}/{Data.TotalRound}, Items={Data.Items.Count}, Factions={Data.Factions.Count}.",
                 this);
         }
 
@@ -96,6 +97,26 @@ namespace TwelveMoons.Core.Runtime
                 {
                     Data.GetOrCreateItem(itemId);
                 }
+            }
+        }
+
+        private void InitializeConfiguredFactions()
+        {
+            if (configManager == null || !configManager.TryGetTable("FactionConfig", out var factionTable))
+            {
+                return;
+            }
+
+            foreach (var row in factionTable.Rows)
+            {
+                var factionId = row.GetString("FactionId");
+                if (string.IsNullOrEmpty(factionId))
+                {
+                    continue;
+                }
+
+                var faction = Data.GetOrCreateFaction(factionId, row.GetInt("InitSuspicion"));
+                faction.SetSuspicion(faction.Suspicion, row.GetInt("MaxSuspicion", 100));
             }
         }
     }

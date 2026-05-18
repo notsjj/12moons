@@ -1,0 +1,4 @@
+DisasterId,StageId,StageName,StartRound,EndRound,Remark
+disaster_flood_01,stage_warning,Warning,1,6,Demo flood opening stage
+disaster_flood_01,stage_peak,Peak,7,12,Demo flood pressure stage
+disaster_flood_01,stage_aftermath,Aftermath,13,18,Demo flood recovery stage

@@ -11,6 +11,7 @@ namespace TwelveMoons.Core.Runtime
         private readonly List<RuntimeTaskState> tasks = new List<RuntimeTaskState>();
         private readonly List<RuntimeBuildingState> buildings = new List<RuntimeBuildingState>();
         private readonly List<RuntimeLetterState> letters = new List<RuntimeLetterState>();
+        private readonly List<RuntimeFactionState> factions = new List<RuntimeFactionState>();
 
         public string DisasterId { get; private set; }
 
@@ -26,6 +27,8 @@ namespace TwelveMoons.Core.Runtime
 
         public IReadOnlyList<RuntimeLetterState> Letters => letters;
 
+        public IReadOnlyList<RuntimeFactionState> Factions => factions;
+
         public void Reset(string disasterId, int totalRound)
         {
             DisasterId = disasterId;
@@ -35,11 +38,23 @@ namespace TwelveMoons.Core.Runtime
             tasks.Clear();
             buildings.Clear();
             letters.Clear();
+            factions.Clear();
         }
 
         public void SetCurrentRound(int currentRound)
         {
             CurrentRound = Math.Max(1, Math.Min(currentRound, TotalRound));
+        }
+
+        public bool TryAdvanceRound()
+        {
+            if (CurrentRound >= TotalRound)
+            {
+                return false;
+            }
+
+            CurrentRound++;
+            return true;
         }
 
         public RuntimeItemState GetOrCreateItem(string itemId)
@@ -92,6 +107,19 @@ namespace TwelveMoons.Core.Runtime
             letter = new RuntimeLetterState(letterId, CurrentRound);
             letters.Add(letter);
             return letter;
+        }
+
+        public RuntimeFactionState GetOrCreateFaction(string factionId, int initSuspicion)
+        {
+            var faction = factions.FirstOrDefault(candidate => candidate.FactionId == factionId);
+            if (faction != null)
+            {
+                return faction;
+            }
+
+            faction = new RuntimeFactionState(factionId, initSuspicion);
+            factions.Add(faction);
+            return faction;
         }
     }
 }
