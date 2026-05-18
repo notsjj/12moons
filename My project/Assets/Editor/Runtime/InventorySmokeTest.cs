@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using TMPro;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
 using TwelveMoons.UI;
@@ -63,6 +64,7 @@ namespace TwelveMoons.EditorTools.Runtime
                 }
 
                 ValidateInventoryCard(inventoryService, runtimeDataService, testRoot.transform);
+                ValidateInventoryPanelLayout(inventoryService, runtimeDataService, testRoot.transform);
 
                 Debug.Log("Inventory smoke test passed. Money=15, Material=8, Food=6, TaskItem=1, CharacterItem=1, Cards=ok.");
             }
@@ -133,13 +135,78 @@ namespace TwelveMoons.EditorTools.Runtime
             return imageObject.GetComponent<Image>();
         }
 
-        private static Text CreateText(string name, Transform parent)
+        private static TMP_Text CreateText(string name, Transform parent)
         {
-            var textObject = new GameObject(name, typeof(RectTransform), typeof(Text));
+            var textObject = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
             textObject.transform.SetParent(parent, false);
-            var text = textObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            return text;
+            return textObject.GetComponent<TextMeshProUGUI>();
+        }
+
+        private static void ValidateInventoryPanelLayout(
+            InventoryService inventoryService,
+            RuntimeDataService runtimeDataService,
+            Transform parent)
+        {
+            var panelObject = new GameObject("InventoryPanelTest", typeof(RectTransform));
+            panelObject.transform.SetParent(parent, false);
+            var contentObject = new GameObject("InventoryContentTest", typeof(RectTransform));
+            contentObject.transform.SetParent(panelObject.transform, false);
+
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            panelRect.sizeDelta = new Vector2(600f, 260f);
+            var contentRect = contentObject.GetComponent<RectTransform>();
+            contentRect.sizeDelta = new Vector2(600f, 260f);
+
+            var panel = panelObject.AddComponent<InventoryPanelView>();
+            SetPrivateField(panel, "inventoryService", inventoryService);
+            SetPrivateField(panel, "runtimeDataService", runtimeDataService);
+            SetPrivateField(panel, "contentRoot", contentRect);
+            SetPrivateField(panel, "showZeroCountItems", false);
+            SetPrivateField(panel, "cardSize", new Vector2(180f, 220f));
+            SetPrivateField(panel, "minimumVisibleStep", 42f);
+
+            foreach (var item in runtimeDataService.Data.Items)
+            {
+                item.SetCount(0);
+            }
+
+            panel.Refresh();
+            if (contentObject.transform.childCount != 0)
+            {
+                throw new InvalidOperationException("InventoryPanelView should hide zero-count items.");
+            }
+
+            runtimeDataService.AddItem("item_money", 1);
+            panel.Refresh();
+            if (contentObject.transform.childCount != 1)
+            {
+                throw new InvalidOperationException("InventoryPanelView should show one card after receiving one item.");
+            }
+
+            var firstCard = contentObject.transform.GetChild(0) as RectTransform;
+            var expectedCenterX = (contentRect.sizeDelta.x - 180f) * 0.5f;
+            if (Mathf.Abs(firstCard.anchoredPosition.x - expectedCenterX) > 0.5f)
+            {
+                throw new InvalidOperationException("Single inventory card should be centered in content area.");
+            }
+
+            runtimeDataService.AddItem("item_material", 1);
+            runtimeDataService.AddItem("item_food", 1);
+            runtimeDataService.AddItem("item_drainage_map", 1);
+            runtimeDataService.AddItem("item_archivist_badge", 1);
+            panel.Refresh();
+            if (contentObject.transform.childCount != 5)
+            {
+                throw new InvalidOperationException("InventoryPanelView should show five received item cards.");
+            }
+
+            var left = ((RectTransform)contentObject.transform.GetChild(0)).anchoredPosition.x;
+            var rightCard = (RectTransform)contentObject.transform.GetChild(contentObject.transform.childCount - 1);
+            var right = rightCard.anchoredPosition.x + rightCard.sizeDelta.x;
+            if (left < -0.5f || right > contentRect.sizeDelta.x + 0.5f)
+            {
+                throw new InvalidOperationException("InventoryPanelView cards should stay inside content area.");
+            }
         }
     }
 }

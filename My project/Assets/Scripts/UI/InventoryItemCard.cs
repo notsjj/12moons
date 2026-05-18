@@ -1,3 +1,4 @@
+using TMPro;
 using TwelveMoons.Core.Runtime;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -10,10 +11,10 @@ namespace TwelveMoons.UI
         [Header("Card Parts")]
         [SerializeField] private Image backgroundImage;
         [SerializeField] private Image iconImage;
-        [SerializeField] private Text nameText;
-        [SerializeField] private Text countText;
-        [SerializeField] private Text typeText;
-        [SerializeField] private Text descriptionText;
+        [SerializeField] private TMP_Text nameText;
+        [SerializeField] private TMP_Text countText;
+        [SerializeField] private TMP_Text typeText;
+        [SerializeField] private TMP_Text descriptionText;
         [SerializeField] private CanvasGroup canvasGroup;
 
         [Header("Drag")]
@@ -40,10 +41,10 @@ namespace TwelveMoons.UI
 
         public void Configure(
             Image itemIconImage,
-            Text itemNameText,
-            Text itemCountText,
-            Text itemTypeText,
-            Text itemDescriptionText,
+            TMP_Text itemNameText,
+            TMP_Text itemCountText,
+            TMP_Text itemTypeText,
+            TMP_Text itemDescriptionText,
             Image itemBackgroundImage = null)
         {
             iconImage = itemIconImage;

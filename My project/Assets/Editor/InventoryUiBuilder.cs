@@ -1,4 +1,5 @@
 using System.IO;
+using TMPro;
 using TwelveMoons.Core;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
@@ -196,13 +197,26 @@ namespace TwelveMoons.EditorTools
             labelRect.offsetMin = Vector2.zero;
             labelRect.offsetMax = Vector2.zero;
 
-            var text = EnsureComponent<Text>(labelObject);
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            RemoveLegacyText(labelObject);
+
+            var text = EnsureComponent<TextMeshProUGUI>(labelObject);
             text.fontSize = 14;
-            text.alignment = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignmentOptions.Center;
             text.color = Color.white;
             text.text = label;
             text.raycastTarget = false;
+        }
+
+        private static void RemoveLegacyText(GameObject gameObject)
+        {
+            foreach (var component in gameObject.GetComponents<Component>())
+            {
+                var componentType = component.GetType();
+                if (componentType.FullName == "UnityEngine.UI.Text")
+                {
+                    Object.DestroyImmediate(component);
+                }
+            }
         }
 
         private static void AddPersistentListenerIfMissing(Button button, Object target, string methodName, UnityAction action)
@@ -286,7 +300,7 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
             serializedObject.FindProperty("contentRoot").objectReferenceValue = contentRoot.GetComponent<RectTransform>();
             serializedObject.FindProperty("cardPrefab").objectReferenceValue = cardPrefab;
-            serializedObject.FindProperty("showZeroCountItems").boolValue = true;
+            serializedObject.FindProperty("showZeroCountItems").boolValue = false;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 

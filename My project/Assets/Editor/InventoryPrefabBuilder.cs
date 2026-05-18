@@ -1,4 +1,5 @@
 using System.IO;
+using TMPro;
 using TwelveMoons.UI;
 using UnityEditor;
 using UnityEngine;
@@ -37,21 +38,21 @@ namespace TwelveMoons.EditorTools
                 countBadge.rectTransform.anchorMax = Vector2.one;
                 SetRect(countBadge.rectTransform, new Vector2(-14f, -14f), new Vector2(44f, 28f), Vector2.one);
 
-                var countText = CreateText("CountText", countBadge.transform, 16, FontStyle.Bold, TextAnchor.MiddleCenter);
+                var countText = CreateText("CountText", countBadge.transform, 16, FontStyles.Bold, TextAlignmentOptions.Center);
                 Stretch(countText.rectTransform);
 
-                var nameText = CreateText("NameText", cardObject.transform, 16, FontStyle.Bold, TextAnchor.MiddleCenter);
+                var nameText = CreateText("NameText", cardObject.transform, 16, FontStyles.Bold, TextAlignmentOptions.Center);
                 nameText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
                 nameText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
                 SetRect(nameText.rectTransform, new Vector2(0f, -105f), new Vector2(156f, 34f), new Vector2(0.5f, 1f));
 
-                var typeText = CreateText("TypeText", cardObject.transform, 13, FontStyle.Normal, TextAnchor.MiddleCenter);
+                var typeText = CreateText("TypeText", cardObject.transform, 13, FontStyles.Normal, TextAlignmentOptions.Center);
                 typeText.color = new Color(0.85f, 0.82f, 0.68f, 1f);
                 typeText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
                 typeText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
                 SetRect(typeText.rectTransform, new Vector2(0f, -140f), new Vector2(156f, 24f), new Vector2(0.5f, 1f));
 
-                var descriptionText = CreateText("DescriptionText", cardObject.transform, 11, FontStyle.Normal, TextAnchor.UpperCenter);
+                var descriptionText = CreateText("DescriptionText", cardObject.transform, 11, FontStyles.Normal, TextAlignmentOptions.Top);
                 descriptionText.color = new Color(0.82f, 0.82f, 0.78f, 1f);
                 descriptionText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
                 descriptionText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
@@ -79,18 +80,17 @@ namespace TwelveMoons.EditorTools
             return image;
         }
 
-        private static Text CreateText(string name, Transform parent, int fontSize, FontStyle fontStyle, TextAnchor alignment)
+        private static TextMeshProUGUI CreateText(string name, Transform parent, int fontSize, FontStyles fontStyle, TextAlignmentOptions alignment)
         {
-            var textObject = new GameObject(name, typeof(RectTransform), typeof(Text));
+            var textObject = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
             textObject.transform.SetParent(parent, false);
-            var text = textObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var text = textObject.GetComponent<TextMeshProUGUI>();
             text.fontSize = fontSize;
             text.fontStyle = fontStyle;
             text.alignment = alignment;
             text.color = Color.white;
-            text.horizontalOverflow = HorizontalWrapMode.Wrap;
-            text.verticalOverflow = VerticalWrapMode.Truncate;
+            text.textWrappingMode = TextWrappingModes.Normal;
+            text.overflowMode = TextOverflowModes.Truncate;
             text.raycastTarget = false;
             return text;
         }

@@ -1,16 +1,16 @@
+using TMPro;
 using TwelveMoons.Core.Runtime;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace TwelveMoons.UI
 {
     public sealed class InventoryItemRow : MonoBehaviour
     {
-        [SerializeField] private Text nameText;
-        [SerializeField] private Text countText;
-        [SerializeField] private Text typeText;
+        [SerializeField] private TMP_Text nameText;
+        [SerializeField] private TMP_Text countText;
+        [SerializeField] private TMP_Text typeText;
 
-        public void Configure(Text itemNameText, Text itemCountText, Text itemTypeText = null)
+        public void Configure(TMP_Text itemNameText, TMP_Text itemCountText, TMP_Text itemTypeText = null)
         {
             nameText = itemNameText;
             countText = itemCountText;

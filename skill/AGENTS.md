@@ -25,3 +25,4 @@
 15. 自动搭建工具只允许创建当前阶段明确需要的 UI、GameObject、Prefab、按钮和绑定；不得借自动化提前创建后续阶段入口或占位对象。
 16. Unity 搭建说明中的每一步都必须写清楚“操作 + 原因”：说明这个 GameObject 负责什么、这个脚本为什么挂在这里、这个 Inspector 引用为什么要拖、这个 Button OnClick 用来验证什么。
 17. 每个阶段最终回复必须包含：修改文件、新增脚本、脚本职责、自动生成了哪些 UI/Prefab、仍需手动检查的引用、带原因的 Unity 搭建步骤、Button OnClick 绑定及验证目的、Unity 验证入口和通过标准、是否可以进入下一阶段。
+18. 所有 Unity UI 文本必须使用 TextMeshPro（TMP_Text / TextMeshProUGUI），不要使用 legacy UnityEngine.UI.Text；自动搭建工具和 Prefab 生成器也必须生成 TMP 文本组件。
