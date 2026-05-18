@@ -2,3 +2,5 @@ ItemId,ItemName,ItemType,Description,IconId,CanDrag,CanConsume,Remark
 item_money,Money,Money,General currency,icon_money,false,true,Demo config for loader test
 item_material,Material,Material,Construction resource,icon_material,false,true,Demo config for loader test
 item_food,Food,Food,Stored food,icon_food,false,true,Demo config for loader test
+item_drainage_map,Drainage Map,TaskItem,Demo task item for inventory testing,icon_drainage_map,true,true,Demo config for inventory test
+item_archivist_badge,Archivist Badge,Character,Demo character item for inventory testing,icon_archivist_badge,true,false,Demo config for inventory test

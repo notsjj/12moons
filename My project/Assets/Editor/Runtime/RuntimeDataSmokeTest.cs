@@ -39,7 +39,7 @@ namespace TwelveMoons.EditorTools.Runtime
             data.AddLetter("letter_demo_lower_city").MarkRead();
 
             if (data.TotalRound != 18 ||
-                data.Items.Count != 3 ||
+                data.Items.Count != 5 ||
                 data.GetOrCreateItem("item_money").Count != 25 ||
                 data.Tasks[0].Status != TaskRuntimeStatus.Active ||
                 !data.Buildings[0].IsUnlocked ||
