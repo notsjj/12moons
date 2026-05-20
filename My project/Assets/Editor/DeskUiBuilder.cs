@@ -34,6 +34,7 @@ namespace TwelveMoons.EditorTools
             var taskService = EnsureComponent<TaskService>(gameEntry.gameObject);
             var factionService = EnsureComponent<FactionService>(gameEntry.gameObject);
             var letterService = EnsureComponent<LetterService>(gameEntry.gameObject);
+            var documentService = EnsureComponent<DocumentService>(gameEntry.gameObject);
 
             ConfigureConfigManager(configManager);
             ConfigureRuntimeDataService(runtimeDataService, configManager);
@@ -42,6 +43,7 @@ namespace TwelveMoons.EditorTools
             ConfigureTaskService(taskService, configManager, runtimeDataService, roundService);
             ConfigureFactionService(factionService, configManager, runtimeDataService);
             ConfigureLetterService(letterService, configManager, runtimeDataService);
+            ConfigureDocumentService(documentService, configManager, runtimeDataService, inventoryService, factionService, taskService);
 
             var deskPanel = FindOrCreateUiChild(canvas.transform, "DeskPanel");
             ConfigureFullScreenRect(deskPanel.GetComponent<RectTransform>());
@@ -52,7 +54,7 @@ namespace TwelveMoons.EditorTools
             var suspicionPanel = BuildSuspicionPanel(deskPanel.transform, factionService, runtimeDataService);
             var letterArea = BuildLetterArea(deskPanel.transform, letterService);
             var sharedActorSlot = BuildSharedActorSlot(deskPanel.transform);
-            var documentPopupPanel = BuildDocumentPopupPanel(deskPanel.transform);
+            var documentPopupPanel = BuildDocumentPopupPanel(deskPanel.transform, documentService, sharedActorSlot.GetComponent<SharedActorSlotView>());
 
             var deskPanelView = EnsureComponent<DeskPanelView>(deskPanel);
             ConfigureDeskPanelView(
@@ -74,7 +76,8 @@ namespace TwelveMoons.EditorTools
                 roundService,
                 runtimeDataService,
                 factionService,
-                letterService);
+                letterService,
+                documentService);
 
             ConfigureGameEntry(gameEntry, deskPanel);
             documentPopupPanel.SetActive(false);
@@ -240,7 +243,10 @@ namespace TwelveMoons.EditorTools
             return slot;
         }
 
-        private static GameObject BuildDocumentPopupPanel(Transform parent)
+        private static GameObject BuildDocumentPopupPanel(
+            Transform parent,
+            DocumentService documentService,
+            SharedActorSlotView sharedActorSlot)
         {
             var panel = FindOrCreateUiChild(parent, "DocumentPopupPanel");
             SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(660f, 520f), new Vector2(0.5f, 0.5f));
@@ -260,7 +266,7 @@ namespace TwelveMoons.EditorTools
             SetFixedRect(optionBButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(-28f, 78f), new Vector2(288f, 48f), new Vector2(1f, 0f));
 
             var feedback = FindOrCreateText(panel.transform, "ProposerFeedbackText", "", 13, FontStyles.Normal, TextAlignmentOptions.Left);
-            SetFixedRect(feedback.rectTransform, new Vector2(0f, 0f), new Vector2(28f, 30f), new Vector2(500f, 32f));
+            SetFixedRect(feedback.rectTransform, new Vector2(0f, 0f), new Vector2(28f, 24f), new Vector2(500f, 46f));
 
             var stamp = FindOrCreateImage(panel.transform, "StampImage", new Color(0.65f, 0.18f, 0.14f, 0.72f));
             SetFixedRect(stamp.rectTransform, new Vector2(1f, 0f), new Vector2(-28f, 24f), new Vector2(72f, 72f), new Vector2(1f, 0f));
@@ -268,6 +274,8 @@ namespace TwelveMoons.EditorTools
 
             var panelView = EnsureComponent<DocumentPopupPanelView>(panel);
             var serializedObject = new SerializedObject(panelView);
+            serializedObject.FindProperty("documentService").objectReferenceValue = documentService;
+            serializedObject.FindProperty("sharedActorSlot").objectReferenceValue = sharedActorSlot;
             serializedObject.FindProperty("titleText").objectReferenceValue = titleText;
             serializedObject.FindProperty("bodyText").objectReferenceValue = bodyText;
             serializedObject.FindProperty("optionAText").objectReferenceValue = optionAButton.transform.Find("Label").GetComponent<TMP_Text>();
@@ -293,7 +301,8 @@ namespace TwelveMoons.EditorTools
             RoundService roundService,
             RuntimeDataService runtimeDataService,
             FactionService factionService,
-            LetterService letterService)
+            LetterService letterService,
+            DocumentService documentService)
         {
             var panel = FindOrCreateUiChild(parent, "TestPanel");
             SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760f, 660f), new Vector2(0.5f, 0.5f));
@@ -317,6 +326,7 @@ namespace TwelveMoons.EditorTools
                 runtimeDataService,
                 factionService,
                 letterService,
+                documentService,
                 feedback);
 
             var buttonsRoot = FindOrCreateUiChild(panel.transform, "Buttons");
@@ -722,6 +732,23 @@ namespace TwelveMoons.EditorTools
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        private static void ConfigureDocumentService(
+            DocumentService documentService,
+            ConfigManager configManager,
+            RuntimeDataService runtimeDataService,
+            InventoryService inventoryService,
+            FactionService factionService,
+            TaskService taskService)
+        {
+            var serializedObject = new SerializedObject(documentService);
+            serializedObject.FindProperty("configManager").objectReferenceValue = configManager;
+            serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
+            serializedObject.FindProperty("inventoryService").objectReferenceValue = inventoryService;
+            serializedObject.FindProperty("factionService").objectReferenceValue = factionService;
+            serializedObject.FindProperty("taskService").objectReferenceValue = taskService;
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void ConfigureInventoryPanelView(
             InventoryPanelView panelView,
             InventoryService inventoryService,
@@ -841,6 +868,7 @@ namespace TwelveMoons.EditorTools
             RuntimeDataService runtimeDataService,
             FactionService factionService,
             LetterService letterService,
+            DocumentService documentService,
             TMP_Text feedbackText)
         {
             var serializedObject = new SerializedObject(controls);
@@ -850,6 +878,7 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
             serializedObject.FindProperty("factionService").objectReferenceValue = factionService;
             serializedObject.FindProperty("letterService").objectReferenceValue = letterService;
+            serializedObject.FindProperty("documentService").objectReferenceValue = documentService;
             serializedObject.FindProperty("deskPanelView").objectReferenceValue = deskPanelView;
             serializedObject.FindProperty("sharedActorSlot").objectReferenceValue = sharedActorSlot;
             serializedObject.FindProperty("documentPopupPanel").objectReferenceValue = documentPopupPanel;
@@ -860,6 +889,7 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("demoLetterIdA").stringValue = "letter_relief_start";
             serializedObject.FindProperty("demoLetterIdB").stringValue = "letter_relief_prepare_end";
             serializedObject.FindProperty("demoLetterIdC").stringValue = "letter_relief_deliver_start";
+            serializedObject.FindProperty("demoDocumentId").stringValue = "document_relief_prepare";
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 

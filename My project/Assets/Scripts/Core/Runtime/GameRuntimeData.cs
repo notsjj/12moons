@@ -188,14 +188,29 @@ namespace TwelveMoons.Core.Runtime
             string taskStageId,
             string beforeDocumentCharacterId)
         {
+            return QueueDocument(documentId, taskId, taskStageId, beforeDocumentCharacterId, 0);
+        }
+
+        public RuntimeDocumentQueueEntry QueueDocument(
+            string documentId,
+            string taskId,
+            string taskStageId,
+            string beforeDocumentCharacterId,
+            int delayRound)
+        {
             var entry = new RuntimeDocumentQueueEntry(
                 documentId,
                 taskId,
                 taskStageId,
                 beforeDocumentCharacterId,
-                CurrentRound);
+                CurrentRound + Math.Max(0, delayRound));
             documentQueue.Add(entry);
             return entry;
+        }
+
+        public bool RemoveDocumentQueueEntry(RuntimeDocumentQueueEntry entry)
+        {
+            return entry != null && documentQueue.Remove(entry);
         }
     }
 }

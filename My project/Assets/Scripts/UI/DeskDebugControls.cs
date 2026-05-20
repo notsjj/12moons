@@ -13,6 +13,7 @@ namespace TwelveMoons.UI
         [SerializeField] private RuntimeDataService runtimeDataService;
         [SerializeField] private FactionService factionService;
         [SerializeField] private LetterService letterService;
+        [SerializeField] private DocumentService documentService;
 
         [Header("Views")]
         [SerializeField] private DeskPanelView deskPanelView;
@@ -27,6 +28,7 @@ namespace TwelveMoons.UI
         [SerializeField] private string demoLetterIdA = "letter_relief_start";
         [SerializeField] private string demoLetterIdB = "letter_relief_prepare_end";
         [SerializeField] private string demoLetterIdC = "letter_relief_deliver_start";
+        [SerializeField] private string demoDocumentId = "document_relief_prepare";
         [SerializeField] private int moneyDelta = 10;
         [SerializeField] private int materialDelta = 5;
         [SerializeField] private int foodDelta = 3;
@@ -135,8 +137,15 @@ namespace TwelveMoons.UI
 
         public void ShowDocumentPreview()
         {
-            documentPopupPanel?.ShowPreview();
-            SetFeedback("DocumentPopupPanel shown.");
+            if (runtimeDataService != null &&
+                documentService != null &&
+                runtimeDataService.Data.DocumentQueue.Count == 0)
+            {
+                documentService.QueueDocument(demoDocumentId, demoTaskId, "task_stage_relief_prepare", "character_steward");
+            }
+
+            documentPopupPanel?.ShowNextPendingDocument();
+            SetFeedback("Next pending document shown.");
         }
 
         public void HideDocumentPreview()
@@ -192,6 +201,11 @@ namespace TwelveMoons.UI
             if (letterService == null)
             {
                 letterService = FindFirstObjectByType<LetterService>();
+            }
+
+            if (documentService == null)
+            {
+                documentService = FindFirstObjectByType<DocumentService>();
             }
 
             if (deskPanelView == null)
