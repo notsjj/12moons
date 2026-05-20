@@ -1,4 +1,8 @@
 LetterId,Title,SenderName,BodyText,Remark
+letter_relief_start,Relief Stores Opened,Storehouse Clerk,The first relief ledger is ready for inspection.,Phase 6 task stage start letter
+letter_relief_prepare_end,Relief Stores Counted,Storehouse Clerk,The stores have been counted and sealed for travel.,Phase 6 task stage end letter
+letter_relief_deliver_start,Road Dispatch,Courier Captain,The convoy is ready to leave the city gate.,Phase 6 task stage start letter
+letter_relief_deliver_end,Road Return,Courier Captain,The convoy returned with its final account.,Phase 6 task stage end letter
 letter_noble_low_01,A Quiet Noble Note,Noble Council,The council records your restraint with guarded approval.,Demo low suspicion letter
 letter_academy_low_01,Academy Thanks,Academy Archive,Your recent decisions have reduced doubt among the academy.,Demo low suspicion letter
 letter_church_low_01,Church Candle,Church Envoy,The chapel sends thanks for easing its worries.,Demo low suspicion letter

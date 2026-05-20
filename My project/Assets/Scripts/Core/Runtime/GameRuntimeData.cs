@@ -12,6 +12,9 @@ namespace TwelveMoons.Core.Runtime
         private readonly List<RuntimeBuildingState> buildings = new List<RuntimeBuildingState>();
         private readonly List<RuntimeLetterState> letters = new List<RuntimeLetterState>();
         private readonly List<RuntimeFactionState> factions = new List<RuntimeFactionState>();
+        private readonly List<RuntimeStoryQueueEntry> storyQueue = new List<RuntimeStoryQueueEntry>();
+        private readonly List<RuntimeStoryProgressState> storyProgress = new List<RuntimeStoryProgressState>();
+        private readonly List<RuntimeDocumentQueueEntry> documentQueue = new List<RuntimeDocumentQueueEntry>();
 
         public string DisasterId { get; private set; }
 
@@ -29,6 +32,12 @@ namespace TwelveMoons.Core.Runtime
 
         public IReadOnlyList<RuntimeFactionState> Factions => factions;
 
+        public IReadOnlyList<RuntimeStoryQueueEntry> StoryQueue => storyQueue;
+
+        public IReadOnlyList<RuntimeStoryProgressState> StoryProgress => storyProgress;
+
+        public IReadOnlyList<RuntimeDocumentQueueEntry> DocumentQueue => documentQueue;
+
         public void Reset(string disasterId, int totalRound)
         {
             DisasterId = disasterId;
@@ -39,6 +48,9 @@ namespace TwelveMoons.Core.Runtime
             buildings.Clear();
             letters.Clear();
             factions.Clear();
+            storyQueue.Clear();
+            storyProgress.Clear();
+            documentQueue.Clear();
         }
 
         public void SetCurrentRound(int currentRound)
@@ -109,6 +121,12 @@ namespace TwelveMoons.Core.Runtime
             return letter;
         }
 
+        public bool RemoveLetter(string letterId)
+        {
+            var letter = letters.FirstOrDefault(candidate => candidate.LetterId == letterId);
+            return letter != null && letters.Remove(letter);
+        }
+
         public RuntimeFactionState GetOrCreateFaction(string factionId, int initSuspicion)
         {
             var faction = factions.FirstOrDefault(candidate => candidate.FactionId == factionId);
@@ -120,6 +138,64 @@ namespace TwelveMoons.Core.Runtime
             faction = new RuntimeFactionState(factionId, initSuspicion);
             factions.Add(faction);
             return faction;
+        }
+
+        public RuntimeStoryQueueEntry QueueStory(
+            string storyId,
+            string taskId,
+            string taskStageId,
+            RuntimeStoryQueueTiming timing)
+        {
+            var entry = new RuntimeStoryQueueEntry(storyId, taskId, taskStageId, CurrentRound, timing);
+            storyQueue.Add(entry);
+            return entry;
+        }
+
+        public bool RemoveStoryQueueEntry(RuntimeStoryQueueEntry entry)
+        {
+            return entry != null && storyQueue.Remove(entry);
+        }
+
+        public RuntimeStoryProgressState SaveStoryProgress(string storyId, string lineId, bool waitingForSubmission)
+        {
+            var progress = storyProgress.FirstOrDefault(candidate => candidate.StoryId == storyId);
+            if (progress != null)
+            {
+                progress.SetProgress(lineId, waitingForSubmission);
+                return progress;
+            }
+
+            progress = new RuntimeStoryProgressState(storyId, lineId, waitingForSubmission);
+            storyProgress.Add(progress);
+            return progress;
+        }
+
+        public bool TryGetStoryProgress(string storyId, out RuntimeStoryProgressState progress)
+        {
+            progress = storyProgress.FirstOrDefault(candidate => candidate.StoryId == storyId);
+            return progress != null;
+        }
+
+        public bool ClearStoryProgress(string storyId)
+        {
+            var progress = storyProgress.FirstOrDefault(candidate => candidate.StoryId == storyId);
+            return progress != null && storyProgress.Remove(progress);
+        }
+
+        public RuntimeDocumentQueueEntry QueueDocument(
+            string documentId,
+            string taskId,
+            string taskStageId,
+            string beforeDocumentCharacterId)
+        {
+            var entry = new RuntimeDocumentQueueEntry(
+                documentId,
+                taskId,
+                taskStageId,
+                beforeDocumentCharacterId,
+                CurrentRound);
+            documentQueue.Add(entry);
+            return entry;
         }
     }
 }

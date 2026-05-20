@@ -1,3 +1,4 @@
+using System;
 using TwelveMoons.Core.Config;
 using UnityEngine;
 
@@ -13,6 +14,10 @@ namespace TwelveMoons.Core.Runtime
         [SerializeField] private string initialDisasterId = "disaster_flood_01";
 
         public GameRuntimeData Data { get; } = new GameRuntimeData();
+
+        public event Action<RuntimeLetterState> LetterReceived;
+
+        public event Action<string> LetterRemoved;
 
         private void Awake()
         {
@@ -62,7 +67,20 @@ namespace TwelveMoons.Core.Runtime
 
         public RuntimeLetterState ReceiveLetter(string letterId)
         {
-            return Data.AddLetter(letterId);
+            var letter = Data.AddLetter(letterId);
+            LetterReceived?.Invoke(letter);
+            return letter;
+        }
+
+        public bool RemoveLetter(string letterId)
+        {
+            var removed = Data.RemoveLetter(letterId);
+            if (removed)
+            {
+                LetterRemoved?.Invoke(letterId);
+            }
+
+            return removed;
         }
 
         [ContextMenu("Create New Game With Initial Disaster")]

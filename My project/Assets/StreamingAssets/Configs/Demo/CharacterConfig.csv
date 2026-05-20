@@ -1,0 +1,4 @@
+CharacterId,CharacterName,FactionId,PortraitId,Description,Remark
+character_steward,Storehouse Steward,civilian,portrait_steward,Tracks relief supplies for the lower district,Demo character for story UI
+character_engineer,Drainage Engineer,academy,portrait_engineer,Plans street drainage and bridge repairs,Demo character for story UI
+character_courier,Council Courier,civilian,portrait_courier,Carries urgent reports between districts,Demo character for story UI

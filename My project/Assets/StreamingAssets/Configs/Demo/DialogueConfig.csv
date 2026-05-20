@@ -1,0 +1,13 @@
+LineId,StoryId,NextLineId,SpeakerCharacterId,Content,Position,IsChoice,RequiredItemIds,RequiredItemCounts,ConsumeItems,AddItemIds,AddItemCounts,Remark
+line_relief_start_001,story_relief_start,line_relief_start_002,character_steward,The relief storehouse has opened. We can count food and timber before the rain rises.,0,false,,,,,,Normal dialogue
+line_relief_start_002,story_relief_start,line_relief_start_003,character_engineer,Then we begin with the lowest streets. A late answer is still an answer.,1,false,,,,,,Right speaker appears
+line_relief_start_003,story_relief_start,END,,Keep the engineer on the right while the final note is read.,1,false,,,,,,Empty speaker keeps previous right character and END closes
+line_relief_actor_001,story_relief_actor,,character_steward,Before the document is read, the storehouse asks for a clear order.,0,false,,,,,,Before-document dialogue
+line_relief_deliver_001,story_relief_deliver_start,,character_courier,The carts are ready. The route will fail if the east bridge closes first.,0,false,,,,,,Second stage start dialogue
+line_relief_courier_001,story_relief_courier,,character_courier,A courier waits outside with the route papers.,0,false,,,,,,Before-document courier dialogue
+line_choice_001,story_demo_choice,line_choice_approve|line_choice_refuse,character_steward,Spend the drainage map|Keep the drainage map,0,true,item_drainage_map|,1|,true|false,item_archivist_badge|,1|,Choice line with item requirement
+line_choice_approve,story_demo_choice,END,character_engineer,The map is copied into the archive and the badge is issued.,1,false,,,,,,Choice A result
+line_choice_refuse,story_demo_choice,END,character_steward,The map remains in your inventory and the clerk records no badge.,0,false,,,,,,Choice B result
+line_submit_001,story_demo_submission,line_submit_002,character_steward,The archive will accept the drainage map before it issues a badge.,0,false,,,,,,Submission intro
+line_submit_002,story_demo_submission,line_submit_003,,Submit the drainage map to continue.,0,false,item_drainage_map,1,true,,,Submission row keeps left speaker and waits for item
+line_submit_003,story_demo_submission,END,character_engineer,The submitted map is sealed and the archivist badge is ready.,1,false,,,,,,Submission result

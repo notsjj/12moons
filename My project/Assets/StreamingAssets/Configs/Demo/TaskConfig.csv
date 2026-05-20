@@ -1,4 +1,5 @@
 TaskId,TaskName,TaskType,Description,StartRound,EndRound,SuccessScore,FailScore,SuccessResultText,FailResultText,ShowInTaskPanel,Remark
+task_demo_relief_01,Relief Trial,Main,Demo task for relative task stages,1,4,2,0,Relief route stabilized.,Relief route failed.,true,Phase 6 demo task
 task_punish_noble_01,Noble Inquiry,Faction,High noble suspicion penalty task,,,,,,,true,Demo high suspicion task
 task_punish_academy_01,Academy Inquiry,Faction,High academy suspicion penalty task,,,,,,,true,Demo high suspicion task
 task_punish_church_01,Church Inquiry,Faction,High church suspicion penalty task,,,,,,,true,Demo high suspicion task
