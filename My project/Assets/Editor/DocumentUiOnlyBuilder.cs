@@ -75,11 +75,13 @@ namespace TwelveMoons.EditorTools
             var inventoryService = FindRequired<InventoryService>("InventoryService");
             var factionService = FindRequired<FactionService>("FactionService");
             var taskService = FindRequired<TaskService>("TaskService");
+            var roundService = FindRequired<RoundService>("RoundService");
             if (configManager == null ||
                 runtimeDataService == null ||
                 inventoryService == null ||
                 factionService == null ||
-                taskService == null)
+                taskService == null ||
+                roundService == null)
             {
                 return false;
             }
@@ -90,6 +92,7 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("inventoryService").objectReferenceValue = inventoryService;
             serializedObject.FindProperty("factionService").objectReferenceValue = factionService;
             serializedObject.FindProperty("taskService").objectReferenceValue = taskService;
+            serializedObject.FindProperty("roundService").objectReferenceValue = roundService;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
             return true;
         }
@@ -117,46 +120,100 @@ namespace TwelveMoons.EditorTools
             SharedActorSlotView sharedActorSlot)
         {
             var panel = CreateUiChild(parent, "DocumentPopupPanel");
-            SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(660f, 520f), new Vector2(0.5f, 0.5f));
-            ConfigurePanelImage(panel, new Color(0.13f, 0.12f, 0.105f, 0.98f));
+            SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(880f, 560f), new Vector2(0.5f, 0.5f));
+            ConfigurePanelImage(panel, new Color(0f, 0f, 0f, 0f));
 
-            var titleText = CreateText(panel.transform, "TitleText", "Document", 24, FontStyles.Bold, TextAlignmentOptions.Left);
-            SetFixedRect(titleText.rectTransform, new Vector2(0f, 1f), new Vector2(28f, -24f), new Vector2(604f, 40f), new Vector2(0f, 1f));
+            var rightScrollEnd = CreateImage(panel.transform, "RightScrollEndImage", new Color(0.33f, 0.21f, 0.1f, 1f));
+            SetFixedRect(rightScrollEnd.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(340f, 0f), new Vector2(80f, 520f), new Vector2(0.5f, 0.5f));
 
-            var bodyText = CreateText(panel.transform, "BodyText", "", 17, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+            var contentViewport = CreateUiChild(panel.transform, "ContentViewport");
+            SetFixedRect(contentViewport.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(-50f, 0f), new Vector2(700f, 500f), new Vector2(0.5f, 0.5f));
+            contentViewport.AddComponent<RectMask2D>();
+
+            var contentRoot = CreateUiChild(contentViewport.transform, "ContentRoot");
+            var contentGroup = contentRoot.AddComponent<CanvasGroup>();
+            SetFixedRect(contentRoot.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(700f, 500f), new Vector2(0.5f, 0.5f));
+
+            var background = CreateImage(contentRoot.transform, "ContentBackgroundImage", new Color(0.76f, 0.68f, 0.48f, 1f));
+            SetFixedRect(background.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(700f, 500f), new Vector2(0.5f, 0.5f));
+
+            var titleText = CreateText(contentRoot.transform, "TitleText", "公文", 26, FontStyles.Bold, TextAlignmentOptions.Center);
+            titleText.color = new Color(0.16f, 0.09f, 0.04f, 1f);
+            SetFixedRect(titleText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -28f), new Vector2(560f, 42f), new Vector2(0.5f, 1f));
+
+            var bodyText = CreateText(contentRoot.transform, "BodyText", "", 18, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+            bodyText.color = new Color(0.16f, 0.09f, 0.04f, 1f);
             bodyText.overflowMode = TextOverflowModes.Overflow;
-            SetFixedRect(bodyText.rectTransform, new Vector2(0f, 1f), new Vector2(28f, -84f), new Vector2(604f, 280f), new Vector2(0f, 1f));
+            SetFixedRect(bodyText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(580f, 250f), new Vector2(0.5f, 1f));
 
-            var optionAButton = CreateButton(panel.transform, "OptionAButton", "Option A");
-            SetFixedRect(optionAButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(28f, 78f), new Vector2(288f, 48f));
+            var submitPanel = CreateUiChild(contentRoot.transform, "SubmitCardSlot");
+            SetFixedRect(submitPanel.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 132f), new Vector2(300f, 56f), new Vector2(0.5f, 0f));
+            ConfigurePanelImage(submitPanel, new Color(0.22f, 0.14f, 0.08f, 0.78f));
+            var submitStatus = CreateText(submitPanel.transform, "StatusText", "", 14, FontStyles.Normal, TextAlignmentOptions.Center);
+            SetFixedRect(submitStatus.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260f, 30f), new Vector2(0.5f, 0.5f));
+            var submitSlot = EnsureComponent<DocumentSubmitSlot>(submitPanel);
+            var submitSerializedObject = new SerializedObject(submitSlot);
+            submitSerializedObject.FindProperty("statusText").objectReferenceValue = submitStatus;
+            submitSerializedObject.ApplyModifiedPropertiesWithoutUndo();
 
-            var optionBButton = CreateButton(panel.transform, "OptionBButton", "Option B");
-            SetFixedRect(optionBButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(-28f, 78f), new Vector2(288f, 48f), new Vector2(1f, 0f));
+            var optionAButton = CreateButton(contentRoot.transform, "OptionAButton", "选项一");
+            SetFixedRect(optionAButton.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(70f, 62f), new Vector2(260f, 54f));
+            var optionAStamp = CreateImage(optionAButton.transform, "StampImage", new Color(0.65f, 0.08f, 0.04f, 0.72f));
+            SetFixedRect(optionAStamp.rectTransform, new Vector2(1f, 0.5f), new Vector2(-34f, 0f), new Vector2(64f, 64f), new Vector2(0.5f, 0.5f));
+            optionAStamp.enabled = false;
 
-            var feedback = CreateText(panel.transform, "ProposerFeedbackText", "", 13, FontStyles.Normal, TextAlignmentOptions.Left);
-            SetFixedRect(feedback.rectTransform, new Vector2(0f, 0f), new Vector2(28f, 24f), new Vector2(500f, 46f));
+            var optionBButton = CreateButton(contentRoot.transform, "OptionBButton", "选项二");
+            SetFixedRect(optionBButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(-70f, 62f), new Vector2(260f, 54f), new Vector2(1f, 0f));
+            var optionBStamp = CreateImage(optionBButton.transform, "StampImage", new Color(0.65f, 0.08f, 0.04f, 0.72f));
+            SetFixedRect(optionBStamp.rectTransform, new Vector2(1f, 0.5f), new Vector2(-34f, 0f), new Vector2(64f, 64f), new Vector2(0.5f, 0.5f));
+            optionBStamp.enabled = false;
 
-            var stamp = CreateImage(panel.transform, "StampImage", new Color(0.65f, 0.18f, 0.14f, 0.72f));
-            SetFixedRect(stamp.rectTransform, new Vector2(1f, 0f), new Vector2(-28f, 24f), new Vector2(72f, 72f), new Vector2(1f, 0f));
-            stamp.enabled = false;
+            var feedback = CreateText(contentRoot.transform, "ProposerFeedbackText", "", 14, FontStyles.Normal, TextAlignmentOptions.Left);
+            feedback.color = new Color(0.16f, 0.09f, 0.04f, 1f);
+            SetFixedRect(feedback.rectTransform, new Vector2(0f, 0f), new Vector2(70f, 18f), new Vector2(420f, 34f));
+
+            var flowStatus = CreateText(contentRoot.transform, "FlowStatusText", "", 13, FontStyles.Normal, TextAlignmentOptions.Right);
+            flowStatus.color = new Color(0.16f, 0.09f, 0.04f, 1f);
+            SetFixedRect(flowStatus.rectTransform, new Vector2(1f, 0f), new Vector2(-70f, 18f), new Vector2(260f, 28f), new Vector2(1f, 0f));
+
+            var leftScrollEnd = CreateImage(panel.transform, "LeftScrollEndImage", new Color(0.33f, 0.21f, 0.1f, 1f));
+            SetFixedRect(leftScrollEnd.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-340f, 0f), new Vector2(80f, 520f), new Vector2(0.5f, 0.5f));
 
             var panelView = EnsureComponent<DocumentPopupPanelView>(panel);
             var serializedObject = new SerializedObject(panelView);
             serializedObject.FindProperty("documentService").objectReferenceValue = documentService;
             serializedObject.FindProperty("sharedActorSlot").objectReferenceValue = sharedActorSlot;
+            serializedObject.FindProperty("suspicionPanel").objectReferenceValue = FindSuspicionPanel(parent);
+            serializedObject.FindProperty("leftScrollEnd").objectReferenceValue = leftScrollEnd.rectTransform;
+            serializedObject.FindProperty("rightScrollEnd").objectReferenceValue = rightScrollEnd.rectTransform;
+            serializedObject.FindProperty("contentRoot").objectReferenceValue = contentRoot.GetComponent<RectTransform>();
+            serializedObject.FindProperty("contentGroup").objectReferenceValue = contentGroup;
+            serializedObject.FindProperty("scrollMoveLeftDistance").floatValue = 700f;
+            serializedObject.FindProperty("scrollTweenDuration").floatValue = 0.8f;
+            serializedObject.FindProperty("contentBackgroundImage").objectReferenceValue = background;
             serializedObject.FindProperty("titleText").objectReferenceValue = titleText;
             serializedObject.FindProperty("bodyText").objectReferenceValue = bodyText;
             serializedObject.FindProperty("optionAText").objectReferenceValue = optionAButton.transform.Find("Label").GetComponent<TMP_Text>();
             serializedObject.FindProperty("optionBText").objectReferenceValue = optionBButton.transform.Find("Label").GetComponent<TMP_Text>();
             serializedObject.FindProperty("proposerFeedbackText").objectReferenceValue = feedback;
-            serializedObject.FindProperty("stampImage").objectReferenceValue = stamp;
+            serializedObject.FindProperty("flowStatusText").objectReferenceValue = flowStatus;
+            serializedObject.FindProperty("optionAStampImage").objectReferenceValue = optionAStamp;
+            serializedObject.FindProperty("optionBStampImage").objectReferenceValue = optionBStamp;
             serializedObject.FindProperty("optionAButton").objectReferenceValue = optionAButton;
             serializedObject.FindProperty("optionBButton").objectReferenceValue = optionBButton;
+            serializedObject.FindProperty("submitPanel").objectReferenceValue = submitPanel;
+            serializedObject.FindProperty("submitSlot").objectReferenceValue = submitSlot;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
 
             AddPersistentListenerIfMissing(optionAButton, panelView, nameof(DocumentPopupPanelView.OnOptionAClicked), panelView.OnOptionAClicked);
             AddPersistentListenerIfMissing(optionBButton, panelView, nameof(DocumentPopupPanelView.OnOptionBClicked), panelView.OnOptionBClicked);
             return panel;
+        }
+
+        private static SuspicionPanelView FindSuspicionPanel(Transform deskPanel)
+        {
+            var panel = deskPanel.Find("SuspicionPanel");
+            return panel == null ? null : panel.GetComponent<SuspicionPanelView>();
         }
 
         private static void UpdateDeskPanelDocumentReference(Transform deskPanel, DocumentPopupPanelView documentPopupPanel)

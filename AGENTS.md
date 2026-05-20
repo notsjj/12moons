@@ -1,6 +1,9 @@
 # AGENTS.md - Twelve Moons Unity Project Rules
 
 Additional active rule: Unity UI text RectTransform heights must never be negative. Editor builders and prefab generators must use zero or positive text box heights.
+Additional active rule: 每次执行阶段时，只允许新增或修改当前阶段明确要求的 UI、GameObject、Prefab、按钮和绑定；其它阶段、其它系统、既有无关 UI 一律不能改动、重建、删除或顺手整理。
+Additional active rule: 每次执行阶段前，必须先读取 docs/12moons.xlsx，至少确认相关工作表、当前阶段目标和整体流程，再开始代码或 UI 修改。
+Additional active rule: 所有可调参数或会显示在 Unity Inspector 中的字段，都必须使用中文 Header 或等价中文说明解释用途，方便在 Inspector 中直接理解和调整。
 
 你正在协助开发 Unity 游戏《十二轮新月》。必须遵守以下规则：
 

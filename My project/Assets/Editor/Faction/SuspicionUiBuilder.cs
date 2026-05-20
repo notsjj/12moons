@@ -16,8 +16,6 @@ namespace TwelveMoons.EditorTools
 {
     public static class SuspicionUiBuilder
     {
-        private const string FactionRowPrefabPath = "Assets/Prefabs/UI/FactionSuspicionRow.prefab";
-
         [MenuItem("Twelve Moons/Setup/Create Suspicion UI")]
         public static void CreateSuspicionUi()
         {
@@ -42,9 +40,14 @@ namespace TwelveMoons.EditorTools
 
             var contentRoot = FindOrCreateUiChild(suspicionPanel.transform, "SuspicionContent");
             ConfigureContentRoot(contentRoot);
+            var factionRows = CreateHierarchyFactionRows(contentRoot.transform);
+
+            var pointerText = CreateOrConfigureText(suspicionPanel.transform, "SuspicionPointerIcon", "☞", 28, FontStyles.Bold, TextAlignmentOptions.Center);
+            pointerText.color = new Color(0.95f, 0.82f, 0.38f, 1f);
+            SetFixedRect(pointerText.rectTransform, new Vector2(0f, 1f), new Vector2(394f, -86f), new Vector2(38f, 38f), new Vector2(0.5f, 0.5f));
 
             var feedbackText = CreateOrConfigureText(suspicionPanel.transform, "FactionFeedbackText", "", 13, FontStyles.Normal, TextAlignmentOptions.Left);
-            SetStretchBottomRect(feedbackText.rectTransform, new Vector2(16f, 64f), new Vector2(-16f, 112f));
+            SetFixedRect(feedbackText.rectTransform, new Vector2(1f, 1f), new Vector2(-18f, -58f), new Vector2(170f, 226f), new Vector2(1f, 1f));
 
             var panelView = EnsureComponent<SuspicionPanelView>(suspicionPanel);
             ConfigureSuspicionPanelView(
@@ -53,7 +56,8 @@ namespace TwelveMoons.EditorTools
                 runtimeDataService,
                 contentRoot,
                 feedbackText,
-                LoadOrCreateFactionRowPrefab());
+                factionRows,
+                pointerText.rectTransform);
 
             var debugControls = EnsureComponent<FactionDebugControls>(suspicionPanel);
             ConfigureFactionDebugControls(debugControls, factionService);
@@ -62,25 +66,6 @@ namespace TwelveMoons.EditorTools
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
             Selection.activeObject = suspicionPanel;
             Debug.Log("Suspicion UI setup completed. Created or updated SuspicionPanel, SuspicionContent, feedback text, FactionService, and debug buttons.");
-        }
-
-        private static FactionSuspicionRow LoadOrCreateFactionRowPrefab()
-        {
-            var rowPrefab = AssetDatabase.LoadAssetAtPath<FactionSuspicionRow>(FactionRowPrefabPath);
-            if (rowPrefab != null)
-            {
-                return rowPrefab;
-            }
-
-            FactionSuspicionRowPrefabBuilder.CreateFactionSuspicionRowPrefab();
-            AssetDatabase.Refresh();
-            rowPrefab = AssetDatabase.LoadAssetAtPath<FactionSuspicionRow>(FactionRowPrefabPath);
-            if (rowPrefab == null)
-            {
-                throw new System.IO.FileNotFoundException($"Failed to create faction suspicion row prefab at {FactionRowPrefabPath}.");
-            }
-
-            return rowPrefab;
         }
 
         private static Canvas FindOrCreateCanvas()
@@ -143,7 +128,7 @@ namespace TwelveMoons.EditorTools
             rectTransform.anchorMax = new Vector2(1f, 1f);
             rectTransform.pivot = new Vector2(1f, 1f);
             rectTransform.anchoredPosition = new Vector2(-24f, -24f);
-            rectTransform.sizeDelta = new Vector2(420f, 420f);
+            rectTransform.sizeDelta = new Vector2(620f, 340f);
         }
 
         private static void ConfigurePanelBackground(GameObject panelObject)
@@ -157,8 +142,11 @@ namespace TwelveMoons.EditorTools
             var rectTransform = contentRoot.GetComponent<RectTransform>();
             rectTransform.anchorMin = new Vector2(0f, 0f);
             rectTransform.anchorMax = new Vector2(1f, 1f);
-            rectTransform.offsetMin = new Vector2(16f, 154f);
-            rectTransform.offsetMax = new Vector2(-16f, -54f);
+            rectTransform.anchorMin = new Vector2(0f, 1f);
+            rectTransform.anchorMax = new Vector2(0f, 1f);
+            rectTransform.pivot = new Vector2(0f, 1f);
+            rectTransform.anchoredPosition = new Vector2(16f, -58f);
+            rectTransform.sizeDelta = new Vector2(360f, 226f);
 
             var layoutGroup = EnsureComponent<VerticalLayoutGroup>(contentRoot);
             layoutGroup.padding = new RectOffset(0, 0, 0, 0);
@@ -191,6 +179,90 @@ namespace TwelveMoons.EditorTools
             text.overflowMode = TextOverflowModes.Truncate;
             text.raycastTarget = false;
             return text;
+        }
+
+        private static FactionSuspicionRow[] CreateHierarchyFactionRows(Transform contentTransform)
+        {
+            var factionIds = new[] { "noble", "academy", "church", "civilian" };
+            var rows = new FactionSuspicionRow[factionIds.Length];
+            for (var index = 0; index < factionIds.Length; index++)
+            {
+                rows[index] = CreateOrConfigureFactionRow(contentTransform, factionIds[index]);
+            }
+
+            return rows;
+        }
+
+        private static FactionSuspicionRow CreateOrConfigureFactionRow(Transform parent, string factionId)
+        {
+            var rowObject = FindOrCreateUiChild(parent, $"{factionId}SuspicionRow");
+            SetFixedRect(rowObject.GetComponent<RectTransform>(), new Vector2(0f, 1f), Vector2.zero, new Vector2(360f, 50f), new Vector2(0f, 1f));
+            var rowImage = EnsureComponent<Image>(rowObject);
+            rowImage.color = new Color(0.16f, 0.16f, 0.15f, 0.92f);
+
+            var nameText = CreateOrConfigureText(rowObject.transform, "NameText", factionId, 15, FontStyles.Bold, TextAlignmentOptions.Left);
+            SetFixedRect(nameText.rectTransform, new Vector2(0f, 0.5f), new Vector2(12f, 0f), new Vector2(86f, 36f), new Vector2(0f, 0.5f));
+
+            var iconImage = CreateOrConfigureImage(rowObject.transform, "FactionIcon", GetFactionIconColor(factionId));
+            SetFixedRect(iconImage.rectTransform, new Vector2(0f, 0.5f), new Vector2(104f, 0f), new Vector2(24f, 24f), new Vector2(0f, 0.5f));
+            iconImage.enabled = true;
+
+            var valueText = CreateOrConfigureText(rowObject.transform, "ValueText", "", 13, FontStyles.Normal, TextAlignmentOptions.Right);
+            SetFixedRect(valueText.rectTransform, new Vector2(1f, 0.5f), new Vector2(-12f, 0f), new Vector2(70f, 36f), new Vector2(1f, 0.5f));
+
+            var sliderObject = FindOrCreateUiChild(rowObject.transform, "SuspicionSlider");
+            var sliderRect = sliderObject.GetComponent<RectTransform>();
+            sliderRect.anchorMin = new Vector2(0f, 0.5f);
+            sliderRect.anchorMax = new Vector2(1f, 0.5f);
+            sliderRect.pivot = new Vector2(0.5f, 0.5f);
+            sliderRect.offsetMin = new Vector2(138f, -8f);
+            sliderRect.offsetMax = new Vector2(-86f, 8f);
+
+            var backgroundImage = CreateOrConfigureImage(sliderObject.transform, "Background", new Color(0.08f, 0.08f, 0.08f, 1f));
+            SetStretchRect(backgroundImage.rectTransform, Vector2.zero, Vector2.zero);
+
+            var fillArea = FindOrCreateUiChild(sliderObject.transform, "Fill Area");
+            SetStretchRect(fillArea.GetComponent<RectTransform>(), new Vector2(2f, 2f), new Vector2(-2f, -2f));
+
+            var fillImage = CreateOrConfigureImage(fillArea.transform, "Fill", new Color(0.74f, 0.22f, 0.18f, 1f));
+            SetStretchRect(fillImage.rectTransform, Vector2.zero, Vector2.zero);
+
+            var slider = EnsureComponent<Slider>(sliderObject);
+            slider.transition = Selectable.Transition.None;
+            slider.interactable = false;
+            slider.fillRect = fillImage.rectTransform;
+            slider.targetGraphic = backgroundImage;
+
+            var row = EnsureComponent<FactionSuspicionRow>(rowObject);
+            row.SetFactionId(factionId);
+            row.Configure(nameText, valueText, slider, iconImage, rowImage, backgroundImage, fillImage);
+            return row;
+        }
+
+        private static Color GetFactionIconColor(string factionId)
+        {
+            switch (factionId)
+            {
+                case "noble":
+                    return new Color(0.92f, 0.72f, 0.28f, 1f);
+                case "academy":
+                    return new Color(0.38f, 0.62f, 0.95f, 1f);
+                case "church":
+                    return new Color(0.78f, 0.78f, 0.86f, 1f);
+                case "civilian":
+                    return new Color(0.52f, 0.82f, 0.48f, 1f);
+                default:
+                    return Color.white;
+            }
+        }
+
+        private static Image CreateOrConfigureImage(Transform parent, string name, Color color)
+        {
+            var imageObject = FindOrCreateUiChild(parent, name);
+            var image = EnsureComponent<Image>(imageObject);
+            image.color = color;
+            image.raycastTarget = false;
+            return image;
         }
 
         private static void CreateDebugButtons(Transform panelTransform, FactionDebugControls debugControls)
@@ -316,16 +388,27 @@ namespace TwelveMoons.EditorTools
             RuntimeDataService runtimeDataService,
             GameObject contentRoot,
             TMP_Text feedbackText,
-            FactionSuspicionRow rowPrefab)
+            FactionSuspicionRow[] factionRows,
+            RectTransform pointerIcon)
         {
             var serializedObject = new SerializedObject(panelView);
             serializedObject.FindProperty("factionService").objectReferenceValue = factionService;
             serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
             serializedObject.FindProperty("contentRoot").objectReferenceValue = contentRoot.GetComponent<RectTransform>();
-            serializedObject.FindProperty("rowPrefab").objectReferenceValue = rowPrefab;
+            ConfigureFactionRows(serializedObject.FindProperty("factionRows"), factionRows);
             serializedObject.FindProperty("feedbackText").objectReferenceValue = feedbackText;
+            serializedObject.FindProperty("pointerIcon").objectReferenceValue = pointerIcon;
             ConfigureFactionIconBindings(serializedObject.FindProperty("factionIcons"));
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureFactionRows(SerializedProperty rowsProperty, FactionSuspicionRow[] factionRows)
+        {
+            rowsProperty.arraySize = factionRows.Length;
+            for (var index = 0; index < factionRows.Length; index++)
+            {
+                rowsProperty.GetArrayElementAtIndex(index).objectReferenceValue = factionRows[index];
+            }
         }
 
         private static void ConfigureFactionIconBindings(SerializedProperty factionIconsProperty)
@@ -366,12 +449,24 @@ namespace TwelveMoons.EditorTools
             rectTransform.offsetMax = offsetMax;
         }
 
+        private static void SetFixedRect(RectTransform rectTransform, Vector2 anchor, Vector2 anchoredPosition, Vector2 size, Vector2 pivot)
+        {
+            rectTransform.anchorMin = anchor;
+            rectTransform.anchorMax = anchor;
+            rectTransform.pivot = pivot;
+            rectTransform.anchoredPosition = anchoredPosition;
+            rectTransform.sizeDelta = new Vector2(Mathf.Abs(size.x), Mathf.Abs(size.y));
+        }
+
         private static void SetStretchRect(RectTransform rectTransform, Vector2 offsetMin, Vector2 offsetMax)
         {
             rectTransform.anchorMin = Vector2.zero;
             rectTransform.anchorMax = Vector2.one;
             rectTransform.offsetMin = offsetMin;
             rectTransform.offsetMax = offsetMax;
+            rectTransform.sizeDelta = new Vector2(
+                Mathf.Max(0f, rectTransform.sizeDelta.x),
+                Mathf.Max(0f, rectTransform.sizeDelta.y));
         }
     }
 }

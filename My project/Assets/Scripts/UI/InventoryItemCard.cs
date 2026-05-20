@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using TwelveMoons.Core.Runtime;
 using UnityEngine;
@@ -6,9 +7,9 @@ using UnityEngine.UI;
 
 namespace TwelveMoons.UI
 {
-    public sealed class InventoryItemCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    public sealed class InventoryItemCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
     {
-        [Header("Card Parts")]
+        [Header("卡牌组件：背景、图标和文本引用")]
         [SerializeField] private Image backgroundImage;
         [SerializeField] private Image iconImage;
         [SerializeField] private TMP_Text nameText;
@@ -17,7 +18,7 @@ namespace TwelveMoons.UI
         [SerializeField] private TMP_Text descriptionText;
         [SerializeField] private CanvasGroup canvasGroup;
 
-        [Header("Drag")]
+        [Header("拖拽设置：是否允许从物品栏拖动")]
         [SerializeField] private bool allowDragInInventory = true;
         [SerializeField] private Color draggableColor = new Color(1f, 1f, 1f, 1f);
         [SerializeField] private Color lockedColor = new Color(0.72f, 0.72f, 0.72f, 1f);
@@ -29,10 +30,14 @@ namespace TwelveMoons.UI
         private bool canDrag;
         private Canvas rootCanvas;
         private Transform originalParent;
+        private bool isDragging;
+        private bool wasDragged;
 
         public string ItemId { get; private set; }
 
         public bool CanDrag => canDrag;
+
+        public event Action<InventoryItemCard> Clicked;
 
         private void Awake()
         {
@@ -110,6 +115,8 @@ namespace TwelveMoons.UI
             startAnchoredPosition = rectTransform.anchoredPosition;
             startSiblingIndex = transform.GetSiblingIndex();
             originalParent = transform.parent;
+            isDragging = true;
+            wasDragged = false;
             if (layoutElement != null)
             {
                 layoutElement.ignoreLayout = true;
@@ -138,6 +145,7 @@ namespace TwelveMoons.UI
 
             var scaleFactor = rootCanvas != null && rootCanvas.scaleFactor > 0f ? rootCanvas.scaleFactor : 1f;
             rectTransform.anchoredPosition += eventData.delta / scaleFactor;
+            wasDragged = true;
         }
 
         public void OnEndDrag(PointerEventData eventData)
@@ -167,6 +175,18 @@ namespace TwelveMoons.UI
                 canvasGroup.alpha = 1f;
                 canvasGroup.blocksRaycasts = true;
             }
+
+            isDragging = false;
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (!isDragging && !wasDragged)
+            {
+                Clicked?.Invoke(this);
+            }
+
+            wasDragged = false;
         }
 
         private void CacheComponents()

@@ -18,7 +18,8 @@ namespace TwelveMoons.EditorTools.Runtime
         {
             RunOptionAFlow();
             RunOptionBFlow();
-            Debug.Log("Document flow smoke test passed. Demo document queues, opens, resolves proposer, settles option A and B, removes the current queue entry, and produces different configured feedback.");
+            RunCurrentRoundDrawFlow();
+            Debug.Log("Document flow smoke test passed. Demo document queues, opens, resolves proposer, settles option A and B, removes the current queue entry, records delayed follow-up documents, and activates them on their due round.");
         }
 
         private static void RunOptionAFlow()
@@ -38,7 +39,7 @@ namespace TwelveMoons.EditorTools.Runtime
                 var data = context.RuntimeDataService.Data;
                 var task = data.Tasks.FirstOrDefault(candidate => candidate.TaskId == DemoTaskId);
                 var building = data.Buildings.FirstOrDefault(candidate => candidate.BuildingId == "building_relief_depot");
-                var nextDocument = data.DocumentQueue.FirstOrDefault(candidate => candidate.DocumentId == "document_relief_followup");
+                var nextDocument = data.FollowUpDocuments.FirstOrDefault(candidate => candidate.DocumentId == "document_relief_followup");
 
                 if (context.InventoryService.GetCount("item_money") != 5 ||
                     context.InventoryService.GetCount("item_material") != 7 ||
@@ -49,7 +50,7 @@ namespace TwelveMoons.EditorTools.Runtime
                     building == null ||
                     !building.IsUnlocked ||
                     nextDocument == null ||
-                    nextDocument.QueuedRound != data.CurrentRound + 1 ||
+                    nextDocument.ActivateRound != data.CurrentRound + 1 ||
                     context.FactionService.GetSuspicion("civilian") != 48 ||
                     context.FactionService.GetSuspicion("noble") != 51 ||
                     string.IsNullOrEmpty(result.Message) ||
@@ -61,6 +62,11 @@ namespace TwelveMoons.EditorTools.Runtime
                 if (data.DocumentQueue.Any(candidate => candidate.DocumentId == DemoDocumentId))
                 {
                     throw new InvalidDataException("Document option A did not remove the current document queue entry.");
+                }
+
+                if (data.DocumentQueue.Any(candidate => candidate.DocumentId == "document_relief_followup"))
+                {
+                    throw new InvalidDataException("Document option A added the delayed follow-up to the active queue too early.");
                 }
             }
             finally
@@ -92,13 +98,69 @@ namespace TwelveMoons.EditorTools.Runtime
                     task == null ||
                     task.Score != -1 ||
                     data.Buildings.Any(candidate => candidate.BuildingId == "building_relief_depot" && candidate.IsUnlocked) ||
-                    data.DocumentQueue.Any() ||
+                    data.DocumentQueue.Any(candidate => candidate.DocumentId == DemoDocumentId) ||
                     context.FactionService.GetSuspicion("civilian") != 53 ||
                     context.FactionService.GetSuspicion("academy") != 51 ||
                     result.Message == definition.OptionA.ResultText ||
                     result.FactionFeedbackText == definition.OptionA.FactionFeedbackText)
                 {
                     throw new InvalidDataException("Document option B flow failed after settlement.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(context.Root);
+            }
+        }
+
+        private static void RunCurrentRoundDrawFlow()
+        {
+            var context = CreateContext("DocumentSmokeTest_DrawQueue");
+            try
+            {
+                PrepareFlow(context);
+
+                var data = context.RuntimeDataService.Data;
+                AssertQueued(data, DemoDocumentId, "Task", "current task stage");
+                if (CountQueuedDocumentsByType(context, "Global") != 2 ||
+                    CountQueuedDocumentsByType(context, "Disaster") != 3 ||
+                    data.DocumentQueue.Count(candidate => candidate.QueuedRound <= data.CurrentRound) != 6)
+                {
+                    throw new InvalidDataException("Document draw did not build a six-document current-round queue with two global documents and disaster documents filling the remaining slots.");
+                }
+
+                var firstRoundCount = data.DocumentQueue.Count;
+                var addedOnRepeat = context.DocumentService.GenerateCurrentRoundDocumentQueue();
+                if (addedOnRepeat != 0 || data.DocumentQueue.Count != firstRoundCount)
+                {
+                    throw new InvalidDataException("Document draw generated duplicate non-repeatable documents in the same round.");
+                }
+
+                var taskEntry = data.DocumentQueue.First(candidate => candidate.DocumentId == DemoDocumentId);
+                var result = context.DocumentService.ResolveDocument(taskEntry, DocumentOptionType.A);
+                if (!result.Success)
+                {
+                    throw new InvalidDataException($"Document draw option A failed: {result.Message}");
+                }
+
+                if (data.DocumentQueue.Any(candidate => candidate.DocumentId == "document_relief_followup") ||
+                    !data.FollowUpDocuments.Any(candidate => candidate.DocumentId == "document_relief_followup" && candidate.ActivateRound == data.CurrentRound + 1))
+                {
+                    throw new InvalidDataException("Delayed follow-up document was not recorded for the next round.");
+                }
+
+                context.RoundService.NextRound();
+                context.TaskService.ProcessCurrentRound();
+                context.DocumentService.GenerateCurrentRoundDocumentQueue();
+
+                if (!data.DocumentQueue.Any(candidate => candidate.DocumentId == "document_relief_followup" && candidate.QueuedRound <= data.CurrentRound))
+                {
+                    throw new InvalidDataException("Delayed follow-up document was not available on its due round.");
+                }
+
+                if (data.FollowUpDocuments.Any(candidate => candidate.DocumentId == "document_relief_followup"))
+                {
+                    throw new InvalidDataException("Delayed follow-up document remained in follow-up state after activation.");
                 }
             }
             finally
@@ -114,6 +176,7 @@ namespace TwelveMoons.EditorTools.Runtime
             var runtimeDataService = root.AddComponent<RuntimeDataService>();
             var inventoryService = root.AddComponent<InventoryService>();
             var factionService = root.AddComponent<FactionService>();
+            var roundService = root.AddComponent<RoundService>();
             var taskService = root.AddComponent<TaskService>();
             var documentService = root.AddComponent<DocumentService>();
 
@@ -121,8 +184,9 @@ namespace TwelveMoons.EditorTools.Runtime
             ConfigureRuntimeDataService(runtimeDataService, configManager);
             ConfigureInventoryService(inventoryService, configManager, runtimeDataService);
             ConfigureFactionService(factionService, configManager, runtimeDataService);
-            ConfigureTaskService(taskService, configManager, runtimeDataService);
-            ConfigureDocumentService(documentService, configManager, runtimeDataService, inventoryService, factionService, taskService);
+            ConfigureRoundService(roundService, configManager, runtimeDataService);
+            ConfigureTaskService(taskService, configManager, runtimeDataService, roundService);
+            ConfigureDocumentService(documentService, configManager, runtimeDataService, inventoryService, factionService, taskService, roundService);
 
             return new TestContext(
                 root,
@@ -130,6 +194,7 @@ namespace TwelveMoons.EditorTools.Runtime
                 runtimeDataService,
                 inventoryService,
                 factionService,
+                roundService,
                 taskService,
                 documentService);
         }
@@ -141,6 +206,7 @@ namespace TwelveMoons.EditorTools.Runtime
             context.RuntimeDataService.CreateNewGame("disaster_flood_01");
             context.InventoryService.Refresh();
             context.FactionService.Refresh();
+            context.RoundService.Refresh();
             context.TaskService.Refresh();
             context.DocumentService.Refresh();
 
@@ -176,9 +242,36 @@ namespace TwelveMoons.EditorTools.Runtime
         private static void AssertDocumentConfigLoads(ConfigManager configManager)
         {
             if (!configManager.TryGetTable("DocumentConfig", out var table) ||
-                !table.TryFindById("DocumentId", DemoDocumentId, out _))
+                !table.TryFindById("DocumentId", DemoDocumentId, out _) ||
+                !table.TryFindById("DocumentId", "document_flood_watch", out _) ||
+                !table.TryFindById("DocumentId", "document_market_notice", out _) ||
+                !table.TryFindById("DocumentId", "document_market_roster", out _))
             {
-                throw new InvalidDataException("DocumentConfig missing phase 10 demo document.");
+                throw new InvalidDataException("DocumentConfig missing document smoke test demo documents.");
+            }
+        }
+
+        private static int CountQueuedDocumentsByType(TestContext context, string documentType)
+        {
+            var count = 0;
+            foreach (var entry in context.RuntimeDataService.Data.DocumentQueue)
+            {
+                if (entry.QueuedRound <= context.RuntimeDataService.Data.CurrentRound &&
+                    context.DocumentService.TryGetDefinition(entry.DocumentId, out var definition) &&
+                    definition.DocumentType == documentType)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static void AssertQueued(GameRuntimeData data, string documentId, string documentType, string label)
+        {
+            if (!data.DocumentQueue.Any(candidate => candidate.DocumentId == documentId))
+            {
+                throw new InvalidDataException($"Document draw did not queue {label}: {documentId} ({documentType}).");
             }
         }
 
@@ -214,11 +307,20 @@ namespace TwelveMoons.EditorTools.Runtime
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void ConfigureTaskService(TaskService taskService, ConfigManager configManager, RuntimeDataService runtimeDataService)
+        private static void ConfigureRoundService(RoundService roundService, ConfigManager configManager, RuntimeDataService runtimeDataService)
+        {
+            var serializedObject = new SerializedObject(roundService);
+            serializedObject.FindProperty("configManager").objectReferenceValue = configManager;
+            serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureTaskService(TaskService taskService, ConfigManager configManager, RuntimeDataService runtimeDataService, RoundService roundService)
         {
             var serializedObject = new SerializedObject(taskService);
             serializedObject.FindProperty("configManager").objectReferenceValue = configManager;
             serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
+            serializedObject.FindProperty("roundService").objectReferenceValue = roundService;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -228,7 +330,8 @@ namespace TwelveMoons.EditorTools.Runtime
             RuntimeDataService runtimeDataService,
             InventoryService inventoryService,
             FactionService factionService,
-            TaskService taskService)
+            TaskService taskService,
+            RoundService roundService)
         {
             var serializedObject = new SerializedObject(documentService);
             serializedObject.FindProperty("configManager").objectReferenceValue = configManager;
@@ -236,6 +339,7 @@ namespace TwelveMoons.EditorTools.Runtime
             serializedObject.FindProperty("inventoryService").objectReferenceValue = inventoryService;
             serializedObject.FindProperty("factionService").objectReferenceValue = factionService;
             serializedObject.FindProperty("taskService").objectReferenceValue = taskService;
+            serializedObject.FindProperty("roundService").objectReferenceValue = roundService;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -247,6 +351,7 @@ namespace TwelveMoons.EditorTools.Runtime
                 RuntimeDataService runtimeDataService,
                 InventoryService inventoryService,
                 FactionService factionService,
+                RoundService roundService,
                 TaskService taskService,
                 DocumentService documentService)
             {
@@ -255,6 +360,7 @@ namespace TwelveMoons.EditorTools.Runtime
                 RuntimeDataService = runtimeDataService;
                 InventoryService = inventoryService;
                 FactionService = factionService;
+                RoundService = roundService;
                 TaskService = taskService;
                 DocumentService = documentService;
             }
@@ -268,6 +374,8 @@ namespace TwelveMoons.EditorTools.Runtime
             public InventoryService InventoryService { get; }
 
             public FactionService FactionService { get; }
+
+            public RoundService RoundService { get; }
 
             public TaskService TaskService { get; }
 

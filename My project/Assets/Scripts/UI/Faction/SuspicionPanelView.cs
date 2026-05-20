@@ -1,27 +1,39 @@
 using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using TMPro;
 using TwelveMoons.Core.Runtime;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace TwelveMoons.UI
 {
     public sealed class SuspicionPanelView : MonoBehaviour
     {
-        [Header("Dependencies")]
+        [Header("依赖服务：阵营配置与运行时存档")]
         [SerializeField] private FactionService factionService;
         [SerializeField] private RuntimeDataService runtimeDataService;
 
-        [Header("Rows")]
+        [Header("Hierarchy 行：直接拖入 SuspicionContent 下的四个阵营行")]
         [SerializeField] private RectTransform contentRoot;
-        [SerializeField] private FactionSuspicionRow rowPrefab;
+        [SerializeField] private FactionSuspicionRow[] factionRows = Array.Empty<FactionSuspicionRow>();
         [SerializeField] private FactionIconBinding[] factionIcons = Array.Empty<FactionIconBinding>();
 
-        [Header("Feedback")]
+        [Header("反馈文本：显示当前公文选项对阵营的反馈")]
         [SerializeField] private TMP_Text feedbackText;
 
-        private readonly List<FactionSuspicionRow> rows = new List<FactionSuspicionRow>();
+        [Header("手指图标：移动到受影响最大的阵营行")]
+        [SerializeField] private RectTransform pointerIcon;
+        [SerializeField] private float pointerMoveDuration = 0.25f;
+        [SerializeField] private Ease pointerMoveEase = Ease.OutCubic;
+        [SerializeField] private float pointerBobDistance = 12f;
+        [SerializeField] private float pointerBobDuration = 0.45f;
+
+        private readonly Dictionary<string, FactionSuspicionRow> rowsByFactionId =
+            new Dictionary<string, FactionSuspicionRow>(StringComparer.Ordinal);
+
+        private Tween pointerMoveTween;
+        private Tween pointerBobTween;
+        private float pointerInitialX;
 
         private void Awake()
         {
@@ -38,6 +50,11 @@ namespace TwelveMoons.UI
             if (contentRoot == null)
             {
                 contentRoot = transform as RectTransform;
+            }
+
+            if (pointerIcon != null)
+            {
+                pointerInitialX = pointerIcon.anchoredPosition.x;
             }
         }
 
@@ -59,6 +76,8 @@ namespace TwelveMoons.UI
                 factionService.FactionsChanged -= Refresh;
                 factionService.ThresholdTriggered -= ShowThresholdFeedback;
             }
+
+            StopPointerTweens();
         }
 
         public void Refresh()
@@ -68,17 +87,36 @@ namespace TwelveMoons.UI
                 return;
             }
 
-            ClearRows();
+            BuildRowLookup();
 
-            foreach (var definition in factionService.Definitions)
+            for (var index = 0; index < factionService.Definitions.Count; index++)
             {
+                var definition = factionService.Definitions[index];
                 var state = runtimeDataService.Data.GetOrCreateFaction(definition.FactionId, definition.InitSuspicion);
-                var row = rowPrefab != null
-                    ? Instantiate(rowPrefab, contentRoot)
-                    : CreateDefaultRow(contentRoot);
+                var row = FindRowForDefinition(definition, index);
+                if (row == null)
+                {
+                    continue;
+                }
+
                 row.Bind(definition, state, FindFactionIcon(definition.FactionId));
-                rows.Add(row);
+                rowsByFactionId[definition.FactionId] = row;
             }
+        }
+
+        public void ShowDocumentChoiceImpact(string factionId, string feedback)
+        {
+            if (feedbackText != null)
+            {
+                feedbackText.text = feedback ?? string.Empty;
+            }
+
+            if (string.IsNullOrEmpty(factionId))
+            {
+                return;
+            }
+
+            MovePointerToFaction(factionId);
         }
 
         private void ShowThresholdFeedback(FactionThresholdResult result)
@@ -91,63 +129,89 @@ namespace TwelveMoons.UI
             if (result.GrantedLowSuspicionLetter)
             {
                 feedbackText.text = $"{result.FactionId}: low suspicion letter received ({result.LowSuspicionLetterId})";
+                MovePointerToFaction(result.FactionId);
                 return;
             }
 
             if (result.ActivatedPunishTask)
             {
                 feedbackText.text = $"{result.FactionId}: high suspicion task activated ({result.PunishTaskId})";
+                MovePointerToFaction(result.FactionId);
             }
         }
 
-        private FactionSuspicionRow CreateDefaultRow(Transform parent)
+        private void BuildRowLookup()
         {
-            var rowObject = new GameObject("FactionSuspicionRow", typeof(RectTransform), typeof(Image));
-            rowObject.transform.SetParent(parent, false);
-            var rowRect = rowObject.GetComponent<RectTransform>();
-            rowRect.sizeDelta = new Vector2(360f, 54f);
+            rowsByFactionId.Clear();
+            foreach (var row in factionRows)
+            {
+                if (row == null || string.IsNullOrEmpty(row.FactionId))
+                {
+                    continue;
+                }
 
-            var background = rowObject.GetComponent<Image>();
-            background.color = new Color(0.16f, 0.16f, 0.15f, 0.92f);
+                rowsByFactionId[row.FactionId] = row;
+            }
+        }
 
-            var nameText = CreateText("NameText", rowObject.transform, 16, FontStyles.Bold, TextAlignmentOptions.Left);
-            SetRect(nameText.rectTransform, new Vector2(14f, 0f), new Vector2(92f, 42f), new Vector2(0f, 0.5f));
+        private FactionSuspicionRow FindRowForDefinition(FactionDefinition definition, int definitionIndex)
+        {
+            if (definition != null &&
+                rowsByFactionId.TryGetValue(definition.FactionId, out var rowById) &&
+                rowById != null)
+            {
+                return rowById;
+            }
 
-            var iconImage = CreateImage("FactionIcon", rowObject.transform, new Color(1f, 1f, 1f, 1f));
-            iconImage.enabled = false;
-            SetRect(iconImage.rectTransform, new Vector2(112f, 0f), new Vector2(24f, 24f), new Vector2(0.5f, 0.5f));
+            return factionRows != null && definitionIndex >= 0 && definitionIndex < factionRows.Length
+                ? factionRows[definitionIndex]
+                : null;
+        }
 
-            var valueText = CreateText("ValueText", rowObject.transform, 14, FontStyles.Normal, TextAlignmentOptions.Right);
-            SetRect(valueText.rectTransform, new Vector2(-14f, 0f), new Vector2(72f, 42f), new Vector2(1f, 0.5f));
+        private void MovePointerToFaction(string factionId)
+        {
+            if (pointerIcon == null ||
+                !rowsByFactionId.TryGetValue(factionId, out var row) ||
+                row == null ||
+                row.RectTransform == null ||
+                pointerIcon.parent == null)
+            {
+                return;
+            }
 
-            var sliderObject = new GameObject("SuspicionSlider", typeof(RectTransform), typeof(Slider));
-            sliderObject.transform.SetParent(rowObject.transform, false);
-            var sliderRect = sliderObject.GetComponent<RectTransform>();
-            sliderRect.anchorMin = new Vector2(0f, 0.5f);
-            sliderRect.anchorMax = new Vector2(1f, 0.5f);
-            sliderRect.pivot = new Vector2(0.5f, 0.5f);
-            sliderRect.offsetMin = new Vector2(146f, -8f);
-            sliderRect.offsetMax = new Vector2(-92f, 8f);
+            StopPointerTweens();
+            var targetPosition = GetPointerTargetPosition(row.RectTransform);
+            pointerMoveTween = pointerIcon
+                .DOAnchorPos(targetPosition, Mathf.Max(0f, pointerMoveDuration))
+                .SetEase(pointerMoveEase)
+                .OnComplete(StartPointerBob);
+        }
 
-            var backgroundImage = CreateImage("Background", sliderObject.transform, new Color(0.08f, 0.08f, 0.08f, 1f));
-            SetStretchRect(backgroundImage.rectTransform, Vector2.zero, Vector2.zero);
+        private Vector2 GetPointerTargetPosition(RectTransform rowRect)
+        {
+            var parentRect = pointerIcon.parent as RectTransform;
+            if (parentRect == null)
+            {
+                return new Vector2(pointerInitialX, pointerIcon.anchoredPosition.y);
+            }
 
-            var fillArea = new GameObject("Fill Area", typeof(RectTransform));
-            fillArea.transform.SetParent(sliderObject.transform, false);
-            SetStretchRect(fillArea.GetComponent<RectTransform>(), new Vector2(2f, 2f), new Vector2(-2f, -2f));
+            var rowWorldCenter = rowRect.TransformPoint(rowRect.rect.center);
+            var localCenter = parentRect.InverseTransformPoint(rowWorldCenter);
+            return new Vector2(pointerInitialX, localCenter.y);
+        }
 
-            var fillImage = CreateImage("Fill", fillArea.transform, new Color(0.74f, 0.22f, 0.18f, 1f));
-            SetStretchRect(fillImage.rectTransform, Vector2.zero, Vector2.zero);
+        private void StartPointerBob()
+        {
+            if (pointerIcon == null || pointerBobDistance <= 0f || pointerBobDuration <= 0f)
+            {
+                return;
+            }
 
-            var slider = sliderObject.GetComponent<Slider>();
-            slider.transition = Selectable.Transition.None;
-            slider.interactable = false;
-            slider.fillRect = fillImage.rectTransform;
-            slider.targetGraphic = backgroundImage;
-
-            var row = rowObject.AddComponent<FactionSuspicionRow>();
-            row.Configure(nameText, valueText, slider, iconImage, background, backgroundImage, fillImage);
-            return row;
+            var targetY = pointerIcon.anchoredPosition.y + pointerBobDistance;
+            pointerBobTween = pointerIcon
+                .DOAnchorPosY(targetY, pointerBobDuration)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
         }
 
         private Sprite FindFactionIcon(string factionId)
@@ -163,59 +227,12 @@ namespace TwelveMoons.UI
             return null;
         }
 
-        private void ClearRows()
+        private void StopPointerTweens()
         {
-            foreach (var row in rows)
-            {
-                if (row != null)
-                {
-                    Destroy(row.gameObject);
-                }
-            }
-
-            rows.Clear();
-        }
-
-        private static TextMeshProUGUI CreateText(string name, Transform parent, int fontSize, FontStyles fontStyle, TextAlignmentOptions alignment)
-        {
-            var textObject = new GameObject(name, typeof(RectTransform));
-            textObject.transform.SetParent(parent, false);
-            var text = textObject.AddComponent<TextMeshProUGUI>();
-            text.fontSize = fontSize;
-            text.fontStyle = fontStyle;
-            text.alignment = alignment;
-            text.color = Color.white;
-            text.textWrappingMode = TextWrappingModes.NoWrap;
-            text.overflowMode = TextOverflowModes.Truncate;
-            text.raycastTarget = false;
-            return text;
-        }
-
-        private static Image CreateImage(string name, Transform parent, Color color)
-        {
-            var imageObject = new GameObject(name, typeof(RectTransform), typeof(Image));
-            imageObject.transform.SetParent(parent, false);
-            var image = imageObject.GetComponent<Image>();
-            image.color = color;
-            image.raycastTarget = false;
-            return image;
-        }
-
-        private static void SetRect(RectTransform rectTransform, Vector2 anchoredPosition, Vector2 size, Vector2 pivot)
-        {
-            rectTransform.anchorMin = new Vector2(pivot.x, 0.5f);
-            rectTransform.anchorMax = new Vector2(pivot.x, 0.5f);
-            rectTransform.pivot = pivot;
-            rectTransform.anchoredPosition = anchoredPosition;
-            rectTransform.sizeDelta = size;
-        }
-
-        private static void SetStretchRect(RectTransform rectTransform, Vector2 offsetMin, Vector2 offsetMax)
-        {
-            rectTransform.anchorMin = Vector2.zero;
-            rectTransform.anchorMax = Vector2.one;
-            rectTransform.offsetMin = offsetMin;
-            rectTransform.offsetMax = offsetMax;
+            pointerMoveTween?.Kill();
+            pointerBobTween?.Kill();
+            pointerMoveTween = null;
+            pointerBobTween = null;
         }
 
         [Serializable]

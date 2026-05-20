@@ -7,12 +7,17 @@ namespace TwelveMoons.Core.Runtime
 {
     public sealed class DocumentService : MonoBehaviour
     {
-        [Header("Dependencies")]
+        [Header("依赖服务：配置、运行时、物品、阵营、任务和回合")]
         [SerializeField] private ConfigManager configManager;
         [SerializeField] private RuntimeDataService runtimeDataService;
         [SerializeField] private InventoryService inventoryService;
         [SerializeField] private FactionService factionService;
         [SerializeField] private TaskService taskService;
+        [SerializeField] private RoundService roundService;
+
+        [Header("抽取规则：每回合公文数量限制")]
+        [SerializeField] private int maxDocumentsPerRound = 6;
+        [SerializeField] private int globalDocumentsPerRound = 2;
 
         private readonly List<DocumentDefinition> definitions = new List<DocumentDefinition>();
         private readonly Dictionary<string, DocumentDefinition> definitionsById =
@@ -30,9 +35,31 @@ namespace TwelveMoons.Core.Runtime
             LoadConfigs();
         }
 
+        private void OnEnable()
+        {
+            if (roundService != null)
+            {
+                roundService.RoundChanged += HandleRoundChanged;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (roundService != null)
+            {
+                roundService.RoundChanged -= HandleRoundChanged;
+            }
+        }
+
+        private void Start()
+        {
+            GenerateCurrentRoundDocumentQueue();
+        }
+
         public void Refresh()
         {
             LoadConfigs();
+            GenerateCurrentRoundDocumentQueue();
             DocumentsChanged?.Invoke();
         }
 
@@ -56,6 +83,8 @@ namespace TwelveMoons.Core.Runtime
                 return false;
             }
 
+            GenerateCurrentRoundDocumentQueue();
+
             var currentRound = runtimeDataService.Data.CurrentRound;
             foreach (var candidate in runtimeDataService.Data.DocumentQueue)
             {
@@ -72,6 +101,43 @@ namespace TwelveMoons.Core.Runtime
             }
 
             return false;
+        }
+
+        [ContextMenu("Generate Current Round Document Queue")]
+        public int GenerateCurrentRoundDocumentQueue()
+        {
+            if (runtimeDataService == null)
+            {
+                return 0;
+            }
+
+            var added = 0;
+            added += QueueCurrentTaskDocuments();
+            added += QueueDueFollowUpDocuments();
+
+            var remainingSlots = GetRemainingCurrentRoundSlots();
+            if (remainingSlots > 0)
+            {
+                added += QueueMatchedDocuments("Global", Mathf.Min(globalDocumentsPerRound, remainingSlots), IsGlobalDocument);
+            }
+
+            remainingSlots = GetRemainingCurrentRoundSlots();
+            if (remainingSlots > 0)
+            {
+                added += QueueMatchedDocuments("Disaster", remainingSlots, MatchesCurrentDisasterStage);
+            }
+
+            if (added > 0)
+            {
+                DocumentsChanged?.Invoke();
+            }
+
+            return added;
+        }
+
+        private void HandleRoundChanged()
+        {
+            GenerateCurrentRoundDocumentQueue();
         }
 
         public DocumentResolutionResult ResolveDocument(RuntimeDocumentQueueEntry entry, DocumentOptionType optionType)
@@ -92,6 +158,7 @@ namespace TwelveMoons.Core.Runtime
                 return Fail(failReason);
             }
 
+            var feedbackFactionId = GetFeedbackFactionId(option);
             ApplyResourceChange(InventoryItemType.Money, option.MoneyChange);
             ApplyResourceChange(InventoryItemType.Material, option.MaterialChange);
             ApplyResourceChange(InventoryItemType.Food, option.FoodChange);
@@ -107,7 +174,7 @@ namespace TwelveMoons.Core.Runtime
             var feedback = string.IsNullOrEmpty(option.FactionFeedbackText)
                 ? option.ProposerFeedbackText
                 : $"{option.ProposerFeedbackText}\n{option.FactionFeedbackText}";
-            return new DocumentResolutionResult(true, option.ResultText, option.ProposerFeedbackText, feedback);
+            return new DocumentResolutionResult(true, option.ResultText, option.ProposerFeedbackText, feedback, feedbackFactionId);
         }
 
         public RuntimeDocumentQueueEntry QueueDocument(string documentId, string taskId = "", string taskStageId = "", string beforeDocumentCharacterId = "", int delayRound = 0)
@@ -147,6 +214,11 @@ namespace TwelveMoons.Core.Runtime
             if (taskService == null)
             {
                 taskService = FindFirstObjectByType<TaskService>();
+            }
+
+            if (roundService == null)
+            {
+                roundService = FindFirstObjectByType<RoundService>();
             }
         }
 
@@ -291,6 +363,34 @@ namespace TwelveMoons.Core.Runtime
             ChangeSuspicion("civilian", option.CivilianSuspicionChange);
         }
 
+        private static string GetFeedbackFactionId(DocumentOptionDefinition option)
+        {
+            return !string.IsNullOrEmpty(option.FeedbackFactionId)
+                ? option.FeedbackFactionId
+                : GetMostAffectedFactionId(option);
+        }
+
+        private static string GetMostAffectedFactionId(DocumentOptionDefinition option)
+        {
+            var factionId = string.Empty;
+            var maxAbsDelta = 0;
+            SetIfGreater("noble", option.NobleSuspicionChange, ref factionId, ref maxAbsDelta);
+            SetIfGreater("academy", option.AcademySuspicionChange, ref factionId, ref maxAbsDelta);
+            SetIfGreater("church", option.ChurchSuspicionChange, ref factionId, ref maxAbsDelta);
+            SetIfGreater("civilian", option.CivilianSuspicionChange, ref factionId, ref maxAbsDelta);
+            return factionId;
+        }
+
+        private static void SetIfGreater(string candidateFactionId, int delta, ref string factionId, ref int maxAbsDelta)
+        {
+            var absDelta = Mathf.Abs(delta);
+            if (absDelta > maxAbsDelta)
+            {
+                maxAbsDelta = absDelta;
+                factionId = candidateFactionId;
+            }
+        }
+
         private void ChangeSuspicion(string factionId, int delta)
         {
             if (delta != 0)
@@ -318,15 +418,247 @@ namespace TwelveMoons.Core.Runtime
 
         private void QueueNextDocument(RuntimeDocumentQueueEntry entry, DocumentOptionDefinition option)
         {
-            if (!string.IsNullOrEmpty(option.NextDocumentId))
+            if (string.IsNullOrEmpty(option.NextDocumentId))
             {
-                runtimeDataService.Data.QueueDocument(
-                    option.NextDocumentId,
-                    entry.TaskId,
-                    entry.TaskStageId,
-                    entry.BeforeDocumentCharacterId,
-                    option.NextDocumentDelayRound);
+                return;
             }
+
+            if (!TryGetDefinition(option.NextDocumentId, out _))
+            {
+                Debug.LogWarning($"DocumentConfig missing follow-up document id {option.NextDocumentId}.", this);
+                return;
+            }
+
+            runtimeDataService.Data.RecordFollowUpDocument(
+                option.NextDocumentId,
+                entry.DocumentId,
+                entry.TaskId,
+                entry.TaskStageId,
+                entry.BeforeDocumentCharacterId,
+                option.NextDocumentDelayRound);
+        }
+
+        private int QueueCurrentTaskDocuments()
+        {
+            if (taskService == null || runtimeDataService == null)
+            {
+                return 0;
+            }
+
+            var added = 0;
+            foreach (var taskState in runtimeDataService.Data.Tasks)
+            {
+                if (taskState.Status != TaskRuntimeStatus.Active)
+                {
+                    continue;
+                }
+
+                var stage = taskService.GetCurrentStage(taskState);
+                if (stage == null)
+                {
+                    continue;
+                }
+
+                foreach (var documentId in stage.LinkedDocumentIds)
+                {
+                    if (TryGetDefinition(documentId, out var definition) &&
+                        QueueDocumentIfEligible(
+                            definition,
+                            "Task",
+                            taskState.TaskId,
+                            stage.TaskStageId,
+                            stage.BeforeDocumentCharacterId))
+                    {
+                        added++;
+                    }
+                }
+            }
+
+            return added;
+        }
+
+        private int QueueDueFollowUpDocuments()
+        {
+            return runtimeDataService != null
+                ? runtimeDataService.Data.ActivateDueFollowUpDocuments()
+                : 0;
+        }
+
+        private int QueueMatchedDocuments(
+            string drawSource,
+            int maxCount,
+            Predicate<DocumentDefinition> predicate)
+        {
+            if (maxCount <= 0 || predicate == null)
+            {
+                return 0;
+            }
+
+            var added = 0;
+            var candidates = new List<DocumentDefinition>();
+            foreach (var definition in definitions)
+            {
+                if (predicate(definition))
+                {
+                    candidates.Add(definition);
+                }
+            }
+
+            if (candidates.Count == 0)
+            {
+                return 0;
+            }
+
+            var startIndex = GetRoundDrawStartIndex(drawSource, candidates.Count);
+            for (var offset = 0; offset < candidates.Count && added < maxCount; offset++)
+            {
+                var definition = candidates[(startIndex + offset) % candidates.Count];
+
+                if (QueueDocumentIfEligible(
+                    definition,
+                    drawSource,
+                    definition.TaskId,
+                    definition.TaskStageId,
+                    string.Empty))
+                {
+                    added++;
+                }
+            }
+
+            return added;
+        }
+
+        private int GetRemainingCurrentRoundSlots()
+        {
+            if (runtimeDataService == null)
+            {
+                return 0;
+            }
+
+            var currentRound = runtimeDataService.Data.CurrentRound;
+            var dueCount = 0;
+            foreach (var entry in runtimeDataService.Data.DocumentQueue)
+            {
+                if (entry.QueuedRound <= currentRound)
+                {
+                    dueCount++;
+                }
+            }
+
+            return Mathf.Max(0, maxDocumentsPerRound - dueCount);
+        }
+
+        private int GetRoundDrawStartIndex(string drawSource, int candidateCount)
+        {
+            if (runtimeDataService == null || candidateCount <= 0)
+            {
+                return 0;
+            }
+
+            var seed = runtimeDataService.Data.CurrentRound;
+            if (!string.IsNullOrEmpty(drawSource))
+            {
+                foreach (var character in drawSource)
+                {
+                    seed = (seed * 31) + character;
+                }
+            }
+
+            return Mathf.Abs(seed) % candidateCount;
+        }
+
+        private bool QueueDocumentIfEligible(
+            DocumentDefinition definition,
+            string drawSource,
+            string taskId,
+            string taskStageId,
+            string beforeDocumentCharacterId)
+        {
+            if (definition == null || runtimeDataService == null)
+            {
+                return false;
+            }
+
+            var drawKey = MakeDrawKey(definition, drawSource);
+            if (!definition.IsRepeatable && runtimeDataService.Data.HasProcessedDocumentDraw(drawKey))
+            {
+                return false;
+            }
+
+            runtimeDataService.Data.MarkDocumentDrawProcessed(drawKey);
+            if (HasQueuedDocument(definition.DocumentId, taskId, taskStageId))
+            {
+                return false;
+            }
+
+            runtimeDataService.Data.QueueDocument(
+                definition.DocumentId,
+                taskId,
+                taskStageId,
+                beforeDocumentCharacterId);
+            return true;
+        }
+
+        private bool HasQueuedDocument(string documentId, string taskId, string taskStageId)
+        {
+            foreach (var entry in runtimeDataService.Data.DocumentQueue)
+            {
+                if (entry.DocumentId == documentId &&
+                    entry.TaskId == (taskId ?? string.Empty) &&
+                    entry.TaskStageId == (taskStageId ?? string.Empty))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool MatchesCurrentDisasterStage(DocumentDefinition definition)
+        {
+            if (!IsDocumentType(definition, "Disaster") || runtimeDataService == null)
+            {
+                return false;
+            }
+
+            var data = runtimeDataService.Data;
+            if (!string.IsNullOrEmpty(definition.DisasterId) &&
+                definition.DisasterId != data.DisasterId)
+            {
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(definition.DisasterStageId))
+            {
+                return true;
+            }
+
+            var stage = roundService != null
+                ? roundService.ResolveDisasterStage(data.CurrentRound)
+                : null;
+            return stage != null && stage.StageId == definition.DisasterStageId;
+        }
+
+        private static bool IsGlobalDocument(DocumentDefinition definition)
+        {
+            return IsDocumentType(definition, "Global");
+        }
+
+        private static bool IsDocumentType(DocumentDefinition definition, string documentType)
+        {
+            return definition != null &&
+                string.Equals(definition.DocumentType, documentType, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private string MakeDrawKey(DocumentDefinition definition, string drawSource)
+        {
+            if (definition.IsRepeatable)
+            {
+                var round = runtimeDataService != null ? runtimeDataService.Data.CurrentRound : 0;
+                return $"{drawSource}:{round}:{definition.DocumentId}";
+            }
+
+            return $"{drawSource}:{definition.DocumentId}";
         }
 
         private ItemDefinition FindItemDefinition(InventoryItemType itemType)

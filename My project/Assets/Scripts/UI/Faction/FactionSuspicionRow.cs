@@ -7,6 +7,10 @@ namespace TwelveMoons.UI
 {
     public sealed class FactionSuspicionRow : MonoBehaviour
     {
+        [Header("阵营标识：用于把表格中的阵营绑定到这一行")]
+        [SerializeField] private string factionId;
+
+        [Header("阵营显示：名称、数值、滑条和图标")]
         [SerializeField] private TMP_Text nameText;
         [SerializeField] private TMP_Text valueText;
         [SerializeField] private Slider suspicionSlider;
@@ -15,6 +19,15 @@ namespace TwelveMoons.UI
         [SerializeField] private Image sliderBackgroundImage;
         [SerializeField] private Image sliderFillImage;
         [SerializeField] private Sprite factionIcon;
+
+        public string FactionId => factionId;
+
+        public RectTransform RectTransform => transform as RectTransform;
+
+        public void SetFactionId(string value)
+        {
+            factionId = value ?? string.Empty;
+        }
 
         public void Configure(
             TMP_Text factionNameText,
@@ -36,6 +49,11 @@ namespace TwelveMoons.UI
 
         public void Bind(FactionDefinition definition, RuntimeFactionState state, Sprite iconOverride = null)
         {
+            if (definition != null && string.IsNullOrEmpty(factionId))
+            {
+                factionId = definition.FactionId;
+            }
+
             if (nameText != null)
             {
                 nameText.text = string.IsNullOrEmpty(definition.FactionName)
@@ -66,8 +84,8 @@ namespace TwelveMoons.UI
                     iconImage.sprite = factionIcon;
                 }
 
-                iconImage.enabled = iconImage.sprite != null;
-                iconImage.preserveAspect = true;
+                iconImage.enabled = true;
+                iconImage.preserveAspect = iconImage.sprite != null;
             }
         }
     }

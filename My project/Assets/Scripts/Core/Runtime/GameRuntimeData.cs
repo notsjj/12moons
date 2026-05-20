@@ -15,6 +15,8 @@ namespace TwelveMoons.Core.Runtime
         private readonly List<RuntimeStoryQueueEntry> storyQueue = new List<RuntimeStoryQueueEntry>();
         private readonly List<RuntimeStoryProgressState> storyProgress = new List<RuntimeStoryProgressState>();
         private readonly List<RuntimeDocumentQueueEntry> documentQueue = new List<RuntimeDocumentQueueEntry>();
+        private readonly List<RuntimeFollowUpDocumentState> followUpDocuments = new List<RuntimeFollowUpDocumentState>();
+        private readonly List<string> processedDocumentDrawKeys = new List<string>();
 
         public string DisasterId { get; private set; }
 
@@ -38,6 +40,10 @@ namespace TwelveMoons.Core.Runtime
 
         public IReadOnlyList<RuntimeDocumentQueueEntry> DocumentQueue => documentQueue;
 
+        public IReadOnlyList<RuntimeFollowUpDocumentState> FollowUpDocuments => followUpDocuments;
+
+        public IReadOnlyList<string> ProcessedDocumentDrawKeys => processedDocumentDrawKeys;
+
         public void Reset(string disasterId, int totalRound)
         {
             DisasterId = disasterId;
@@ -51,6 +57,8 @@ namespace TwelveMoons.Core.Runtime
             storyQueue.Clear();
             storyProgress.Clear();
             documentQueue.Clear();
+            followUpDocuments.Clear();
+            processedDocumentDrawKeys.Clear();
         }
 
         public void SetCurrentRound(int currentRound)
@@ -211,6 +219,83 @@ namespace TwelveMoons.Core.Runtime
         public bool RemoveDocumentQueueEntry(RuntimeDocumentQueueEntry entry)
         {
             return entry != null && documentQueue.Remove(entry);
+        }
+
+        public RuntimeFollowUpDocumentState RecordFollowUpDocument(
+            string documentId,
+            string sourceDocumentId,
+            string taskId,
+            string taskStageId,
+            string beforeDocumentCharacterId,
+            int delayRound)
+        {
+            if (string.IsNullOrEmpty(documentId))
+            {
+                return null;
+            }
+
+            var activateRound = CurrentRound + Math.Max(0, delayRound);
+            var existing = followUpDocuments.FirstOrDefault(candidate =>
+                candidate.DocumentId == documentId &&
+                candidate.SourceDocumentId == (sourceDocumentId ?? string.Empty) &&
+                candidate.TaskId == (taskId ?? string.Empty) &&
+                candidate.TaskStageId == (taskStageId ?? string.Empty) &&
+                candidate.ActivateRound == activateRound);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var state = new RuntimeFollowUpDocumentState(
+                documentId,
+                sourceDocumentId,
+                taskId,
+                taskStageId,
+                beforeDocumentCharacterId,
+                activateRound);
+            followUpDocuments.Add(state);
+            return state;
+        }
+
+        public int ActivateDueFollowUpDocuments()
+        {
+            var activated = 0;
+            var dueStates = followUpDocuments
+                .Where(candidate => candidate.ActivateRound <= CurrentRound)
+                .ToList();
+
+            foreach (var state in dueStates)
+            {
+                if (!documentQueue.Any(candidate =>
+                    candidate.DocumentId == state.DocumentId &&
+                    candidate.TaskId == state.TaskId &&
+                    candidate.TaskStageId == state.TaskStageId))
+                {
+                    QueueDocument(
+                        state.DocumentId,
+                        state.TaskId,
+                        state.TaskStageId,
+                        state.BeforeDocumentCharacterId);
+                    activated++;
+                }
+
+                followUpDocuments.Remove(state);
+            }
+
+            return activated;
+        }
+
+        public bool HasProcessedDocumentDraw(string key)
+        {
+            return !string.IsNullOrEmpty(key) && processedDocumentDrawKeys.Contains(key);
+        }
+
+        public void MarkDocumentDrawProcessed(string key)
+        {
+            if (!string.IsNullOrEmpty(key) && !processedDocumentDrawKeys.Contains(key))
+            {
+                processedDocumentDrawKeys.Add(key);
+            }
         }
     }
 }

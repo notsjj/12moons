@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DG.Tweening;
 using TMPro;
 using TwelveMoons.Core.Runtime;
 using UnityEngine;
@@ -8,18 +9,27 @@ namespace TwelveMoons.UI
 {
     public sealed class InventoryPanelView : MonoBehaviour
     {
-        [Header("Dependencies")]
+        [Header("依赖服务：背包数据与运行时存档")]
         [SerializeField] private InventoryService inventoryService;
         [SerializeField] private RuntimeDataService runtimeDataService;
 
-        [Header("Cards")]
+        [Header("卡牌显示：内容根节点、卡牌预制体与尺寸")]
         [SerializeField] private RectTransform contentRoot;
         [SerializeField] private InventoryItemCard cardPrefab;
         [SerializeField] private bool showZeroCountItems;
         [SerializeField] private Vector2 cardSize = new Vector2(180f, 220f);
         [SerializeField] private float minimumVisibleStep = 42f;
 
+        [Header("卡牌动画：新增卡牌后旧卡牌移动到新位置")]
+        [SerializeField] private float layoutMoveDuration = 0.24f;
+        [SerializeField] private Ease layoutMoveEase = Ease.OutCubic;
+
+        [Header("点击抬起：点击卡牌后向上移动的距离")]
+        [SerializeField] private float selectedLiftDistance = 36f;
+
         private readonly List<InventoryItemCard> cards = new List<InventoryItemCard>();
+        private readonly Dictionary<string, InventoryItemCard> cardsByItemId = new Dictionary<string, InventoryItemCard>();
+        private string selectedItemId;
 
         private void Awake()
         {
@@ -64,7 +74,7 @@ namespace TwelveMoons.UI
                 return;
             }
 
-            ClearRows();
+            var activeItemIds = new HashSet<string>();
 
             foreach (var definition in inventoryService.Definitions)
             {
@@ -74,20 +84,38 @@ namespace TwelveMoons.UI
                     continue;
                 }
 
-                CreateCard(definition, state);
+                activeItemIds.Add(definition.ItemId);
+                var card = GetOrCreateCard(definition, state);
+                card.Bind(definition, state);
             }
 
-            LayoutCardsInSingleRow();
+            RemoveInactiveCards(activeItemIds);
+            SortCardsByDefinitions();
+            LayoutCardsInSingleRow(true);
         }
 
-        private void CreateCard(ItemDefinition definition, RuntimeItemState state)
+        private InventoryItemCard GetOrCreateCard(ItemDefinition definition, RuntimeItemState state)
+        {
+            if (cardsByItemId.TryGetValue(definition.ItemId, out var existingCard) && existingCard != null)
+            {
+                return existingCard;
+            }
+
+            var card = CreateCard(definition, state);
+            cardsByItemId[definition.ItemId] = card;
+            return card;
+        }
+
+        private InventoryItemCard CreateCard(ItemDefinition definition, RuntimeItemState state)
         {
             var card = cardPrefab != null
                 ? Instantiate(cardPrefab, contentRoot)
                 : CreateDefaultCard(contentRoot);
 
             card.Bind(definition, state);
+            card.Clicked += HandleCardClicked;
             cards.Add(card);
+            return card;
         }
 
         private InventoryItemCard CreateDefaultCard(Transform parent)
@@ -135,10 +163,10 @@ namespace TwelveMoons.UI
 
         public void RefreshLayout()
         {
-            LayoutCardsInSingleRow();
+            LayoutCardsInSingleRow(true);
         }
 
-        private void LayoutCardsInSingleRow()
+        private void LayoutCardsInSingleRow(bool animate)
         {
             if (contentRoot == null || cards.Count == 0)
             {
@@ -181,8 +209,68 @@ namespace TwelveMoons.UI
                 rectTransform.anchorMax = new Vector2(0f, 0f);
                 rectTransform.pivot = new Vector2(0f, 0f);
                 rectTransform.sizeDelta = cardSize;
-                rectTransform.anchoredPosition = new Vector2(startX + step * index, y);
+                var targetPosition = new Vector2(startX + step * index, y + GetCardLift(cards[index]));
+                rectTransform.DOKill();
+                if (animate && layoutMoveDuration > 0f && gameObject.activeInHierarchy)
+                {
+                    rectTransform.DOAnchorPos(targetPosition, layoutMoveDuration).SetEase(layoutMoveEase);
+                }
+                else
+                {
+                    rectTransform.anchoredPosition = targetPosition;
+                }
+
                 rectTransform.SetSiblingIndex(index);
+            }
+        }
+
+        private float GetCardLift(InventoryItemCard card)
+        {
+            return card != null && card.ItemId == selectedItemId ? Mathf.Max(0f, selectedLiftDistance) : 0f;
+        }
+
+        private void HandleCardClicked(InventoryItemCard card)
+        {
+            if (card == null || string.IsNullOrEmpty(card.ItemId))
+            {
+                return;
+            }
+
+            selectedItemId = selectedItemId == card.ItemId ? string.Empty : card.ItemId;
+            LayoutCardsInSingleRow(true);
+        }
+
+        private void RemoveInactiveCards(HashSet<string> activeItemIds)
+        {
+            for (var index = cards.Count - 1; index >= 0; index--)
+            {
+                var card = cards[index];
+                if (card == null || activeItemIds.Contains(card.ItemId))
+                {
+                    continue;
+                }
+
+                card.Clicked -= HandleCardClicked;
+                cardsByItemId.Remove(card.ItemId);
+                if (selectedItemId == card.ItemId)
+                {
+                    selectedItemId = string.Empty;
+                }
+
+                Destroy(card.gameObject);
+                cards.RemoveAt(index);
+            }
+        }
+
+        private void SortCardsByDefinitions()
+        {
+            cards.Clear();
+            foreach (var definition in inventoryService.Definitions)
+            {
+                if (cardsByItemId.TryGetValue(definition.ItemId, out var card) && card != null)
+                {
+                    cards.Add(card);
+                }
             }
         }
 
@@ -192,11 +280,13 @@ namespace TwelveMoons.UI
             {
                 if (card != null)
                 {
+                    card.Clicked -= HandleCardClicked;
                     Destroy(card.gameObject);
                 }
             }
 
             cards.Clear();
+            cardsByItemId.Clear();
         }
 
         private static Image CreateImage(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax)

@@ -141,11 +141,23 @@ namespace TwelveMoons.UI
                 documentService != null &&
                 runtimeDataService.Data.DocumentQueue.Count == 0)
             {
-                documentService.QueueDocument(demoDocumentId, demoTaskId, "task_stage_relief_prepare", "character_steward");
+                documentService.GenerateCurrentRoundDocumentQueue();
+                if (runtimeDataService.Data.DocumentQueue.Count == 0)
+                {
+                    documentService.QueueDocument(demoDocumentId, demoTaskId, "task_stage_relief_prepare", "character_steward");
+                }
             }
 
             documentPopupPanel?.ShowNextPendingDocument();
             SetFeedback("Next pending document shown.");
+        }
+
+        public void GenerateDocumentQueue()
+        {
+            var added = documentService != null ? documentService.GenerateCurrentRoundDocumentQueue() : 0;
+            var total = runtimeDataService != null ? runtimeDataService.Data.DocumentQueue.Count : 0;
+            var followUps = runtimeDataService != null ? runtimeDataService.Data.FollowUpDocuments.Count : 0;
+            SetFeedback($"Document queue built. Added {added}, active {total}, delayed {followUps}.");
         }
 
         public void HideDocumentPreview()
