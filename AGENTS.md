@@ -1,5 +1,7 @@
 # AGENTS.md - Twelve Moons Unity Project Rules
 
+Additional active rule: Unity UI text RectTransform heights must never be negative. Editor builders and prefab generators must use zero or positive text box heights.
+
 你正在协助开发 Unity 游戏《十二轮新月》。必须遵守以下规则：
 
 1. 不要一次性实现多个阶段。每次只完成当前 Prompt 指定阶段。

@@ -114,69 +114,22 @@ namespace TwelveMoons.EditorTools
         {
             var panel = FindOrCreateUiChild(parent, "TaskPanel");
             ClearFormalDebugArtifacts(panel);
-            ConfigureLeftFifthPanelRect(panel.GetComponent<RectTransform>());
+            SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(-24f, 24f), new Vector2(420f, 610f), new Vector2(1f, 0f));
             ConfigurePanelImage(panel, new Color(0.11f, 0.11f, 0.1f, 0.94f));
 
             var title = FindOrCreateText(panel.transform, "TitleText", "Tasks", 20, FontStyles.Bold, TextAlignmentOptions.Left);
-            SetStretchTopRect(title.rectTransform, 16f, -16f, 16f, 32f);
+            SetFixedRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(16f, -16f), new Vector2(388f, 32f), new Vector2(0f, 1f));
 
             var emptyText = FindOrCreateText(panel.transform, "EmptyText", "No active task.", 14, FontStyles.Normal, TextAlignmentOptions.Left);
-            SetStretchTopRect(emptyText.rectTransform, 16f, -52f, 16f, 28f);
+            SetFixedRect(emptyText.rectTransform, new Vector2(0f, 1f), new Vector2(16f, -52f), new Vector2(388f, 28f), new Vector2(0f, 1f));
 
-            var content = FindOrCreateTaskScrollContent(panel.transform);
+            var content = FindOrCreateUiChild(panel.transform, "TaskContent");
+            SetFixedRect(content.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(16f, -90f), new Vector2(388f, 496f), new Vector2(0f, 1f));
+            ConfigureVerticalList(content, 8f);
 
             var panelView = EnsureComponent<TaskPanelView>(panel);
             ConfigureTaskPanelView(panelView, taskService, runtimeDataService, content, emptyText);
             return panel;
-        }
-
-        private static GameObject FindOrCreateTaskScrollContent(Transform panelTransform)
-        {
-            var oldContent = panelTransform.Find("TaskContent");
-            if (oldContent != null)
-            {
-                Object.DestroyImmediate(oldContent.gameObject);
-            }
-
-            var scrollView = FindOrCreateUiChild(panelTransform, "TaskScrollView");
-            var scrollRectTransform = scrollView.GetComponent<RectTransform>();
-            scrollRectTransform.anchorMin = Vector2.zero;
-            scrollRectTransform.anchorMax = Vector2.one;
-            scrollRectTransform.offsetMin = new Vector2(16f, 16f);
-            scrollRectTransform.offsetMax = new Vector2(-16f, -90f);
-
-            var scrollRect = EnsureComponent<ScrollRect>(scrollView);
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
-            scrollRect.scrollSensitivity = 28f;
-
-            var viewport = FindOrCreateUiChild(scrollView.transform, "Viewport");
-            var viewportRect = viewport.GetComponent<RectTransform>();
-            viewportRect.anchorMin = Vector2.zero;
-            viewportRect.anchorMax = Vector2.one;
-            viewportRect.offsetMin = Vector2.zero;
-            viewportRect.offsetMax = Vector2.zero;
-
-            var viewportImage = EnsureComponent<Image>(viewport);
-            viewportImage.color = new Color(0f, 0f, 0f, 0.01f);
-            var mask = EnsureComponent<Mask>(viewport);
-            mask.showMaskGraphic = false;
-            scrollRect.viewport = viewportRect;
-
-            var content = FindOrCreateUiChild(viewport.transform, "TaskContent");
-            var contentRect = content.GetComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0f, 1f);
-            contentRect.anchorMax = new Vector2(1f, 1f);
-            contentRect.pivot = new Vector2(0.5f, 1f);
-            contentRect.anchoredPosition = Vector2.zero;
-            contentRect.sizeDelta = Vector2.zero;
-            ConfigureVerticalList(content, 8f);
-
-            var fitter = EnsureComponent<ContentSizeFitter>(content);
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            scrollRect.content = contentRect;
-            return content;
         }
 
         private static GameObject BuildSuspicionPanel(
@@ -552,26 +505,6 @@ namespace TwelveMoons.EditorTools
             rectTransform.offsetMin = Vector2.zero;
             rectTransform.offsetMax = Vector2.zero;
             rectTransform.sizeDelta = Vector2.zero;
-        }
-
-        private static void ConfigureLeftFifthPanelRect(RectTransform rectTransform)
-        {
-            rectTransform.anchorMin = new Vector2(0f, 0f);
-            rectTransform.anchorMax = new Vector2(0.2f, 1f);
-            rectTransform.pivot = new Vector2(0f, 0.5f);
-            rectTransform.offsetMin = Vector2.zero;
-            rectTransform.offsetMax = Vector2.zero;
-            rectTransform.anchoredPosition = Vector2.zero;
-            rectTransform.sizeDelta = Vector2.zero;
-        }
-
-        private static void SetStretchTopRect(RectTransform rectTransform, float left, float top, float right, float height)
-        {
-            rectTransform.anchorMin = new Vector2(0f, 1f);
-            rectTransform.anchorMax = new Vector2(1f, 1f);
-            rectTransform.pivot = new Vector2(0f, 1f);
-            rectTransform.offsetMin = new Vector2(left, top - height);
-            rectTransform.offsetMax = new Vector2(-right, top);
         }
 
         private static void SetFixedRect(RectTransform rectTransform, Vector2 anchor, Vector2 anchoredPosition, Vector2 size)

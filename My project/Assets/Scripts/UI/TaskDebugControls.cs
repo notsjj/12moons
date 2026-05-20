@@ -13,6 +13,26 @@ namespace TwelveMoons.UI
 
         [Header("Demo")]
         [SerializeField] private string demoTaskId = "task_demo_relief_01";
+        [SerializeField]
+        private string[] demoTaskIds =
+        {
+            "task_demo_relief_01",
+            "task_punish_noble_01",
+            "task_punish_academy_01",
+            "task_punish_church_01",
+            "task_punish_civilian_01",
+            "task_scroll_test_01",
+            "task_scroll_test_02",
+            "task_scroll_test_03",
+            "task_scroll_test_04",
+            "task_scroll_test_05",
+            "task_scroll_test_06",
+            "task_scroll_test_07",
+            "task_scroll_test_08",
+            "task_scroll_test_09",
+            "task_scroll_test_10"
+        };
+
         [SerializeField] private int scoreStep = 1;
         [SerializeField] private TMP_Text feedbackText;
 
@@ -38,6 +58,31 @@ namespace TwelveMoons.UI
         {
             var state = taskService != null ? taskService.ActivateTask(demoTaskId) : null;
             SetFeedback(state != null ? $"Activated {demoTaskId}." : "Task activation failed.");
+        }
+
+        public void ActivateDemoTasks()
+        {
+            if (taskService == null || demoTaskIds == null || demoTaskIds.Length == 0)
+            {
+                SetFeedback("Multi task activation failed.");
+                return;
+            }
+
+            var activatedCount = 0;
+            foreach (var taskId in demoTaskIds)
+            {
+                if (string.IsNullOrEmpty(taskId))
+                {
+                    continue;
+                }
+
+                if (taskService.ActivateTask(taskId) != null)
+                {
+                    activatedCount++;
+                }
+            }
+
+            SetFeedback($"Activated {activatedCount} demo tasks.");
         }
 
         public void AddDemoTaskScore()

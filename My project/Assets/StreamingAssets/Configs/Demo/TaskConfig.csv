@@ -4,3 +4,13 @@ task_punish_noble_01,Noble Inquiry,Faction,High noble suspicion penalty task,,,,
 task_punish_academy_01,Academy Inquiry,Faction,High academy suspicion penalty task,,,,,,,true,Demo high suspicion task
 task_punish_church_01,Church Inquiry,Faction,High church suspicion penalty task,,,,,,,true,Demo high suspicion task
 task_punish_civilian_01,Civilian Inquiry,Faction,High civilian suspicion penalty task,,,,,,,true,Demo high suspicion task
+task_scroll_test_01,Scroll Test 01,Small,Task panel scroll test task 01,,,,,,,true,Task panel scroll test
+task_scroll_test_02,Scroll Test 02,Small,Task panel scroll test task 02,,,,,,,true,Task panel scroll test
+task_scroll_test_03,Scroll Test 03,Small,Task panel scroll test task 03,,,,,,,true,Task panel scroll test
+task_scroll_test_04,Scroll Test 04,Small,Task panel scroll test task 04,,,,,,,true,Task panel scroll test
+task_scroll_test_05,Scroll Test 05,Small,Task panel scroll test task 05,,,,,,,true,Task panel scroll test
+task_scroll_test_06,Scroll Test 06,Small,Task panel scroll test task 06,,,,,,,true,Task panel scroll test
+task_scroll_test_07,Scroll Test 07,Small,Task panel scroll test task 07,,,,,,,true,Task panel scroll test
+task_scroll_test_08,Scroll Test 08,Small,Task panel scroll test task 08,,,,,,,true,Task panel scroll test
+task_scroll_test_09,Scroll Test 09,Small,Task panel scroll test task 09,,,,,,,true,Task panel scroll test
+task_scroll_test_10,Scroll Test 10,Small,Task panel scroll test task 10,,,,,,,true,Task panel scroll test
