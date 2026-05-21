@@ -34,6 +34,7 @@ namespace TwelveMoons.EditorTools
             var factionService = EnsureComponent<FactionService>(gameEntry.gameObject);
             var letterService = EnsureComponent<LetterService>(gameEntry.gameObject);
             var documentService = EnsureComponent<DocumentService>(gameEntry.gameObject);
+            var storyService = EnsureComponent<StoryService>(gameEntry.gameObject);
 
             ConfigureConfigManager(configManager);
             ConfigureRuntimeDataService(runtimeDataService, configManager);
@@ -43,6 +44,7 @@ namespace TwelveMoons.EditorTools
             ConfigureFactionService(factionService, configManager, runtimeDataService);
             ConfigureLetterService(letterService, configManager, runtimeDataService);
             ConfigureDocumentService(documentService, configManager, runtimeDataService, inventoryService, factionService, taskService, roundService);
+            ConfigureStoryService(storyService, configManager, runtimeDataService, inventoryService, taskService);
 
             var deskPanel = FindOrCreateUiChild(canvas.transform, "DeskPanel");
             ConfigureFullScreenRect(deskPanel.GetComponent<RectTransform>());
@@ -53,7 +55,22 @@ namespace TwelveMoons.EditorTools
             var suspicionPanel = BuildSuspicionPanel(deskPanel.transform, factionService, runtimeDataService);
             var letterArea = BuildLetterArea(deskPanel.transform, letterService);
             var sharedActorSlot = BuildSharedActorSlot(deskPanel.transform);
-            var documentPopupPanel = BuildDocumentPopupPanel(deskPanel.transform, documentService, sharedActorSlot.GetComponent<SharedActorSlotView>(), suspicionPanel.GetComponent<SuspicionPanelView>());
+            var documentPopupPanel = BuildDocumentPopupPanel(
+                deskPanel.transform,
+                documentService,
+                inventoryService,
+                sharedActorSlot.GetComponent<SharedActorSlotView>(),
+                suspicionPanel.GetComponent<SuspicionPanelView>());
+            var newspaperPanel = BuildNewspaperPanel(deskPanel.transform, runtimeDataService);
+            BuildDeskLoopControls(
+                deskPanel.transform,
+                runtimeDataService,
+                roundService,
+                taskService,
+                storyService,
+                documentService,
+                documentPopupPanel.GetComponent<DocumentPopupPanelView>(),
+                newspaperPanel.GetComponent<NewspaperPanelView>());
 
             var deskPanelView = EnsureComponent<DeskPanelView>(deskPanel);
             ConfigureDeskPanelView(
@@ -80,6 +97,7 @@ namespace TwelveMoons.EditorTools
 
             ConfigureGameEntry(gameEntry, deskPanel);
             documentPopupPanel.SetActive(false);
+            newspaperPanel.SetActive(false);
             testPanel.SetActive(false);
 
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
@@ -234,8 +252,10 @@ namespace TwelveMoons.EditorTools
             var roleText = FindOrCreateText(slot.transform, "RoleText", "", 13, FontStyles.Normal, TextAlignmentOptions.Center);
             SetFixedRect(roleText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(208f, 24f), new Vector2(0.5f, 0f));
 
-            var proposerFeedbackText = FindOrCreateText(slot.transform, "ProposerFeedbackText", "", 13, FontStyles.Normal, TextAlignmentOptions.TopLeft);
-            SetFixedRect(proposerFeedbackText.rectTransform, new Vector2(1f, 0.5f), new Vector2(18f, 0f), new Vector2(220f, 120f), new Vector2(0f, 0.5f));
+            var proposerFeedbackBackground = FindOrCreateImage(slot.transform, "ProposerFeedbackBackground", new Color(0.08f, 0.075f, 0.065f, 0.92f));
+            SetFixedRect(proposerFeedbackBackground.rectTransform, new Vector2(1f, 0.5f), new Vector2(20f, 0f), new Vector2(244f, 144f), new Vector2(0f, 0.5f));
+            var proposerFeedbackText = FindOrCreateText(proposerFeedbackBackground.transform, "ProposerFeedbackText", "", 13, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+            StretchRect(proposerFeedbackText.rectTransform, new Vector2(14f, 12f), new Vector2(-14f, -12f));
 
             var slotView = EnsureComponent<SharedActorSlotView>(slot);
             var serializedObject = new SerializedObject(slotView);
@@ -254,6 +274,7 @@ namespace TwelveMoons.EditorTools
         private static GameObject BuildDocumentPopupPanel(
             Transform parent,
             DocumentService documentService,
+            InventoryService inventoryService,
             SharedActorSlotView sharedActorSlot,
             SuspicionPanelView suspicionPanel)
         {
@@ -296,29 +317,16 @@ namespace TwelveMoons.EditorTools
             var dropArea = FindOrCreateImage(submitPanel.transform, "DropCardArea", new Color(0.12f, 0.08f, 0.04f, 0.78f));
             dropArea.raycastTarget = true;
             SetFixedRect(dropArea.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(104f, 150f), new Vector2(0.5f, 0.5f));
-
-            var submittedCard = FindOrCreateUiChild(dropArea.transform, "SubmittedCardPreview");
-            SetFixedRect(submittedCard.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(88f, 126f), new Vector2(0.5f, 0.5f));
-            ConfigurePanelImage(submittedCard, new Color(0.78f, 0.69f, 0.46f, 1f));
-            submittedCard.GetComponent<Image>().raycastTarget = false;
-            var submittedIcon = FindOrCreateImage(submittedCard.transform, "IconImage", new Color(1f, 1f, 1f, 1f));
-            SetFixedRect(submittedIcon.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(52f, 52f), new Vector2(0.5f, 1f));
-            var submittedName = FindOrCreateText(submittedCard.transform, "NameText", "", 11, FontStyles.Bold, TextAlignmentOptions.Center);
-            submittedName.color = new Color(0.16f, 0.09f, 0.04f, 1f);
-            SetFixedRect(submittedName.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 36f), new Vector2(78f, 28f), new Vector2(0.5f, 0f));
-            var submittedCount = FindOrCreateText(submittedCard.transform, "CountText", "", 16, FontStyles.Bold, TextAlignmentOptions.Center);
-            submittedCount.color = new Color(0.16f, 0.09f, 0.04f, 1f);
-            SetFixedRect(submittedCount.rectTransform, new Vector2(1f, 0f), new Vector2(-10f, 10f), new Vector2(26f, 24f), new Vector2(1f, 0f));
+            DestroyChildIfExists(dropArea.transform, "SubmittedCardPreview");
 
             var submitStatus = FindOrCreateText(submitPanel.transform, "StatusText", "", 12, FontStyles.Normal, TextAlignmentOptions.Center);
             SetFixedRect(submitStatus.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 12f), new Vector2(138f, 34f), new Vector2(0.5f, 0f));
             var submitSlot = EnsureComponent<DocumentSubmitSlot>(dropArea.gameObject);
             var submitSerializedObject = new SerializedObject(submitSlot);
+            submitSerializedObject.FindProperty("inventoryService").objectReferenceValue = inventoryService;
             submitSerializedObject.FindProperty("dropAreaImage").objectReferenceValue = dropArea;
-            submitSerializedObject.FindProperty("submittedCardRoot").objectReferenceValue = submittedCard;
-            submitSerializedObject.FindProperty("submittedIconImage").objectReferenceValue = submittedIcon;
-            submitSerializedObject.FindProperty("submittedNameText").objectReferenceValue = submittedName;
-            submitSerializedObject.FindProperty("submittedCountText").objectReferenceValue = submittedCount;
+            submitSerializedObject.FindProperty("submittedCardPrefab").objectReferenceValue = LoadOrCreateInventoryCardPrefab();
+            submitSerializedObject.FindProperty("submittedCardSize").vector2Value = new Vector2(96f, 118f);
             submitSerializedObject.FindProperty("statusText").objectReferenceValue = submitStatus;
             submitSerializedObject.ApplyModifiedPropertiesWithoutUndo();
 
@@ -346,6 +354,7 @@ namespace TwelveMoons.EditorTools
             var panelView = EnsureComponent<DocumentPopupPanelView>(panel);
             var serializedObject = new SerializedObject(panelView);
             serializedObject.FindProperty("documentService").objectReferenceValue = documentService;
+            serializedObject.FindProperty("inventoryService").objectReferenceValue = inventoryService;
             serializedObject.FindProperty("sharedActorSlot").objectReferenceValue = sharedActorSlot;
             serializedObject.FindProperty("suspicionPanel").objectReferenceValue = suspicionPanel;
             serializedObject.FindProperty("leftScrollEnd").objectReferenceValue = leftScrollEnd.rectTransform;
@@ -371,6 +380,90 @@ namespace TwelveMoons.EditorTools
 
             AddPersistentListenerIfMissing(optionAButton, panelView, nameof(DocumentPopupPanelView.OnOptionAClicked), panelView.OnOptionAClicked);
             AddPersistentListenerIfMissing(optionBButton, panelView, nameof(DocumentPopupPanelView.OnOptionBClicked), panelView.OnOptionBClicked);
+            return panel;
+        }
+
+        private static GameObject BuildNewspaperPanel(
+            Transform parent,
+            RuntimeDataService runtimeDataService)
+        {
+            var panel = FindOrCreateUiChild(parent, "NewspaperPanel");
+            SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(620f, 560f), new Vector2(0.5f, 0.5f));
+            ConfigurePanelImage(panel, new Color(0.78f, 0.72f, 0.56f, 0.98f));
+
+            var titleText = FindOrCreateText(panel.transform, "TitleText", "报纸", 28, FontStyles.Bold, TextAlignmentOptions.Center);
+            titleText.color = new Color(0.14f, 0.09f, 0.04f, 1f);
+            SetFixedRect(titleText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(560f, 44f), new Vector2(0.5f, 1f));
+
+            var bodyText = FindOrCreateText(panel.transform, "BodyText", "", 18, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+            bodyText.color = new Color(0.14f, 0.09f, 0.04f, 1f);
+            bodyText.overflowMode = TextOverflowModes.Overflow;
+            SetFixedRect(bodyText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -96f), new Vector2(540f, 360f), new Vector2(0.5f, 1f));
+
+            var emptyText = FindOrCreateText(panel.transform, "EmptyText", "", 16, FontStyles.Normal, TextAlignmentOptions.Center);
+            emptyText.color = new Color(0.14f, 0.09f, 0.04f, 1f);
+            SetFixedRect(emptyText.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420f, 60f), new Vector2(0.5f, 0.5f));
+
+            var closeButton = FindOrCreateButton(panel.transform, "CloseButton", "关闭");
+            SetFixedRect(closeButton.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 28f), new Vector2(140f, 42f), new Vector2(0.5f, 0f));
+
+            var panelView = EnsureComponent<NewspaperPanelView>(panel);
+            var serializedObject = new SerializedObject(panelView);
+            serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
+            serializedObject.FindProperty("titleText").objectReferenceValue = titleText;
+            serializedObject.FindProperty("bodyText").objectReferenceValue = bodyText;
+            serializedObject.FindProperty("emptyText").objectReferenceValue = emptyText;
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+            AddPersistentListenerIfMissing(closeButton, panelView, nameof(NewspaperPanelView.Hide), panelView.Hide);
+            return panel;
+        }
+
+        private static GameObject BuildDeskLoopControls(
+            Transform parent,
+            RuntimeDataService runtimeDataService,
+            RoundService roundService,
+            TaskService taskService,
+            StoryService storyService,
+            DocumentService documentService,
+            DocumentPopupPanelView documentPopupPanel,
+            NewspaperPanelView newspaperPanel)
+        {
+            var panel = FindOrCreateUiChild(parent, "DeskLoopControls");
+            SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 24f), new Vector2(720f, 92f), new Vector2(0.5f, 0f));
+            ConfigurePanelImage(panel, new Color(0.1f, 0.095f, 0.082f, 0.92f));
+
+            var storyButton = FindOrCreateButton(panel.transform, "StoryButton", "播放剧情");
+            SetFixedRect(storyButton.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(18f, -16f), new Vector2(150f, 38f), new Vector2(0f, 1f));
+            var documentButton = FindOrCreateButton(panel.transform, "DocumentButton", "处理公文");
+            SetFixedRect(documentButton.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(182f, -16f), new Vector2(150f, 38f), new Vector2(0f, 1f));
+            var endRoundButton = FindOrCreateButton(panel.transform, "EndRoundButton", "结束回合");
+            SetFixedRect(endRoundButton.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(346f, -16f), new Vector2(150f, 38f), new Vector2(0f, 1f));
+            var newspaperButton = FindOrCreateButton(panel.transform, "NewspaperButton", "报纸");
+            SetFixedRect(newspaperButton.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(510f, -16f), new Vector2(150f, 38f), new Vector2(0f, 1f));
+
+            var statusText = FindOrCreateText(panel.transform, "StatusText", "", 14, FontStyles.Normal, TextAlignmentOptions.Left);
+            SetFixedRect(statusText.rectTransform, new Vector2(0f, 0f), new Vector2(18f, 12f), new Vector2(660f, 28f), new Vector2(0f, 0f));
+
+            var controller = EnsureComponent<DeskLoopController>(panel);
+            var serializedObject = new SerializedObject(controller);
+            serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
+            serializedObject.FindProperty("roundService").objectReferenceValue = roundService;
+            serializedObject.FindProperty("taskService").objectReferenceValue = taskService;
+            serializedObject.FindProperty("storyService").objectReferenceValue = storyService;
+            serializedObject.FindProperty("documentService").objectReferenceValue = documentService;
+            serializedObject.FindProperty("documentPopupPanel").objectReferenceValue = documentPopupPanel;
+            serializedObject.FindProperty("newspaperPanel").objectReferenceValue = newspaperPanel;
+            serializedObject.FindProperty("storyButton").objectReferenceValue = storyButton;
+            serializedObject.FindProperty("documentButton").objectReferenceValue = documentButton;
+            serializedObject.FindProperty("endRoundButton").objectReferenceValue = endRoundButton;
+            serializedObject.FindProperty("newspaperButton").objectReferenceValue = newspaperButton;
+            serializedObject.FindProperty("statusText").objectReferenceValue = statusText;
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+
+            AddPersistentListenerIfMissing(storyButton, controller, nameof(DeskLoopController.StartOrContinueStoryQueue), controller.StartOrContinueStoryQueue);
+            AddPersistentListenerIfMissing(documentButton, controller, nameof(DeskLoopController.BeginDocumentFlow), controller.BeginDocumentFlow);
+            AddPersistentListenerIfMissing(endRoundButton, controller, nameof(DeskLoopController.EndCurrentRound), controller.EndCurrentRound);
+            AddPersistentListenerIfMissing(newspaperButton, controller, nameof(DeskLoopController.ShowPreviousRoundNewspaper), controller.ShowPreviousRoundNewspaper);
             return panel;
         }
 
@@ -897,6 +990,21 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("factionService").objectReferenceValue = factionService;
             serializedObject.FindProperty("taskService").objectReferenceValue = taskService;
             serializedObject.FindProperty("roundService").objectReferenceValue = roundService;
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureStoryService(
+            StoryService storyService,
+            ConfigManager configManager,
+            RuntimeDataService runtimeDataService,
+            InventoryService inventoryService,
+            TaskService taskService)
+        {
+            var serializedObject = new SerializedObject(storyService);
+            serializedObject.FindProperty("configManager").objectReferenceValue = configManager;
+            serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
+            serializedObject.FindProperty("inventoryService").objectReferenceValue = inventoryService;
+            serializedObject.FindProperty("taskService").objectReferenceValue = taskService;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 

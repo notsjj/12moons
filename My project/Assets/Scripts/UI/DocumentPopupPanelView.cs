@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using DG.Tweening;
 using TMPro;
 using TwelveMoons.Core.Runtime;
@@ -22,6 +23,7 @@ namespace TwelveMoons.UI
 
         [Header("依赖对象：运行时服务与共用人物框")]
         [SerializeField] private DocumentService documentService;
+        [SerializeField] private InventoryService inventoryService;
         [SerializeField] private SharedActorSlotView sharedActorSlot;
 
         [Header("质疑度栏：选项结算后显示阵营反馈")]
@@ -207,7 +209,7 @@ namespace TwelveMoons.UI
             lastSubmitAccepted = false;
             ClearTransientFeedback();
             SetText(titleText, document.Title);
-            SetText(bodyText, document.BodyText);
+            SetText(bodyText, BuildBodyTextWithRequirements(document));
             SetText(optionAText, document.OptionA.Text);
             SetText(optionBText, document.OptionB.Text);
             SetText(proposerFeedbackText, string.Empty);
@@ -236,16 +238,14 @@ namespace TwelveMoons.UI
             }
 
             var option = currentDocument.GetOption(optionType);
-            if (RequiresSubmittedItem(option) && (submitSlot == null || !submitSlot.HasAcceptedItem))
+            if (RequiresSubmittedItem(option) && !HasSubmittedRequirement(option))
             {
                 SetText(flowStatusText, "这个选项需要先把对应卡牌拖入提交区域。");
                 RefreshOptionLocks();
                 return;
             }
 
-            var requiredItemAlreadySubmitted = RequiresSubmittedItem(option) &&
-                submitSlot != null &&
-                submitSlot.HasAcceptedItem;
+            var requiredItemAlreadySubmitted = HasSubmittedRequirement(option);
             var result = documentService.ResolveDocument(currentEntry, optionType, requiredItemAlreadySubmitted);
             SetText(proposerFeedbackText, string.Empty);
 
@@ -423,8 +423,8 @@ namespace TwelveMoons.UI
 
         private void ConfigureSubmitPanel(DocumentDefinition document)
         {
-            var optionARequiresItem = RequiresSubmittedItem(document.OptionA);
-            var optionBRequiresItem = RequiresSubmittedItem(document.OptionB);
+            var optionARequiresItem = TryGetSubmittedRequirement(document.OptionA, out var optionAItemId, out var optionACount);
+            var optionBRequiresItem = TryGetSubmittedRequirement(document.OptionB, out var optionBItemId, out var optionBCount);
             if (!optionARequiresItem && !optionBRequiresItem)
             {
                 HideSubmitPanel();
@@ -436,8 +436,9 @@ namespace TwelveMoons.UI
                 submitPanel.SetActive(true);
             }
 
-            var requiredOption = optionARequiresItem ? document.OptionA : document.OptionB;
-            submitSlot?.Configure(requiredOption.RequiredItemId, requiredOption.RequiredItemCount);
+            submitSlot?.Configure(
+                optionARequiresItem ? optionAItemId : optionBItemId,
+                optionARequiresItem ? optionACount : optionBCount);
         }
 
         private void HideSubmitPanel()
@@ -458,8 +459,8 @@ namespace TwelveMoons.UI
                 return;
             }
 
-            SetButtonInteractable(optionAButton, !RequiresSubmittedItem(currentDocument.OptionA) || (submitSlot != null && submitSlot.HasAcceptedItem));
-            SetButtonInteractable(optionBButton, !RequiresSubmittedItem(currentDocument.OptionB) || (submitSlot != null && submitSlot.HasAcceptedItem));
+            SetButtonInteractable(optionAButton, !TryGetSubmittedRequirement(currentDocument.OptionA, out _, out _) || HasSubmittedRequirement(currentDocument.OptionA));
+            SetButtonInteractable(optionBButton, !TryGetSubmittedRequirement(currentDocument.OptionB, out _, out _) || HasSubmittedRequirement(currentDocument.OptionB));
         }
 
         private void ClearStamps()
@@ -517,6 +518,11 @@ namespace TwelveMoons.UI
                 documentService = FindFirstObjectByType<DocumentService>();
             }
 
+            if (inventoryService == null)
+            {
+                inventoryService = FindFirstObjectByType<InventoryService>();
+            }
+
             if (sharedActorSlot == null)
             {
                 sharedActorSlot = FindFirstObjectByType<SharedActorSlotView>(FindObjectsInactive.Include);
@@ -561,8 +567,160 @@ namespace TwelveMoons.UI
         private static bool RequiresSubmittedItem(DocumentOptionDefinition option)
         {
             return option != null &&
-                !string.IsNullOrEmpty(option.RequiredItemId) &&
-                option.RequiredItemCount > 0;
+                ((!string.IsNullOrEmpty(option.RequiredItemId) && option.RequiredItemCount > 0) ||
+                 option.MoneyChange < 0 ||
+                 option.MaterialChange < 0 ||
+                 option.FoodChange < 0);
+        }
+
+        private bool TryGetSubmittedRequirement(DocumentOptionDefinition option, out string itemId, out int count)
+        {
+            itemId = string.Empty;
+            count = 0;
+            if (option == null)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(option.RequiredItemId) && option.RequiredItemCount > 0)
+            {
+                itemId = option.RequiredItemId;
+                count = option.RequiredItemCount;
+                return true;
+            }
+
+            if (option.MoneyChange < 0 && TryFindItemIdByType(InventoryItemType.Money, out itemId))
+            {
+                count = -option.MoneyChange;
+                return true;
+            }
+
+            if (option.MaterialChange < 0 && TryFindItemIdByType(InventoryItemType.Material, out itemId))
+            {
+                count = -option.MaterialChange;
+                return true;
+            }
+
+            if (option.FoodChange < 0 && TryFindItemIdByType(InventoryItemType.Food, out itemId))
+            {
+                count = -option.FoodChange;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool HasSubmittedRequirement(DocumentOptionDefinition option)
+        {
+            return TryGetSubmittedRequirement(option, out var itemId, out var count) &&
+                submitSlot != null &&
+                submitSlot.HasAcceptedItem &&
+                submitSlot.AcceptedItemId == itemId &&
+                submitSlot.AcceptedItemCount == count;
+        }
+
+        private bool TryFindItemIdByType(InventoryItemType itemType, out string itemId)
+        {
+            itemId = string.Empty;
+            if (inventoryService == null)
+            {
+                return false;
+            }
+
+            foreach (var definition in inventoryService.Definitions)
+            {
+                if (definition.ItemType == itemType)
+                {
+                    itemId = definition.ItemId;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private string BuildBodyTextWithRequirements(DocumentDefinition document)
+        {
+            if (document == null)
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder(document.BodyText ?? string.Empty);
+            var optionARequirements = BuildRequirementText(document.OptionA);
+            var optionBRequirements = BuildRequirementText(document.OptionB);
+            if (string.IsNullOrEmpty(optionARequirements) && string.IsNullOrEmpty(optionBRequirements))
+            {
+                return builder.ToString();
+            }
+
+            if (builder.Length > 0)
+            {
+                builder.AppendLine();
+                builder.AppendLine();
+            }
+
+            builder.AppendLine("所需物品：");
+            if (!string.IsNullOrEmpty(optionARequirements))
+            {
+                builder.AppendLine($"甲：{optionARequirements}");
+            }
+
+            if (!string.IsNullOrEmpty(optionBRequirements))
+            {
+                builder.AppendLine($"乙：{optionBRequirements}");
+            }
+
+            return builder.ToString();
+        }
+
+        private string BuildRequirementText(DocumentOptionDefinition option)
+        {
+            if (option == null)
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder();
+            AppendRequirement(builder, option.RequiredItemId, option.RequiredItemCount);
+            AppendResourceRequirement(builder, InventoryItemType.Money, option.MoneyChange);
+            AppendResourceRequirement(builder, InventoryItemType.Material, option.MaterialChange);
+            AppendResourceRequirement(builder, InventoryItemType.Food, option.FoodChange);
+            return builder.ToString();
+        }
+
+        private void AppendResourceRequirement(StringBuilder builder, InventoryItemType itemType, int delta)
+        {
+            if (delta >= 0 || !TryFindItemIdByType(itemType, out var itemId))
+            {
+                return;
+            }
+
+            AppendRequirement(builder, itemId, -delta);
+        }
+
+        private void AppendRequirement(StringBuilder builder, string itemId, int count)
+        {
+            if (string.IsNullOrEmpty(itemId) || count <= 0)
+            {
+                return;
+            }
+
+            if (builder.Length > 0)
+            {
+                builder.Append("，");
+            }
+
+            builder.Append(GetItemDisplayName(itemId)).Append(" x").Append(count);
+        }
+
+        private string GetItemDisplayName(string itemId)
+        {
+            return inventoryService != null &&
+                inventoryService.TryGetDefinition(itemId, out var definition) &&
+                !string.IsNullOrEmpty(definition.ItemName)
+                ? definition.ItemName
+                : itemId;
         }
 
         private static void SetText(TMP_Text target, string value)

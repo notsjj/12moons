@@ -66,6 +66,69 @@ namespace TwelveMoons.EditorTools
             Debug.Log("Document UI only setup completed. Only DeskPanel/DocumentPopupPanel was created and bound.");
         }
 
+        [MenuItem("Twelve Moons/Setup/Update Document Submit Slot Only")]
+        public static void UpdateDocumentSubmitSlotOnly()
+        {
+            var documentPopupPanel = Object.FindFirstObjectByType<DocumentPopupPanelView>(FindObjectsInactive.Include);
+            if (documentPopupPanel == null)
+            {
+                Fail("DocumentPopupPanelView not found. Submit slot update will not create the document popup.");
+                return;
+            }
+
+            var submitPanel = FindChildRecursive(documentPopupPanel.transform, "SubmitCardSlot");
+            if (submitPanel == null)
+            {
+                Fail("SubmitCardSlot not found under DocumentPopupPanel. Keep your current layout and create that object first.");
+                return;
+            }
+
+            var dropAreaTransform = FindChildRecursive(submitPanel, "DropCardArea");
+            if (dropAreaTransform == null)
+            {
+                Fail("DropCardArea not found under SubmitCardSlot. Keep your current layout and create that drop area first.");
+                return;
+            }
+
+            var oldPreview = FindChildRecursive(dropAreaTransform, "SubmittedCardPreview");
+            if (oldPreview != null)
+            {
+                Object.DestroyImmediate(oldPreview.gameObject);
+            }
+
+            var dropAreaImage = dropAreaTransform.GetComponent<Image>();
+            if (dropAreaImage == null)
+            {
+                dropAreaImage = dropAreaTransform.gameObject.AddComponent<Image>();
+            }
+
+            dropAreaImage.raycastTarget = true;
+            var statusTextTransform = FindChildRecursive(submitPanel, "StatusText");
+            var statusText = statusTextTransform != null
+                ? statusTextTransform.GetComponent<TMP_Text>()
+                : null;
+
+            var submitSlot = EnsureComponent<DocumentSubmitSlot>(dropAreaTransform.gameObject);
+            var submitSerializedObject = new SerializedObject(submitSlot);
+            submitSerializedObject.FindProperty("inventoryService").objectReferenceValue = Object.FindFirstObjectByType<InventoryService>(FindObjectsInactive.Include);
+            submitSerializedObject.FindProperty("dropAreaImage").objectReferenceValue = dropAreaImage;
+            submitSerializedObject.FindProperty("submittedCardPrefab").objectReferenceValue =
+                AssetDatabase.LoadAssetAtPath<InventoryItemCard>("Assets/Prefabs/UI/InventoryItemCard.prefab");
+            submitSerializedObject.FindProperty("submittedCardSize").vector2Value = new Vector2(96f, 118f);
+            submitSerializedObject.FindProperty("statusText").objectReferenceValue = statusText;
+            submitSerializedObject.ApplyModifiedPropertiesWithoutUndo();
+
+            var popupSerializedObject = new SerializedObject(documentPopupPanel);
+            popupSerializedObject.FindProperty("inventoryService").objectReferenceValue = Object.FindFirstObjectByType<InventoryService>(FindObjectsInactive.Include);
+            popupSerializedObject.FindProperty("submitPanel").objectReferenceValue = submitPanel.gameObject;
+            popupSerializedObject.FindProperty("submitSlot").objectReferenceValue = submitSlot;
+            popupSerializedObject.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            Selection.activeObject = dropAreaTransform.gameObject;
+            Debug.Log("Document submit slot updated only. Existing SubmitCardSlot and DropCardArea layout was preserved.");
+        }
+
         private static bool TryResolveDocumentService(GameEntry gameEntry, out DocumentService documentService)
         {
             documentService = EnsureComponent<DocumentService>(gameEntry.gameObject);
@@ -159,28 +222,15 @@ namespace TwelveMoons.EditorTools
             dropArea.raycastTarget = true;
             SetFixedRect(dropArea.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(104f, 150f), new Vector2(0.5f, 0.5f));
 
-            var submittedCard = CreateUiChild(dropArea.transform, "SubmittedCardPreview");
-            SetFixedRect(submittedCard.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(88f, 126f), new Vector2(0.5f, 0.5f));
-            ConfigurePanelImage(submittedCard, new Color(0.78f, 0.69f, 0.46f, 1f));
-            submittedCard.GetComponent<Image>().raycastTarget = false;
-            var submittedIcon = CreateImage(submittedCard.transform, "IconImage", new Color(1f, 1f, 1f, 1f));
-            SetFixedRect(submittedIcon.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(52f, 52f), new Vector2(0.5f, 1f));
-            var submittedName = CreateText(submittedCard.transform, "NameText", "", 11, FontStyles.Bold, TextAlignmentOptions.Center);
-            submittedName.color = new Color(0.16f, 0.09f, 0.04f, 1f);
-            SetFixedRect(submittedName.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 36f), new Vector2(78f, 28f), new Vector2(0.5f, 0f));
-            var submittedCount = CreateText(submittedCard.transform, "CountText", "", 16, FontStyles.Bold, TextAlignmentOptions.Center);
-            submittedCount.color = new Color(0.16f, 0.09f, 0.04f, 1f);
-            SetFixedRect(submittedCount.rectTransform, new Vector2(1f, 0f), new Vector2(-10f, 10f), new Vector2(26f, 24f), new Vector2(1f, 0f));
-
             var submitStatus = CreateText(submitPanel.transform, "StatusText", "", 12, FontStyles.Normal, TextAlignmentOptions.Center);
             SetFixedRect(submitStatus.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 12f), new Vector2(138f, 34f), new Vector2(0.5f, 0f));
             var submitSlot = EnsureComponent<DocumentSubmitSlot>(dropArea.gameObject);
             var submitSerializedObject = new SerializedObject(submitSlot);
+            submitSerializedObject.FindProperty("inventoryService").objectReferenceValue = Object.FindFirstObjectByType<InventoryService>(FindObjectsInactive.Include);
             submitSerializedObject.FindProperty("dropAreaImage").objectReferenceValue = dropArea;
-            submitSerializedObject.FindProperty("submittedCardRoot").objectReferenceValue = submittedCard;
-            submitSerializedObject.FindProperty("submittedIconImage").objectReferenceValue = submittedIcon;
-            submitSerializedObject.FindProperty("submittedNameText").objectReferenceValue = submittedName;
-            submitSerializedObject.FindProperty("submittedCountText").objectReferenceValue = submittedCount;
+            submitSerializedObject.FindProperty("submittedCardPrefab").objectReferenceValue =
+                AssetDatabase.LoadAssetAtPath<InventoryItemCard>("Assets/Prefabs/UI/InventoryItemCard.prefab");
+            submitSerializedObject.FindProperty("submittedCardSize").vector2Value = new Vector2(96f, 118f);
             submitSerializedObject.FindProperty("statusText").objectReferenceValue = submitStatus;
             submitSerializedObject.ApplyModifiedPropertiesWithoutUndo();
 
@@ -208,6 +258,7 @@ namespace TwelveMoons.EditorTools
             var panelView = EnsureComponent<DocumentPopupPanelView>(panel);
             var serializedObject = new SerializedObject(panelView);
             serializedObject.FindProperty("documentService").objectReferenceValue = documentService;
+            serializedObject.FindProperty("inventoryService").objectReferenceValue = Object.FindFirstObjectByType<InventoryService>(FindObjectsInactive.Include);
             serializedObject.FindProperty("sharedActorSlot").objectReferenceValue = sharedActorSlot;
             serializedObject.FindProperty("suspicionPanel").objectReferenceValue = FindSuspicionPanel(parent);
             serializedObject.FindProperty("leftScrollEnd").objectReferenceValue = leftScrollEnd.rectTransform;
@@ -260,6 +311,31 @@ namespace TwelveMoons.EditorTools
             var childObject = new GameObject(childName, typeof(RectTransform));
             childObject.transform.SetParent(parent, false);
             return childObject;
+        }
+
+        private static Transform FindChildRecursive(Transform parent, string childName)
+        {
+            if (parent == null)
+            {
+                return null;
+            }
+
+            for (var index = 0; index < parent.childCount; index++)
+            {
+                var child = parent.GetChild(index);
+                if (child.name == childName)
+                {
+                    return child;
+                }
+
+                var nested = FindChildRecursive(child, childName);
+                if (nested != null)
+                {
+                    return nested;
+                }
+            }
+
+            return null;
         }
 
         private static TextMeshProUGUI CreateText(

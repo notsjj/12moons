@@ -16,6 +16,7 @@ namespace TwelveMoons.Core.Runtime
         private readonly List<RuntimeStoryProgressState> storyProgress = new List<RuntimeStoryProgressState>();
         private readonly List<RuntimeDocumentQueueEntry> documentQueue = new List<RuntimeDocumentQueueEntry>();
         private readonly List<RuntimeFollowUpDocumentState> followUpDocuments = new List<RuntimeFollowUpDocumentState>();
+        private readonly List<RuntimeNewspaperState> newspapers = new List<RuntimeNewspaperState>();
         private readonly List<string> processedDocumentDrawKeys = new List<string>();
 
         public string DisasterId { get; private set; }
@@ -42,6 +43,8 @@ namespace TwelveMoons.Core.Runtime
 
         public IReadOnlyList<RuntimeFollowUpDocumentState> FollowUpDocuments => followUpDocuments;
 
+        public IReadOnlyList<RuntimeNewspaperState> Newspapers => newspapers;
+
         public IReadOnlyList<string> ProcessedDocumentDrawKeys => processedDocumentDrawKeys;
 
         public void Reset(string disasterId, int totalRound)
@@ -58,6 +61,7 @@ namespace TwelveMoons.Core.Runtime
             storyProgress.Clear();
             documentQueue.Clear();
             followUpDocuments.Clear();
+            newspapers.Clear();
             processedDocumentDrawKeys.Clear();
         }
 
@@ -296,6 +300,31 @@ namespace TwelveMoons.Core.Runtime
             {
                 processedDocumentDrawKeys.Add(key);
             }
+        }
+
+        public RuntimeNewspaperState EnsureNewspaper(int round)
+        {
+            var safeRound = Math.Max(1, round);
+            var newspaper = newspapers.FirstOrDefault(candidate => candidate.Round == safeRound);
+            if (newspaper != null)
+            {
+                return newspaper;
+            }
+
+            newspaper = new RuntimeNewspaperState(safeRound);
+            newspapers.Add(newspaper);
+            return newspaper;
+        }
+
+        public void EnsureNewspaperEntry(int round, string entry)
+        {
+            EnsureNewspaper(round).AddEntry(entry);
+        }
+
+        public bool TryGetNewspaper(int round, out RuntimeNewspaperState newspaper)
+        {
+            newspaper = newspapers.FirstOrDefault(candidate => candidate.Round == round);
+            return newspaper != null;
         }
     }
 }

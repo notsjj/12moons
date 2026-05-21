@@ -175,15 +175,16 @@ namespace TwelveMoons.Core.Runtime
             }
 
             var feedbackFactionId = GetFeedbackFactionId(option);
-            ApplyResourceChange(InventoryItemType.Money, option.MoneyChange);
-            ApplyResourceChange(InventoryItemType.Material, option.MaterialChange);
-            ApplyResourceChange(InventoryItemType.Food, option.FoodChange);
+            ApplyResourceChange(InventoryItemType.Money, option.MoneyChange, requiredItemAlreadySubmitted && option.MoneyChange < 0);
+            ApplyResourceChange(InventoryItemType.Material, option.MaterialChange, requiredItemAlreadySubmitted && option.MaterialChange < 0);
+            ApplyResourceChange(InventoryItemType.Food, option.FoodChange, requiredItemAlreadySubmitted && option.FoodChange < 0);
             ApplyRequiredItem(option, requiredItemAlreadySubmitted);
             ApplyAddedItem(option);
             ApplySuspicion(option);
             ApplyTaskScore(document, option);
             ApplyBuildingUnlock(option);
             QueueNextDocument(entry, option);
+            RecordDocumentSettlement(document, option);
             runtimeDataService.Data.RemoveDocumentQueueEntry(entry);
             DocumentsChanged?.Invoke();
 
@@ -298,9 +299,9 @@ namespace TwelveMoons.Core.Runtime
                 return false;
             }
 
-            if (!CanAffordResource(InventoryItemType.Money, option.MoneyChange, out failReason) ||
-                !CanAffordResource(InventoryItemType.Material, option.MaterialChange, out failReason) ||
-                !CanAffordResource(InventoryItemType.Food, option.FoodChange, out failReason))
+            if (!CanAffordResource(InventoryItemType.Money, option.MoneyChange, requiredItemAlreadySubmitted, out failReason) ||
+                !CanAffordResource(InventoryItemType.Material, option.MaterialChange, requiredItemAlreadySubmitted, out failReason) ||
+                !CanAffordResource(InventoryItemType.Food, option.FoodChange, requiredItemAlreadySubmitted, out failReason))
             {
                 return false;
             }
@@ -317,10 +318,15 @@ namespace TwelveMoons.Core.Runtime
             return true;
         }
 
-        private bool CanAffordResource(InventoryItemType itemType, int delta, out string failReason)
+        private bool CanAffordResource(InventoryItemType itemType, int delta, bool alreadySubmitted, out string failReason)
         {
             failReason = string.Empty;
             if (delta >= 0)
+            {
+                return true;
+            }
+
+            if (alreadySubmitted)
             {
                 return true;
             }
@@ -335,9 +341,14 @@ namespace TwelveMoons.Core.Runtime
             return false;
         }
 
-        private void ApplyResourceChange(InventoryItemType itemType, int delta)
+        private void ApplyResourceChange(InventoryItemType itemType, int delta, bool alreadySubmitted)
         {
             if (delta == 0 || inventoryService == null)
+            {
+                return;
+            }
+
+            if (alreadySubmitted)
             {
                 return;
             }
@@ -451,6 +462,20 @@ namespace TwelveMoons.Core.Runtime
                 entry.TaskStageId,
                 entry.BeforeDocumentCharacterId,
                 option.NextDocumentDelayRound);
+        }
+
+        private void RecordDocumentSettlement(DocumentDefinition document, DocumentOptionDefinition option)
+        {
+            if (runtimeDataService == null || document == null || option == null)
+            {
+                return;
+            }
+
+            var title = string.IsNullOrEmpty(document.Title) ? document.DocumentId : document.Title;
+            var resultText = string.IsNullOrEmpty(option.ResultText) ? option.Text : option.ResultText;
+            runtimeDataService.Data.EnsureNewspaperEntry(
+                runtimeDataService.Data.CurrentRound,
+                $"公文处理：{title} - {resultText}");
         }
 
         private int QueueCurrentTaskDocuments()

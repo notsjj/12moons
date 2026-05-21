@@ -498,6 +498,7 @@ namespace TwelveMoons.Core.Runtime
                 if (inventoryService != null && inventoryService.AddItem(story.AddItemId, story.AddItemCount))
                 {
                     feedbackParts.Add($"Added item {story.AddItemId} x{story.AddItemCount}");
+                    RecordStorySettlement(story, $"剧情奖励：{GetStoryDisplayName(story)} 获得 {story.AddItemId} x{story.AddItemCount}");
                 }
             }
 
@@ -507,6 +508,7 @@ namespace TwelveMoons.Core.Runtime
                 if (task != null)
                 {
                     feedbackParts.Add($"Activated task {story.TriggerTaskId}");
+                    RecordStorySettlement(story, $"剧情触发任务：{GetStoryDisplayName(story)} -> {story.TriggerTaskId}");
                 }
             }
 
@@ -517,6 +519,21 @@ namespace TwelveMoons.Core.Runtime
         private void NotifyStoryChanged()
         {
             StoryChanged?.Invoke();
+        }
+
+        private void RecordStorySettlement(StoryDefinition story, string message)
+        {
+            if (runtimeDataService == null || story == null)
+            {
+                return;
+            }
+
+            runtimeDataService.Data.EnsureNewspaperEntry(runtimeDataService.Data.CurrentRound, message);
+        }
+
+        private static string GetStoryDisplayName(StoryDefinition story)
+        {
+            return string.IsNullOrEmpty(story.StoryName) ? story.StoryId : story.StoryName;
         }
     }
 }

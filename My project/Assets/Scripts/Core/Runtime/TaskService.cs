@@ -37,7 +37,7 @@ namespace TwelveMoons.Core.Runtime
         {
             if (roundService != null)
             {
-                roundService.RoundChanged += ProcessCurrentRound;
+                roundService.RoundChanged += ProcessCurrentRoundStart;
             }
         }
 
@@ -45,19 +45,19 @@ namespace TwelveMoons.Core.Runtime
         {
             if (roundService != null)
             {
-                roundService.RoundChanged -= ProcessCurrentRound;
+                roundService.RoundChanged -= ProcessCurrentRoundStart;
             }
         }
 
         private void Start()
         {
-            ProcessCurrentRound();
+            ProcessCurrentRoundStart();
         }
 
         public void Refresh()
         {
             LoadTaskConfig();
-            ProcessCurrentRound();
+            ProcessCurrentRoundStart();
         }
 
         public bool TryGetDefinition(string taskId, out TaskDefinition definition)
@@ -73,7 +73,7 @@ namespace TwelveMoons.Core.Runtime
             }
 
             var state = runtimeDataService.ActivateTask(taskId);
-            ProcessTaskStages(state);
+            ProcessTaskStageStarts(state);
             NotifyTasksChanged();
             return state;
         }
@@ -94,6 +94,12 @@ namespace TwelveMoons.Core.Runtime
 
         public void ProcessCurrentRound()
         {
+            ProcessCurrentRoundStart();
+            ProcessCurrentRoundEnd();
+        }
+
+        public void ProcessCurrentRoundStart()
+        {
             if (runtimeDataService == null)
             {
                 Debug.LogWarning("TaskService missing RuntimeDataService.", this);
@@ -109,7 +115,28 @@ namespace TwelveMoons.Core.Runtime
                     continue;
                 }
 
-                ProcessTaskStages(state);
+                ProcessTaskStageStarts(state);
+            }
+
+            NotifyTasksChanged();
+        }
+
+        public void ProcessCurrentRoundEnd()
+        {
+            if (runtimeDataService == null)
+            {
+                Debug.LogWarning("TaskService missing RuntimeDataService.", this);
+                return;
+            }
+
+            foreach (var state in runtimeDataService.Data.Tasks)
+            {
+                if (state.Status != TaskRuntimeStatus.Active)
+                {
+                    continue;
+                }
+
+                ProcessTaskStageEnds(state);
                 EvaluateTaskResult(state);
             }
 
@@ -248,6 +275,12 @@ namespace TwelveMoons.Core.Runtime
 
         private void ProcessTaskStages(RuntimeTaskState state)
         {
+            ProcessTaskStageStarts(state);
+            ProcessTaskStageEnds(state);
+        }
+
+        private void ProcessTaskStageStarts(RuntimeTaskState state)
+        {
             if (!stagesByTaskId.TryGetValue(state.TaskId, out var stages))
             {
                 return;
@@ -260,7 +293,19 @@ namespace TwelveMoons.Core.Runtime
                 {
                     ProcessStageStart(state, stage);
                 }
+            }
+        }
 
+        private void ProcessTaskStageEnds(RuntimeTaskState state)
+        {
+            if (!stagesByTaskId.TryGetValue(state.TaskId, out var stages))
+            {
+                return;
+            }
+
+            var relativeRound = runtimeDataService.Data.CurrentRound - state.ActivatedRound;
+            foreach (var stage in stages)
+            {
                 if (relativeRound == stage.EndOffsetRound && !state.HasProcessedStageEnd(stage.TaskStageId))
                 {
                     ProcessStageEnd(state, stage);
@@ -327,6 +372,7 @@ namespace TwelveMoons.Core.Runtime
             if (definition.SuccessScore > 0 && state.Score >= definition.SuccessScore)
             {
                 state.Complete(currentRound);
+                RecordTaskResult(definition, state, true);
                 return;
             }
 
@@ -335,14 +381,24 @@ namespace TwelveMoons.Core.Runtime
                 if (definition.FailScore != 0 && state.Score <= definition.FailScore)
                 {
                     state.Fail(currentRound);
+                    RecordTaskResult(definition, state, false);
                     return;
                 }
 
                 if (definition.SuccessScore > 0)
                 {
                     state.Fail(currentRound);
+                    RecordTaskResult(definition, state, false);
                 }
             }
+        }
+
+        private void RecordTaskResult(TaskDefinition definition, RuntimeTaskState state, bool completed)
+        {
+            var taskName = string.IsNullOrEmpty(definition.TaskName) ? definition.TaskId : definition.TaskName;
+            runtimeDataService?.Data.EnsureNewspaperEntry(
+                state.CompletedRound,
+                completed ? $"任务完成：{taskName}" : $"任务失败：{taskName}");
         }
 
         private bool TryGetUsableTask(string taskId, out TaskDefinition definition)

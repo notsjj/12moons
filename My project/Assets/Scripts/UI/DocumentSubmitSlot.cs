@@ -14,11 +14,9 @@ namespace TwelveMoons.UI
         [Header("提交区域：实际接收卡牌拖放的射线目标")]
         [SerializeField] private Image dropAreaImage;
 
-        [Header("提交预览：拖入后在槽中心显示需要提交的那一张卡牌")]
-        [SerializeField] private GameObject submittedCardRoot;
-        [SerializeField] private Image submittedIconImage;
-        [SerializeField] private TMP_Text submittedNameText;
-        [SerializeField] private TMP_Text submittedCountText;
+        [Header("提交卡牌：复用背包卡牌预制体并缩小显示")]
+        [SerializeField] private InventoryItemCard submittedCardPrefab;
+        [SerializeField] private Vector2 submittedCardSize = new Vector2(96f, 118f);
 
         [Header("状态文本：提示当前需要的物品和拖放结果")]
         [SerializeField] private TMP_Text statusText;
@@ -29,13 +27,15 @@ namespace TwelveMoons.UI
 
         public bool HasAcceptedItem { get; private set; }
 
+        private static readonly Vector2 InventoryCardDesignSize = new Vector2(180f, 220f);
         private bool acceptedItemCommitted;
+        private InventoryItemCard submittedCardInstance;
 
         private void Awake()
         {
             ResolveDependencies();
             ConfigureDropRaycast();
-            HideSubmittedPreview();
+            HideSubmittedCard();
         }
 
         public void Configure(string requiredItemId, int requiredCount)
@@ -45,7 +45,7 @@ namespace TwelveMoons.UI
             AcceptedItemCount = Mathf.Max(0, requiredCount);
             SetStatus(string.IsNullOrEmpty(AcceptedItemId)
                 ? string.Empty
-                : $"拖入：{AcceptedItemId} x{AcceptedItemCount}");
+                : "拖入公文正文要求的物品。");
         }
 
         public void Clear()
@@ -55,7 +55,7 @@ namespace TwelveMoons.UI
             AcceptedItemCount = 0;
             HasAcceptedItem = false;
             acceptedItemCommitted = false;
-            HideSubmittedPreview();
+            HideSubmittedCard();
             SetStatus(string.Empty);
         }
 
@@ -75,27 +75,27 @@ namespace TwelveMoons.UI
             {
                 SetStatus(string.IsNullOrEmpty(AcceptedItemId)
                     ? string.Empty
-                    : $"请拖入：{AcceptedItemId} x{AcceptedItemCount}");
+                    : "拖入物品与公文正文要求不符。");
                 return;
             }
 
             if (inventoryService == null || !inventoryService.HasItem(AcceptedItemId, AcceptedItemCount))
             {
-                SetStatus($"数量不足：{AcceptedItemId} x{AcceptedItemCount}");
+                SetStatus("数量不足，请查看公文正文要求。");
                 return;
             }
 
             RefundUncommittedAcceptedItem();
             if (!inventoryService.TryRemoveItem(AcceptedItemId, AcceptedItemCount))
             {
-                SetStatus($"提交失败：{AcceptedItemId} x{AcceptedItemCount}");
+                SetStatus("提交失败，请查看公文正文要求。");
                 return;
             }
 
             HasAcceptedItem = true;
             acceptedItemCommitted = false;
-            ShowSubmittedPreview();
-            SetStatus($"已放入：{AcceptedItemId} x{AcceptedItemCount}");
+            ShowSubmittedCard();
+            SetStatus("已放入公文要求的物品。");
         }
 
         private void RefundUncommittedAcceptedItem()
@@ -112,48 +112,61 @@ namespace TwelveMoons.UI
             inventoryService?.AddItem(AcceptedItemId, AcceptedItemCount);
         }
 
-        private void ShowSubmittedPreview()
+        private void ShowSubmittedCard()
         {
-            if (submittedCardRoot != null)
+            if (submittedCardPrefab == null ||
+                inventoryService == null ||
+                !inventoryService.TryGetDefinition(AcceptedItemId, out var definition))
             {
-                submittedCardRoot.SetActive(true);
+                HideSubmittedCard();
+                return;
             }
 
-            if (inventoryService != null &&
-                inventoryService.TryGetDefinition(AcceptedItemId, out var definition))
+            if (submittedCardInstance == null)
             {
-                if (submittedIconImage != null)
-                {
-                    submittedIconImage.sprite = InventoryIconProvider.LoadIcon(definition.IconId);
-                    submittedIconImage.enabled = submittedIconImage.sprite != null;
-                    submittedIconImage.preserveAspect = true;
-                }
-
-                SetText(submittedNameText, string.IsNullOrEmpty(definition.ItemName) ? definition.ItemId : definition.ItemName);
-            }
-            else
-            {
-                SetText(submittedNameText, AcceptedItemId);
+                submittedCardInstance = Instantiate(submittedCardPrefab, transform);
+                submittedCardInstance.name = "SubmittedInventoryItemCard";
+                DisablePreviewCardInput(submittedCardInstance.gameObject);
             }
 
-            SetText(submittedCountText, AcceptedItemCount.ToString());
+            submittedCardInstance.gameObject.SetActive(true);
+            submittedCardInstance.Bind(definition, new RuntimeItemState(AcceptedItemId, AcceptedItemCount));
+            var rectTransform = submittedCardInstance.transform as RectTransform;
+            if (rectTransform != null)
+            {
+                var scale = CalculateSubmittedCardScale();
+                rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+                rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+                rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                rectTransform.anchoredPosition = Vector2.zero;
+                rectTransform.sizeDelta = InventoryCardDesignSize;
+                rectTransform.localScale = new Vector3(scale, scale, 1f);
+            }
+
+            var layoutElement = submittedCardInstance.GetComponent<LayoutElement>();
+            if (layoutElement != null)
+            {
+                layoutElement.ignoreLayout = true;
+            }
         }
 
-        private void HideSubmittedPreview()
+        private float CalculateSubmittedCardScale()
         {
-            if (submittedCardRoot != null)
-            {
-                submittedCardRoot.SetActive(false);
-            }
+            var widthScale = submittedCardSize.x > 0f
+                ? submittedCardSize.x / InventoryCardDesignSize.x
+                : 1f;
+            var heightScale = submittedCardSize.y > 0f
+                ? submittedCardSize.y / InventoryCardDesignSize.y
+                : 1f;
+            return Mathf.Max(0.01f, Mathf.Min(widthScale, heightScale));
+        }
 
-            if (submittedIconImage != null)
+        private void HideSubmittedCard()
+        {
+            if (submittedCardInstance != null)
             {
-                submittedIconImage.sprite = null;
-                submittedIconImage.enabled = false;
+                submittedCardInstance.gameObject.SetActive(false);
             }
-
-            SetText(submittedNameText, string.Empty);
-            SetText(submittedCountText, string.Empty);
         }
 
         private void ResolveDependencies()
@@ -177,16 +190,32 @@ namespace TwelveMoons.UI
             }
         }
 
-        private void SetStatus(string value)
+        private static void DisablePreviewCardInput(GameObject cardObject)
         {
-            SetText(statusText, value);
+            var card = cardObject.GetComponent<InventoryItemCard>();
+            if (card != null)
+            {
+                card.enabled = false;
+            }
+
+            var canvasGroup = cardObject.GetComponent<CanvasGroup>();
+            if (canvasGroup != null)
+            {
+                canvasGroup.blocksRaycasts = false;
+                canvasGroup.interactable = false;
+            }
+
+            foreach (var graphic in cardObject.GetComponentsInChildren<Graphic>(true))
+            {
+                graphic.raycastTarget = false;
+            }
         }
 
-        private static void SetText(TMP_Text target, string value)
+        private void SetStatus(string value)
         {
-            if (target != null)
+            if (statusText != null)
             {
-                target.text = value ?? string.Empty;
+                statusText.text = value ?? string.Empty;
             }
         }
     }
