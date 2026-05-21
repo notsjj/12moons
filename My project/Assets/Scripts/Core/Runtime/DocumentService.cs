@@ -8,15 +8,23 @@ namespace TwelveMoons.Core.Runtime
     public sealed class DocumentService : MonoBehaviour
     {
         [Header("依赖服务：配置、运行时、物品、阵营、任务和回合")]
+        [Tooltip("配置管理器；用于读取 DocumentConfig 和 CharacterConfig。")]
         [SerializeField] private ConfigManager configManager;
+        [Tooltip("运行时数据服务；用于读取当前回合、任务、公文队列和后续公文。")]
         [SerializeField] private RuntimeDataService runtimeDataService;
+        [Tooltip("背包服务；用于处理公文选项的资源与道具消耗或奖励。")]
         [SerializeField] private InventoryService inventoryService;
+        [Tooltip("阵营服务；用于处理公文选项带来的质疑度变化。")]
         [SerializeField] private FactionService factionService;
+        [Tooltip("任务服务；用于读取当前任务阶段和处理公文造成的任务分数变化。")]
         [SerializeField] private TaskService taskService;
+        [Tooltip("回合服务；用于判断当前灾难阶段并在回合变化时刷新公文队列。")]
         [SerializeField] private RoundService roundService;
 
         [Header("抽取规则：每回合公文数量限制")]
+        [Tooltip("当前回合最多进入待处理队列的公文数量。")]
         [SerializeField] private int maxDocumentsPerRound = 6;
+        [Tooltip("每回合优先抽取的全局公文数量。")]
         [SerializeField] private int globalDocumentsPerRound = 2;
 
         private readonly List<DocumentDefinition> definitions = new List<DocumentDefinition>();
@@ -142,6 +150,14 @@ namespace TwelveMoons.Core.Runtime
 
         public DocumentResolutionResult ResolveDocument(RuntimeDocumentQueueEntry entry, DocumentOptionType optionType)
         {
+            return ResolveDocument(entry, optionType, false);
+        }
+
+        public DocumentResolutionResult ResolveDocument(
+            RuntimeDocumentQueueEntry entry,
+            DocumentOptionType optionType,
+            bool requiredItemAlreadySubmitted)
+        {
             if (entry == null)
             {
                 return Fail("No document is selected.");
@@ -153,7 +169,7 @@ namespace TwelveMoons.Core.Runtime
             }
 
             var option = document.GetOption(optionType);
-            if (!CanAffordOption(option, out var failReason))
+            if (!CanAffordOption(option, requiredItemAlreadySubmitted, out var failReason))
             {
                 return Fail(failReason);
             }
@@ -162,7 +178,7 @@ namespace TwelveMoons.Core.Runtime
             ApplyResourceChange(InventoryItemType.Money, option.MoneyChange);
             ApplyResourceChange(InventoryItemType.Material, option.MaterialChange);
             ApplyResourceChange(InventoryItemType.Food, option.FoodChange);
-            ApplyRequiredItem(option);
+            ApplyRequiredItem(option, requiredItemAlreadySubmitted);
             ApplyAddedItem(option);
             ApplySuspicion(option);
             ApplyTaskScore(document, option);
@@ -171,10 +187,7 @@ namespace TwelveMoons.Core.Runtime
             runtimeDataService.Data.RemoveDocumentQueueEntry(entry);
             DocumentsChanged?.Invoke();
 
-            var feedback = string.IsNullOrEmpty(option.FactionFeedbackText)
-                ? option.ProposerFeedbackText
-                : $"{option.ProposerFeedbackText}\n{option.FactionFeedbackText}";
-            return new DocumentResolutionResult(true, option.ResultText, option.ProposerFeedbackText, feedback, feedbackFactionId);
+            return new DocumentResolutionResult(true, option.ResultText, option.ProposerFeedbackText, option.FactionFeedbackText, feedbackFactionId);
         }
 
         public RuntimeDocumentQueueEntry QueueDocument(string documentId, string taskId = "", string taskStageId = "", string beforeDocumentCharacterId = "", int delayRound = 0)
@@ -276,7 +289,7 @@ namespace TwelveMoons.Core.Runtime
             }
         }
 
-        private bool CanAffordOption(DocumentOptionDefinition option, out string failReason)
+        private bool CanAffordOption(DocumentOptionDefinition option, bool requiredItemAlreadySubmitted, out string failReason)
         {
             failReason = string.Empty;
             if (inventoryService == null)
@@ -292,7 +305,8 @@ namespace TwelveMoons.Core.Runtime
                 return false;
             }
 
-            if (!string.IsNullOrEmpty(option.RequiredItemId) &&
+            if (!requiredItemAlreadySubmitted &&
+                !string.IsNullOrEmpty(option.RequiredItemId) &&
                 option.RequiredItemCount > 0 &&
                 !inventoryService.HasItem(option.RequiredItemId, option.RequiredItemCount))
             {
@@ -337,9 +351,10 @@ namespace TwelveMoons.Core.Runtime
             inventoryService.TryRemoveByType(itemType, -delta);
         }
 
-        private void ApplyRequiredItem(DocumentOptionDefinition option)
+        private void ApplyRequiredItem(DocumentOptionDefinition option, bool requiredItemAlreadySubmitted)
         {
-            if (option.ConsumeItem &&
+            if (!requiredItemAlreadySubmitted &&
+                option.ConsumeItem &&
                 !string.IsNullOrEmpty(option.RequiredItemId) &&
                 option.RequiredItemCount > 0)
             {

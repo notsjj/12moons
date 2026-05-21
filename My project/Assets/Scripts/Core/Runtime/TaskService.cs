@@ -7,9 +7,12 @@ namespace TwelveMoons.Core.Runtime
 {
     public sealed class TaskService : MonoBehaviour
     {
-        [Header("Dependencies")]
+        [Header("依赖服务：配置、运行时和回合")]
+        [Tooltip("配置管理器；用于读取 TaskConfig 和 TaskStageConfig。")]
         [SerializeField] private ConfigManager configManager;
+        [Tooltip("运行时数据服务；用于保存任务状态、阶段处理记录和队列结果。")]
         [SerializeField] private RuntimeDataService runtimeDataService;
+        [Tooltip("回合服务；用于在回合变化时推进任务阶段。")]
         [SerializeField] private RoundService roundService;
 
         private readonly List<TaskDefinition> definitions = new List<TaskDefinition>();

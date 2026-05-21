@@ -12,6 +12,7 @@ namespace TwelveMoons.UI
         [SerializeField] private Image portraitImage;
         [SerializeField] private TMP_Text nameText;
         [SerializeField] private TMP_Text roleText;
+        [SerializeField] private TMP_Text proposerFeedbackText;
         [SerializeField] private Color placeholderPortraitColor = new Color(0.42f, 0.45f, 0.5f, 1f);
 
         [Header("人物框移动：以当前摆放位置为显示位置")]
@@ -33,7 +34,16 @@ namespace TwelveMoons.UI
                 actorRoot = transform as RectTransform;
             }
 
+            if (proposerFeedbackText == null)
+            {
+                var feedbackTransform = transform.Find("ProposerFeedbackText");
+                proposerFeedbackText = feedbackTransform != null
+                    ? feedbackTransform.GetComponent<TMP_Text>()
+                    : null;
+            }
+
             visiblePosition = actorRoot != null ? actorRoot.anchoredPosition : Vector2.zero;
+            ClearFeedback();
             SetVisible(false, true);
         }
 
@@ -50,6 +60,16 @@ namespace TwelveMoons.UI
             }
 
             SetVisible(true, false);
+        }
+
+        public void ShowFeedback(string feedback)
+        {
+            SetText(proposerFeedbackText, feedback);
+        }
+
+        public void ClearFeedback()
+        {
+            SetText(proposerFeedbackText, string.Empty);
         }
 
         [ContextMenu("Show Test Actor")]

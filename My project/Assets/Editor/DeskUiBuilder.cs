@@ -234,12 +234,16 @@ namespace TwelveMoons.EditorTools
             var roleText = FindOrCreateText(slot.transform, "RoleText", "", 13, FontStyles.Normal, TextAlignmentOptions.Center);
             SetFixedRect(roleText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(208f, 24f), new Vector2(0.5f, 0f));
 
+            var proposerFeedbackText = FindOrCreateText(slot.transform, "ProposerFeedbackText", "", 13, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+            SetFixedRect(proposerFeedbackText.rectTransform, new Vector2(1f, 0.5f), new Vector2(18f, 0f), new Vector2(220f, 120f), new Vector2(0f, 0.5f));
+
             var slotView = EnsureComponent<SharedActorSlotView>(slot);
             var serializedObject = new SerializedObject(slotView);
             serializedObject.FindProperty("canvasGroup").objectReferenceValue = canvasGroup;
             serializedObject.FindProperty("portraitImage").objectReferenceValue = portrait;
             serializedObject.FindProperty("nameText").objectReferenceValue = nameText;
             serializedObject.FindProperty("roleText").objectReferenceValue = roleText;
+            serializedObject.FindProperty("proposerFeedbackText").objectReferenceValue = proposerFeedbackText;
             serializedObject.FindProperty("actorRoot").objectReferenceValue = slot.GetComponent<RectTransform>();
             serializedObject.FindProperty("hiddenMoveLeftDistance").floatValue = 284f;
             serializedObject.FindProperty("slideDuration").floatValue = 0.8f;
@@ -256,6 +260,7 @@ namespace TwelveMoons.EditorTools
             var panel = FindOrCreateUiChild(parent, "DocumentPopupPanel");
             SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(880f, 560f), new Vector2(0.5f, 0.5f));
             ConfigurePanelImage(panel, new Color(0f, 0f, 0f, 0f));
+            panel.GetComponent<Image>().raycastTarget = true;
 
             var rightScrollEnd = FindOrCreateImage(panel.transform, "RightScrollEndImage", new Color(0.33f, 0.21f, 0.1f, 1f));
             SetFixedRect(rightScrollEnd.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(340f, 0f), new Vector2(80f, 520f), new Vector2(0.5f, 0.5f));
@@ -280,13 +285,40 @@ namespace TwelveMoons.EditorTools
             bodyText.overflowMode = TextOverflowModes.Overflow;
             SetFixedRect(bodyText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(580f, 250f), new Vector2(0.5f, 1f));
 
-            var submitPanel = FindOrCreateUiChild(contentRoot.transform, "SubmitCardSlot");
-            SetFixedRect(submitPanel.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 132f), new Vector2(300f, 56f), new Vector2(0.5f, 0f));
-            ConfigurePanelImage(submitPanel, new Color(0.22f, 0.14f, 0.08f, 0.78f));
-            var submitStatus = FindOrCreateText(submitPanel.transform, "StatusText", "", 14, FontStyles.Normal, TextAlignmentOptions.Center);
-            SetFixedRect(submitStatus.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260f, 30f), new Vector2(0.5f, 0.5f));
-            var submitSlot = EnsureComponent<DocumentSubmitSlot>(submitPanel);
+            var submitPanel = FindOrCreateUiChild(panel.transform, "SubmitCardSlot");
+            SetFixedRect(submitPanel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(-430f, 0f), new Vector2(150f, 360f), new Vector2(0.5f, 0.5f));
+            ConfigurePanelImage(submitPanel, new Color(0f, 0f, 0f, 0f));
+            submitPanel.GetComponent<Image>().raycastTarget = false;
+
+            var slotImage = FindOrCreateImage(submitPanel.transform, "CardSlotImage", new Color(0.32f, 0.21f, 0.11f, 0.92f));
+            SetFixedRect(slotImage.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(86f, 300f), new Vector2(0.5f, 0.5f));
+
+            var dropArea = FindOrCreateImage(submitPanel.transform, "DropCardArea", new Color(0.12f, 0.08f, 0.04f, 0.78f));
+            dropArea.raycastTarget = true;
+            SetFixedRect(dropArea.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(104f, 150f), new Vector2(0.5f, 0.5f));
+
+            var submittedCard = FindOrCreateUiChild(dropArea.transform, "SubmittedCardPreview");
+            SetFixedRect(submittedCard.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(88f, 126f), new Vector2(0.5f, 0.5f));
+            ConfigurePanelImage(submittedCard, new Color(0.78f, 0.69f, 0.46f, 1f));
+            submittedCard.GetComponent<Image>().raycastTarget = false;
+            var submittedIcon = FindOrCreateImage(submittedCard.transform, "IconImage", new Color(1f, 1f, 1f, 1f));
+            SetFixedRect(submittedIcon.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(52f, 52f), new Vector2(0.5f, 1f));
+            var submittedName = FindOrCreateText(submittedCard.transform, "NameText", "", 11, FontStyles.Bold, TextAlignmentOptions.Center);
+            submittedName.color = new Color(0.16f, 0.09f, 0.04f, 1f);
+            SetFixedRect(submittedName.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 36f), new Vector2(78f, 28f), new Vector2(0.5f, 0f));
+            var submittedCount = FindOrCreateText(submittedCard.transform, "CountText", "", 16, FontStyles.Bold, TextAlignmentOptions.Center);
+            submittedCount.color = new Color(0.16f, 0.09f, 0.04f, 1f);
+            SetFixedRect(submittedCount.rectTransform, new Vector2(1f, 0f), new Vector2(-10f, 10f), new Vector2(26f, 24f), new Vector2(1f, 0f));
+
+            var submitStatus = FindOrCreateText(submitPanel.transform, "StatusText", "", 12, FontStyles.Normal, TextAlignmentOptions.Center);
+            SetFixedRect(submitStatus.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 12f), new Vector2(138f, 34f), new Vector2(0.5f, 0f));
+            var submitSlot = EnsureComponent<DocumentSubmitSlot>(dropArea.gameObject);
             var submitSerializedObject = new SerializedObject(submitSlot);
+            submitSerializedObject.FindProperty("dropAreaImage").objectReferenceValue = dropArea;
+            submitSerializedObject.FindProperty("submittedCardRoot").objectReferenceValue = submittedCard;
+            submitSerializedObject.FindProperty("submittedIconImage").objectReferenceValue = submittedIcon;
+            submitSerializedObject.FindProperty("submittedNameText").objectReferenceValue = submittedName;
+            submitSerializedObject.FindProperty("submittedCountText").objectReferenceValue = submittedCount;
             submitSerializedObject.FindProperty("statusText").objectReferenceValue = submitStatus;
             submitSerializedObject.ApplyModifiedPropertiesWithoutUndo();
 
@@ -302,9 +334,7 @@ namespace TwelveMoons.EditorTools
             SetFixedRect(optionBStamp.rectTransform, new Vector2(1f, 0.5f), new Vector2(-34f, 0f), new Vector2(64f, 64f), new Vector2(0.5f, 0.5f));
             optionBStamp.enabled = false;
 
-            var feedback = FindOrCreateText(contentRoot.transform, "ProposerFeedbackText", "", 14, FontStyles.Normal, TextAlignmentOptions.Left);
-            feedback.color = new Color(0.16f, 0.09f, 0.04f, 1f);
-            SetFixedRect(feedback.rectTransform, new Vector2(0f, 0f), new Vector2(70f, 18f), new Vector2(420f, 34f));
+            TMP_Text feedback = null;
 
             var flowStatus = FindOrCreateText(contentRoot.transform, "FlowStatusText", "", 13, FontStyles.Normal, TextAlignmentOptions.Right);
             flowStatus.color = new Color(0.16f, 0.09f, 0.04f, 1f);

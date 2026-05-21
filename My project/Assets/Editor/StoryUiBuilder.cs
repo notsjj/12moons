@@ -40,6 +40,10 @@ namespace TwelveMoons.EditorTools
             var storyPanel = FindOrCreateUiChild(canvas.transform, "StoryPanel");
             RemoveDeprecatedStoryPanelChildren(storyPanel.transform);
             ConfigurePanelRect(storyPanel.GetComponent<RectTransform>());
+            var rootCanvasGroup = EnsureComponent<CanvasGroup>(storyPanel);
+            rootCanvasGroup.alpha = 0f;
+            rootCanvasGroup.blocksRaycasts = false;
+            rootCanvasGroup.interactable = false;
 
             var storyAreaButton = CreateTransparentButton(storyPanel.transform, "StoryAreaButton");
             SetFullStretchRect(storyAreaButton.GetComponent<RectTransform>());
@@ -111,6 +115,7 @@ namespace TwelveMoons.EditorTools
             ConfigureStoryPanel(
                 storyPanel,
                 storyService,
+                rootCanvasGroup,
                 titleText,
                 feedbackText,
                 storyAreaButton,
@@ -556,6 +561,7 @@ namespace TwelveMoons.EditorTools
         private static void ConfigureStoryPanel(
             GameObject storyPanel,
             StoryService storyService,
+            CanvasGroup rootCanvasGroup,
             TMP_Text titleText,
             TMP_Text feedbackText,
             Button storyAreaButton,
@@ -585,6 +591,7 @@ namespace TwelveMoons.EditorTools
             var panelView = EnsureComponent<StoryPanelView>(storyPanel);
             var serializedObject = new SerializedObject(panelView);
             serializedObject.FindProperty("storyService").objectReferenceValue = storyService;
+            serializedObject.FindProperty("rootCanvasGroup").objectReferenceValue = rootCanvasGroup;
             serializedObject.FindProperty("titleText").objectReferenceValue = titleText;
             serializedObject.FindProperty("feedbackText").objectReferenceValue = feedbackText;
             serializedObject.FindProperty("storyAreaButton").objectReferenceValue = storyAreaButton;

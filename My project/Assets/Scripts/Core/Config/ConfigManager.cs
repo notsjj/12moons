@@ -7,9 +7,12 @@ namespace TwelveMoons.Core.Config
 {
     public sealed class ConfigManager : MonoBehaviour
     {
-        [Header("Config Source")]
+        [Header("配置来源：StreamingAssets 下的配置目录")]
+        [Tooltip("相对于 StreamingAssets 的配置目录名；CSV/JSON 配置表会从这里读取。")]
         [SerializeField] private string relativeConfigDirectory = "Configs";
+        [Tooltip("勾选后 Awake 时自动加载预加载表，适合正常运行和编辑器快速验证。")]
         [SerializeField] private bool loadOnAwake = true;
+        [Tooltip("Awake 或右键菜单加载时需要预加载的表名列表，例如 DisasterConfig、TaskConfig。")]
         [SerializeField] private string[] preloadTables = Array.Empty<string>();
 
         private readonly Dictionary<string, ConfigTable> tables = new Dictionary<string, ConfigTable>(StringComparer.Ordinal);

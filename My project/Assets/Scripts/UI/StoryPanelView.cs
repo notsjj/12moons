@@ -8,16 +8,17 @@ namespace TwelveMoons.UI
 {
     public sealed class StoryPanelView : MonoBehaviour
     {
-        [Header("Dependencies")]
+        [Header("依赖服务：读取并推进当前剧情播放状态")]
         [SerializeField] private StoryService storyService;
 
-        [Header("Root")]
+        [Header("根层显隐：无剧情时隐藏并放开桌面点击")]
+        [SerializeField] private CanvasGroup rootCanvasGroup;
         [SerializeField] private TMP_Text titleText;
         [SerializeField] private TMP_Text feedbackText;
         [SerializeField] private Button storyAreaButton;
         [SerializeField] private float typewriterCharactersPerSecond = 42f;
 
-        [Header("Dialogue Panel")]
+        [Header("对话面板：显示角色、对白、继续按钮和选项")]
         [SerializeField] private GameObject dialoguePanel;
         [SerializeField] private Image leftPortrait;
         [SerializeField] private Image rightPortrait;
@@ -31,7 +32,7 @@ namespace TwelveMoons.UI
         [SerializeField] private TMP_Text choiceButtonAText;
         [SerializeField] private TMP_Text choiceButtonBText;
 
-        [Header("Submission Panel")]
+        [Header("提交面板：剧情需要道具时显示提交与退出按钮")]
         [SerializeField] private GameObject submissionPanel;
         [SerializeField] private TMP_Text submissionTitleText;
         [SerializeField] private TMP_Text submissionRequirementText;
@@ -40,7 +41,7 @@ namespace TwelveMoons.UI
         [SerializeField] private Button exitSubmitButton;
         [SerializeField] private TMP_Text exitSubmitButtonText;
 
-        [Header("Image Story Panel")]
+        [Header("图片剧情面板：显示单页图片或漫画格")]
         [SerializeField] private GameObject imageStoryPanel;
         [SerializeField] private Image storyImage;
         [SerializeField] private Image[] comicPanelImages;
@@ -48,7 +49,7 @@ namespace TwelveMoons.UI
         [SerializeField] private Button imageContinueButton;
         [SerializeField] private TMP_Text imageContinueButtonText;
 
-        [Header("Text Story Panel")]
+        [Header("文本剧情面板：显示纯文本段落和继续按钮")]
         [SerializeField] private GameObject textStoryPanel;
         [SerializeField] private TMP_Text textContent;
         [SerializeField] private Button textContinueButton;
@@ -68,6 +69,16 @@ namespace TwelveMoons.UI
             if (storyService == null)
             {
                 storyService = FindFirstObjectByType<StoryService>();
+            }
+
+            if (rootCanvasGroup == null)
+            {
+                rootCanvasGroup = GetComponent<CanvasGroup>();
+            }
+
+            if (rootCanvasGroup == null)
+            {
+                rootCanvasGroup = gameObject.AddComponent<CanvasGroup>();
             }
         }
 
@@ -157,9 +168,11 @@ namespace TwelveMoons.UI
                 SetText(titleText, "Story");
                 SetText(feedbackText, "");
                 ShowOnlyPanel(null);
+                SetRootVisible(false);
                 return;
             }
 
+            SetRootVisible(true);
             var playback = storyService.CurrentPlayback;
             var story = playback.Story;
             if (story.StoryId != currentStoryId)
@@ -542,6 +555,21 @@ namespace TwelveMoons.UI
             if (activePanel != dialoguePanel)
             {
                 SetPanelActive(submissionPanel, false);
+            }
+        }
+
+        private void SetRootVisible(bool visible)
+        {
+            if (rootCanvasGroup != null)
+            {
+                rootCanvasGroup.alpha = visible ? 1f : 0f;
+                rootCanvasGroup.blocksRaycasts = visible;
+                rootCanvasGroup.interactable = visible;
+            }
+
+            if (storyAreaButton != null)
+            {
+                storyAreaButton.gameObject.SetActive(visible);
             }
         }
 

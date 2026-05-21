@@ -119,6 +119,14 @@ namespace TwelveMoons.UI
             MovePointerToFaction(factionId);
         }
 
+        public void ClearDocumentFeedback()
+        {
+            if (feedbackText != null)
+            {
+                feedbackText.text = string.Empty;
+            }
+        }
+
         private void ShowThresholdFeedback(FactionThresholdResult result)
         {
             if (feedbackText == null || result == null)

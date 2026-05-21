@@ -6,8 +6,10 @@ namespace TwelveMoons.Core.Runtime
 {
     public sealed class RoundService : MonoBehaviour
     {
-        [Header("Dependencies")]
+        [Header("依赖服务：配置和运行时")]
+        [Tooltip("配置管理器；用于读取 DisasterStageConfig。")]
         [SerializeField] private ConfigManager configManager;
+        [Tooltip("运行时数据服务；用于读取和推进当前回合。")]
         [SerializeField] private RuntimeDataService runtimeDataService;
 
         private DisasterStageResolver disasterStageResolver;

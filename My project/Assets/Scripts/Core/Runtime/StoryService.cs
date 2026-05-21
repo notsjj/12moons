@@ -8,10 +8,14 @@ namespace TwelveMoons.Core.Runtime
 {
     public sealed class StoryService : MonoBehaviour
     {
-        [Header("Dependencies")]
+        [Header("依赖服务：配置、运行时、背包和任务")]
+        [Tooltip("配置管理器；用于读取 StoryConfig、DialogueConfig 和 CharacterConfig。")]
         [SerializeField] private ConfigManager configManager;
+        [Tooltip("运行时数据服务；用于读取剧情队列、保存剧情提交进度和触发任务。")]
         [SerializeField] private RuntimeDataService runtimeDataService;
+        [Tooltip("背包服务；用于处理剧情选项和提交道具的消耗或奖励。")]
         [SerializeField] private InventoryService inventoryService;
+        [Tooltip("任务服务；用于在剧情结束后按 StoryConfig.TriggerTaskId 激活任务。")]
         [SerializeField] private TaskService taskService;
 
         private readonly List<StoryDefinition> stories = new List<StoryDefinition>();

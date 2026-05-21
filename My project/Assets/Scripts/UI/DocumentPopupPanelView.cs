@@ -1,6 +1,6 @@
 using System;
-using TMPro;
 using DG.Tweening;
+using TMPro;
 using TwelveMoons.Core.Runtime;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -23,7 +23,8 @@ namespace TwelveMoons.UI
         [Header("依赖对象：运行时服务与共用人物框")]
         [SerializeField] private DocumentService documentService;
         [SerializeField] private SharedActorSlotView sharedActorSlot;
-        [Header("质疑度栏：选项结算后移动手指并显示阵营反馈")]
+
+        [Header("质疑度栏：选项结算后显示阵营反馈")]
         [SerializeField] private SuspicionPanelView suspicionPanel;
 
         [Header("卷轴移动：内容与左卷轴端使用同一距离和速度")]
@@ -34,7 +35,7 @@ namespace TwelveMoons.UI
         [SerializeField] private float scrollMoveLeftDistance = 700f;
         [SerializeField] private float scrollTweenDuration = 0.8f;
 
-        [Header("公文内容：背景、标题、正文、反馈与盖章")]
+        [Header("公文内容：背景、标题、正文、状态与盖章")]
         [SerializeField] private Image contentBackgroundImage;
         [SerializeField] private DocumentTypeBackgroundBinding[] typeBackgrounds;
         [SerializeField] private TMP_Text titleText;
@@ -65,6 +66,7 @@ namespace TwelveMoons.UI
         private void Awake()
         {
             ResolveDependencies();
+            ConfigureClickCatcher();
             CacheClosedScrollPositions();
             CloseInstant();
         }
@@ -104,7 +106,7 @@ namespace TwelveMoons.UI
         {
             Show(
                 "Document Preview",
-                "This popup is the desk document frame. Document queue and result logic are added by the document system stage.",
+                "This popup is the desk document frame.",
                 "Option A",
                 "Option B");
         }
@@ -137,6 +139,7 @@ namespace TwelveMoons.UI
         {
             currentEntry = null;
             currentDocument = null;
+            ClearTransientFeedback();
             SetText(titleText, title);
             SetText(bodyText, body);
             SetText(optionAText, optionA);
@@ -157,6 +160,7 @@ namespace TwelveMoons.UI
             currentEntry = null;
             currentDocument = null;
             waitingForContinue = false;
+            ClearTransientFeedback();
             sharedActorSlot?.HideToRight();
             submitSlot?.Clear();
             lastSubmitAccepted = false;
@@ -174,12 +178,34 @@ namespace TwelveMoons.UI
             ResolveCurrentDocument(DocumentOptionType.B);
         }
 
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (waitingForContinue)
+            {
+                ContinueAfterResolution();
+            }
+        }
+
+        public void ContinueAfterResolution()
+        {
+            if (!waitingForContinue)
+            {
+                return;
+            }
+
+            waitingForContinue = false;
+            sharedActorSlot?.HideToRight();
+            CloseScroll();
+            DOVirtual.DelayedCall(scrollTweenDuration, ShowNextDocumentOrFinish);
+        }
+
         private void ShowDocument(RuntimeDocumentQueueEntry entry, DocumentDefinition document)
         {
             currentEntry = entry;
             currentDocument = document;
             waitingForContinue = false;
             lastSubmitAccepted = false;
+            ClearTransientFeedback();
             SetText(titleText, document.Title);
             SetText(bodyText, document.BodyText);
             SetText(optionAText, document.OptionA.Text);
@@ -212,16 +238,29 @@ namespace TwelveMoons.UI
             var option = currentDocument.GetOption(optionType);
             if (RequiresSubmittedItem(option) && (submitSlot == null || !submitSlot.HasAcceptedItem))
             {
-                SetText(flowStatusText, "这个选项需要先把对应卡牌拖入提交栏。");
+                SetText(flowStatusText, "这个选项需要先把对应卡牌拖入提交区域。");
                 RefreshOptionLocks();
                 return;
             }
 
-            var result = documentService.ResolveDocument(currentEntry, optionType);
-            SetText(proposerFeedbackText, FormatResultFeedback(result));
+            var requiredItemAlreadySubmitted = RequiresSubmittedItem(option) &&
+                submitSlot != null &&
+                submitSlot.HasAcceptedItem;
+            var result = documentService.ResolveDocument(currentEntry, optionType, requiredItemAlreadySubmitted);
+            SetText(proposerFeedbackText, string.Empty);
 
             if (result.Success)
             {
+                if (requiredItemAlreadySubmitted)
+                {
+                    submitSlot?.MarkAcceptedItemCommitted();
+                }
+                else
+                {
+                    submitSlot?.Clear();
+                }
+
+                sharedActorSlot?.ShowFeedback(result.ProposerFeedbackText);
                 suspicionPanel?.ShowDocumentChoiceImpact(result.FeedbackFactionId, result.FactionFeedbackText);
                 ShowStamp(optionType);
                 SetButtonsInteractable(false);
@@ -235,27 +274,6 @@ namespace TwelveMoons.UI
                 SetText(flowStatusText, result.Message);
                 RefreshOptionLocks();
             }
-        }
-
-        public void OnPointerClick(PointerEventData eventData)
-        {
-            if (waitingForContinue)
-            {
-                ContinueAfterResolution();
-            }
-        }
-
-        public void ContinueAfterResolution()
-        {
-            if (!waitingForContinue)
-            {
-                return;
-            }
-
-            waitingForContinue = false;
-            sharedActorSlot?.HideToRight();
-            CloseScroll();
-            DOVirtual.DelayedCall(scrollTweenDuration, ShowNextDocumentOrFinish);
         }
 
         private void RefreshCurrentDocument()
@@ -296,6 +314,7 @@ namespace TwelveMoons.UI
 
         private void ShowNextDocumentOrFinish()
         {
+            ClearTransientFeedback();
             submitSlot?.Clear();
             if (documentService != null &&
                 documentService.TryGetNextPendingDocument(out var entry, out var document))
@@ -312,6 +331,7 @@ namespace TwelveMoons.UI
             currentEntry = null;
             currentDocument = null;
             waitingForContinue = false;
+            ClearTransientFeedback();
             submitSlot?.Clear();
             SetText(flowStatusText, "本回合公文已全部处理。");
             if (cityExploreButton != null)
@@ -483,6 +503,13 @@ namespace TwelveMoons.UI
             }
         }
 
+        private void ClearTransientFeedback()
+        {
+            SetText(proposerFeedbackText, string.Empty);
+            sharedActorSlot?.ClearFeedback();
+            suspicionPanel?.ClearDocumentFeedback();
+        }
+
         private void ResolveDependencies()
         {
             if (documentService == null)
@@ -498,6 +525,15 @@ namespace TwelveMoons.UI
             if (suspicionPanel == null)
             {
                 suspicionPanel = FindFirstObjectByType<SuspicionPanelView>(FindObjectsInactive.Include);
+            }
+        }
+
+        private void ConfigureClickCatcher()
+        {
+            var clickCatcher = GetComponent<Image>();
+            if (clickCatcher != null)
+            {
+                clickCatcher.raycastTarget = true;
             }
         }
 
@@ -527,26 +563,6 @@ namespace TwelveMoons.UI
             return option != null &&
                 !string.IsNullOrEmpty(option.RequiredItemId) &&
                 option.RequiredItemCount > 0;
-        }
-
-        private static string FormatResultFeedback(DocumentResolutionResult result)
-        {
-            if (result == null)
-            {
-                return string.Empty;
-            }
-
-            if (string.IsNullOrEmpty(result.FactionFeedbackText))
-            {
-                return result.Message;
-            }
-
-            if (string.IsNullOrEmpty(result.Message))
-            {
-                return result.FactionFeedbackText;
-            }
-
-            return $"{result.Message}\n{result.FactionFeedbackText}";
         }
 
         private static void SetText(TMP_Text target, string value)

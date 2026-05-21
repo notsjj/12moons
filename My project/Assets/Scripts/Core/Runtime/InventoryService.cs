@@ -8,8 +8,10 @@ namespace TwelveMoons.Core.Runtime
 {
     public sealed class InventoryService : MonoBehaviour
     {
-        [Header("Dependencies")]
+        [Header("依赖服务：配置和运行时")]
+        [Tooltip("配置管理器；用于读取 ItemConfig。")]
         [SerializeField] private ConfigManager configManager;
+        [Tooltip("运行时数据服务；用于保存背包物品数量。")]
         [SerializeField] private RuntimeDataService runtimeDataService;
 
         private readonly List<ItemDefinition> definitions = new List<ItemDefinition>();

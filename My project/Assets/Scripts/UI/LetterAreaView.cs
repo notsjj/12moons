@@ -2,21 +2,22 @@ using System.Collections.Generic;
 using TMPro;
 using TwelveMoons.Core.Runtime;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace TwelveMoons.UI
 {
     public sealed class LetterAreaView : MonoBehaviour
     {
-        [Header("Dependencies")]
+        [Header("依赖服务：读取已收到信件并维护当前阅读状态")]
         [SerializeField] private LetterService letterService;
 
-        [Header("List")]
+        [Header("信件列表：只让信件按钮接收点击，背景不遮挡背包卡牌")]
         [SerializeField] private Transform listRoot;
         [SerializeField] private LetterRowView rowPrefab;
         [SerializeField] private TMP_Text emptyText;
         [SerializeField] private int maxVisibleLetters = 9;
 
-        [Header("Reader")]
+        [Header("阅读面板：选中信件后显示正文")]
         [SerializeField] private GameObject readerPanel;
         [SerializeField] private TMP_Text titleText;
         [SerializeField] private TMP_Text senderText;
@@ -32,6 +33,8 @@ namespace TwelveMoons.UI
             {
                 letterService = FindFirstObjectByType<LetterService>();
             }
+
+            DisableDecorativeRaycasts();
         }
 
         private void OnEnable()
@@ -162,6 +165,19 @@ namespace TwelveMoons.UI
             if (target != null)
             {
                 target.text = value ?? string.Empty;
+            }
+        }
+
+        private void DisableDecorativeRaycasts()
+        {
+            foreach (var image in GetComponentsInChildren<Image>(true))
+            {
+                if (image == null || image.GetComponent<Button>() != null)
+                {
+                    continue;
+                }
+
+                image.raycastTarget = false;
             }
         }
     }

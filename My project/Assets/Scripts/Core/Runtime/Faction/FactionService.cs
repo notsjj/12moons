@@ -7,11 +7,14 @@ namespace TwelveMoons.Core.Runtime
 {
     public sealed class FactionService : MonoBehaviour
     {
-        [Header("Dependencies")]
+        [Header("依赖服务：配置和运行时")]
+        [Tooltip("配置管理器；用于读取 FactionConfig。")]
         [SerializeField] private ConfigManager configManager;
+        [Tooltip("运行时数据服务；用于保存阵营质疑度和触发惩罚任务、低质疑信件。")]
         [SerializeField] private RuntimeDataService runtimeDataService;
 
-        [Header("Thresholds")]
+        [Header("阈值规则：高质疑触发后的回落值")]
+        [Tooltip("阵营高质疑惩罚触发后，自动降低的质疑度数值。")]
         [SerializeField] private int highSuspicionReduceValue = 30;
 
         private readonly List<FactionDefinition> definitions = new List<FactionDefinition>();
