@@ -1,12 +1,12 @@
 StoryId,StoryName,StoryType,ImageId,ImageDisplayMode,ImageIds,ImageCaptions,TextContent,TriggerTaskOnEnd,TriggerTaskId,AddItemId,AddItemCount,Remark
-story_relief_start,Relief Start,Dialogue,,,,,,false,,,0,Task stage start dialogue
-story_relief_prepare_end,Relief Prepare End,Text,,,,,The first relief stores are counted and sealed before nightfall.,false,,item_food,1,Task stage end text reward
-story_relief_actor,Steward Before Document,Dialogue,,,,,,false,,,0,Before-document actor dialogue
-story_relief_deliver_start,Relief Delivery Start,Dialogue,,,,,,false,,,0,Second task stage dialogue
-story_relief_deliver_end,Relief Delivery End,Text,,,,,The delivery route is logged for the council archive.,false,,item_material,1,Second task stage end text reward
-story_relief_courier,Courier Before Document,Dialogue,,,,,,false,,,0,Before-document courier dialogue
-story_demo_choice,Choice Demo,Dialogue,,,,,,true,task_punish_civilian_01,item_money,2,Choice jump and story end task trigger demo
-story_demo_text,Text Demo,Text,,,,,A sealed note reports that the lower district drains are holding for now.|A second paragraph is added to the same black page after the first line completes.|The final paragraph confirms the council can move before dawn.,false,,item_food,1,Standalone multi-paragraph text story demo
-story_demo_image,Image Page Demo,Image,image_flood_map,PageSequence,image_flood_map|image_bridge_route|image_storehouse,The map marks three flooded streets.|The bridge route is still open.|The storehouse is ready.,,false,,item_material,1,Standalone page image story demo
-story_demo_comic_image,Image Comic Demo,Image,,ComicPanels,image_comic_panel_01|image_comic_panel_02|image_comic_panel_03|image_comic_panel_04,Rain reaches the canal.|Workers lift the timber.|A courier crosses the bridge.|The moon rises over the lower district.,,false,,item_food,1,Standalone comic panel image story demo
-story_demo_submission,Submission Demo,Dialogue,,,,,,false,,item_archivist_badge,1,Dialogue item submission demo
+story_relief_start,赈济开场剧情,Dialogue,,,,,,false,,,0,任务阶段开始剧情测试
+story_relief_prepare_end,赈济仓清点结束,Text,,,,,第一批赈济物资在入夜前清点完毕，并贴上封条。,false,,item_food,1,任务阶段结束文本奖励测试
+story_relief_actor,库房管事公文前剧情,Dialogue,,,,,,false,,,0,公文前角色滑入剧情测试
+story_relief_deliver_start,赈济车出发剧情,Dialogue,,,,,,false,,,0,第二个任务阶段开始剧情测试
+story_relief_deliver_end,赈济车回执剧情,Text,,,,,车队路线已经登记进议厅档案，后续可以按图复核。,false,,item_material,1,第二个任务阶段结束文本奖励测试
+story_relief_courier,信使公文前剧情,Dialogue,,,,,,false,,,0,第二阶段公文前剧情测试
+story_demo_choice,选择分支测试,Dialogue,,,,,,true,task_punish_civilian_01,item_money,2,选择跳转和剧情结束触发任务测试
+story_demo_text,纯文本剧情测试,Text,,,,,一封封蜡便笺报告低城区排水沟暂时还能承压。|第二段文字在同一黑幕页继续出现，说明雨势还没有减弱。|最后一段确认议厅仍能在天亮前行动。,false,,item_food,1,多段纯文本剧情测试
+story_demo_image,图片翻页剧情测试,Image,image_flood_map,PageSequence,image_flood_map|image_bridge_route|image_storehouse,地图标出三条被水淹没的街道。|石桥路线仍可通行。|仓库已经准备封车。,,false,,item_material,1,图片逐页剧情测试
+story_demo_comic_image,漫画分格剧情测试,Image,,ComicPanels,image_comic_panel_01|image_comic_panel_02|image_comic_panel_03|image_comic_panel_04,雨水漫到河渠边。|工人抬起木料。|信使穿过石桥。|新月升到低城区上空。,,false,,item_food,1,漫画分格图片剧情测试
+story_demo_submission,道具提交剧情测试,Dialogue,,,,,,false,,item_archivist_badge,1,对白中提交道具测试

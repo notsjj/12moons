@@ -23,6 +23,7 @@
 13. 每个阶段完成后，必须明确输出“是否可以进入下一阶段”。只有在当前阶段目标完成、Unity 验证步骤明确、无本阶段相关编译/运行错误、必要搭建说明完整时，才允许说明“可以进入下一阶段”；如果仍需用户在 Unity 中验证，必须明确写出验证入口和通过标准。
 14. 每个阶段必须按照当前阶段策划案完整实现，不允许只完成底层数据或空脚本；凡是当前阶段明确要求的 UI、交互、测试入口、可操作流程，都必须同步完成。
 15. 自动搭建工具只允许创建当前阶段明确需要的 UI、GameObject、Prefab、按钮和绑定；不得借自动化提前创建后续阶段入口或占位对象。
-16. Unity 搭建说明中的每一步都必须写清楚“操作 + 原因”：说明这个 GameObject 负责什么、这个脚本为什么挂在这里、这个 Inspector 引用为什么要拖、这个 Button OnClick 用来验证什么。
-17. 每个阶段最终回复必须包含：修改文件、新增脚本、脚本职责、自动生成了哪些 UI/Prefab、仍需手动检查的引用、带原因的 Unity 搭建步骤、Button OnClick 绑定及验证目的、Unity 验证入口和通过标准、是否可以进入下一阶段。
-18. 所有 Unity UI 文本必须使用 TextMeshPro（TMP_Text / TextMeshProUGUI），不要使用 legacy UnityEngine.UI.Text；自动搭建工具和 Prefab 生成器也必须生成 TMP 文本组件。
+16. 必须保护当前已经调整好的 UI 布局。修改某一个 UI、面板、按钮或 Prefab 时，只允许改它自身及其直接必要子物体、引用和绑定；不得顺手改变其它 UI 的 RectTransform、锚点、尺寸、位置、层级、颜色、字体、Prefab 或绑定。需要补单个 UI 时必须优先写“Only/局部更新”工具或手动局部修改，禁止运行会重建或重排整个桌面界面的总构建器（例如 Create Desk UI Framework），除非当前 Prompt 明确要求整体重建。
+17. Unity 搭建说明中的每一步都必须写清楚“操作 + 原因”：说明这个 GameObject 负责什么、这个脚本为什么挂在这里、这个 Inspector 引用为什么要拖、这个 Button OnClick 用来验证什么。
+18. 每个阶段最终回复必须包含：修改文件、新增脚本、脚本职责、自动生成了哪些 UI/Prefab、仍需手动检查的引用、带原因的 Unity 搭建步骤、Button OnClick 绑定及验证目的、Unity 验证入口和通过标准、是否可以进入下一阶段。
+19. 所有 Unity UI 文本必须使用 TextMeshPro（TMP_Text / TextMeshProUGUI），不要使用 legacy UnityEngine.UI.Text；自动搭建工具和 Prefab 生成器也必须生成 TMP 文本组件。

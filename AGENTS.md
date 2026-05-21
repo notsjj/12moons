@@ -4,6 +4,7 @@ Additional active rule: Unity UI text RectTransform heights must never be negati
 Additional active rule: 需要在 Inspector 中可视化观察的运行时状态，必须提供清晰的中文 Header/Tooltip 或等价中文说明；尤其是当前回合公文、每份公文的后续公文、所属任务、当前任务阶段、全部任务配置、当前回合剧情队列、当前播放剧情、后续公文队列等调试信息，应优先做成只读 Inspector 快照或 Debug View，不要为观察需求擅自新增正式 UI、按钮、Prefab 或后续阶段入口。
 Additional active rule: 所有需要手动填写、手动拖引用、可调参数、测试配置、调试开关、Inspector 可见快照字段，都必须使用中文 Header 和中文 Tooltip/说明解释用途；新增脚本、Editor Builder、Prefab 生成器和序列化数据类也必须遵守，避免只写英文 Header、无说明字段或乱码说明。
 Additional active rule: 每次执行阶段时，只允许新增或修改当前阶段明确要求的 UI、GameObject、Prefab、按钮和绑定；其它阶段、其它系统、既有无关 UI 一律不能改动、重建、删除或顺手整理。
+Additional active rule: 必须保护当前已经调整好的 UI 布局。修改某一个 UI、面板、按钮或 Prefab 时，只允许改它自身及其直接必要子物体、引用和绑定；不得顺手改变其它 UI 的 RectTransform、锚点、尺寸、位置、层级、颜色、字体、Prefab 或绑定。需要补单个 UI 时必须优先写“Only/局部更新”工具或手动局部修改，禁止运行会重建或重排整个桌面界面的总构建器（例如 Create Desk UI Framework），除非当前 Prompt 明确要求整体重建。
 Additional active rule: 每次执行阶段前，必须先读取 docs/12moons.xlsx，至少确认相关工作表、当前阶段目标和整体流程，再开始代码或 UI 修改。
 Additional active rule: 所有可调参数或会显示在 Unity Inspector 中的字段，都必须使用中文 Header 或等价中文说明解释用途，方便在 Inspector 中直接理解和调整。
 

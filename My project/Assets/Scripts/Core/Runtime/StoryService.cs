@@ -490,14 +490,12 @@ namespace TwelveMoons.Core.Runtime
             }
 
             var story = CurrentPlayback.Story;
-            var feedbackParts = new List<string>();
             runtimeDataService?.Data.ClearStoryProgress(story.StoryId);
 
             if (!string.IsNullOrEmpty(story.AddItemId) && story.AddItemCount > 0)
             {
                 if (inventoryService != null && inventoryService.AddItem(story.AddItemId, story.AddItemCount))
                 {
-                    feedbackParts.Add($"Added item {story.AddItemId} x{story.AddItemCount}");
                     RecordStorySettlement(story, $"剧情奖励：{GetStoryDisplayName(story)} 获得 {story.AddItemId} x{story.AddItemCount}");
                 }
             }
@@ -507,12 +505,11 @@ namespace TwelveMoons.Core.Runtime
                 var task = taskService != null ? taskService.ActivateTask(story.TriggerTaskId) : null;
                 if (task != null)
                 {
-                    feedbackParts.Add($"Activated task {story.TriggerTaskId}");
                     RecordStorySettlement(story, $"剧情触发任务：{GetStoryDisplayName(story)} -> {story.TriggerTaskId}");
                 }
             }
 
-            CurrentPlayback.Complete(feedbackParts.Count > 0 ? string.Join("; ", feedbackParts) : "Story completed.");
+            CurrentPlayback = null;
             NotifyStoryChanged();
         }
 

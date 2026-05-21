@@ -1,4 +1,4 @@
 CharacterId,CharacterName,FactionId,PortraitId,Description,Remark
-character_steward,Storehouse Steward,civilian,portrait_steward,Tracks relief supplies for the lower district,Demo character for story UI
-character_engineer,Drainage Engineer,academy,portrait_engineer,Plans street drainage and bridge repairs,Demo character for story UI
-character_courier,Council Courier,civilian,portrait_courier,Carries urgent reports between districts,Demo character for story UI
+character_steward,库房管事,civilian,portrait_steward,负责记录低城区赈济物资的管事。,剧情界面角色测试
+character_engineer,排水工程师,academy,portrait_engineer,负责规划街道排水和石桥修补的工程师。,剧情界面角色测试
+character_courier,议厅信使,civilian,portrait_courier,往返各城区递送急报的信使。,剧情界面角色测试

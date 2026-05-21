@@ -13,6 +13,8 @@ namespace TwelveMoons.UI
 
         [Header("根层显隐：无剧情时隐藏并放开桌面点击")]
         [SerializeField] private CanvasGroup rootCanvasGroup;
+        [Tooltip("剧情面板根背景；显示剧情时保持不透明并拦截桌面点击。")]
+        [SerializeField] private Image rootBackgroundImage;
         [SerializeField] private TMP_Text titleText;
         [SerializeField] private TMP_Text feedbackText;
         [SerializeField] private Button storyAreaButton;
@@ -79,6 +81,16 @@ namespace TwelveMoons.UI
             if (rootCanvasGroup == null)
             {
                 rootCanvasGroup = gameObject.AddComponent<CanvasGroup>();
+            }
+
+            if (rootBackgroundImage == null)
+            {
+                rootBackgroundImage = GetComponent<Image>();
+                if (rootBackgroundImage == null)
+                {
+                    rootBackgroundImage = gameObject.AddComponent<Image>();
+                    rootBackgroundImage.color = Color.black;
+                }
             }
         }
 
@@ -560,11 +572,24 @@ namespace TwelveMoons.UI
 
         private void SetRootVisible(bool visible)
         {
+            if (visible)
+            {
+                transform.SetAsLastSibling();
+            }
+
             if (rootCanvasGroup != null)
             {
                 rootCanvasGroup.alpha = visible ? 1f : 0f;
                 rootCanvasGroup.blocksRaycasts = visible;
                 rootCanvasGroup.interactable = visible;
+            }
+
+            if (rootBackgroundImage != null)
+            {
+                var color = rootBackgroundImage.color;
+                color.a = 1f;
+                rootBackgroundImage.color = color;
+                rootBackgroundImage.raycastTarget = visible;
             }
 
             if (storyAreaButton != null)

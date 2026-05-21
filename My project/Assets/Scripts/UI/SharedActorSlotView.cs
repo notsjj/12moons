@@ -12,6 +12,8 @@ namespace TwelveMoons.UI
         [SerializeField] private Image portraitImage;
         [SerializeField] private TMP_Text nameText;
         [SerializeField] private TMP_Text roleText;
+        [Tooltip("提出者反馈背景；做出公文选择前隐藏，显示反馈时开启，公文合上时再次隐藏。")]
+        [SerializeField] private GameObject proposerFeedbackBackground;
         [SerializeField] private TMP_Text proposerFeedbackText;
         [SerializeField] private Color placeholderPortraitColor = new Color(0.42f, 0.45f, 0.5f, 1f);
 
@@ -42,6 +44,14 @@ namespace TwelveMoons.UI
                     : null;
             }
 
+            if (proposerFeedbackBackground == null)
+            {
+                var feedbackBackgroundTransform = transform.Find("ProposerFeedbackBackground");
+                proposerFeedbackBackground = feedbackBackgroundTransform != null
+                    ? feedbackBackgroundTransform.gameObject
+                    : null;
+            }
+
             visiblePosition = actorRoot != null ? actorRoot.anchoredPosition : Vector2.zero;
             ClearFeedback();
             SetVisible(false, true);
@@ -65,11 +75,13 @@ namespace TwelveMoons.UI
         public void ShowFeedback(string feedback)
         {
             SetText(proposerFeedbackText, feedback);
+            SetFeedbackBackgroundVisible(!string.IsNullOrEmpty(feedback));
         }
 
         public void ClearFeedback()
         {
             SetText(proposerFeedbackText, string.Empty);
+            SetFeedbackBackgroundVisible(false);
         }
 
         [ContextMenu("Show Test Actor")]
@@ -135,6 +147,14 @@ namespace TwelveMoons.UI
             if (target != null)
             {
                 target.text = value ?? string.Empty;
+            }
+        }
+
+        private void SetFeedbackBackgroundVisible(bool visible)
+        {
+            if (proposerFeedbackBackground != null)
+            {
+                proposerFeedbackBackground.SetActive(visible);
             }
         }
     }

@@ -1,6 +1,6 @@
 ItemId,ItemName,ItemType,Description,IconId,CanDrag,CanConsume,Remark
-item_money,Money,Money,General currency,icon_money,false,true,Demo config for loader test
-item_material,Material,Material,Construction resource,icon_material,false,true,Demo config for loader test
-item_food,Food,Food,Stored food,icon_food,false,true,Demo config for loader test
-item_drainage_map,Drainage Map,TaskItem,Demo task item for inventory testing,icon_drainage_map,true,true,Demo config for inventory test
-item_archivist_badge,Archivist Badge,Character,Demo character item for inventory testing,icon_archivist_badge,true,false,Demo config for inventory test
+item_money,金币,Money,通用货币资源。,icon_money,false,true,配置加载测试资源
+item_material,建材,Material,用于修缮和建设的材料资源。,icon_material,false,true,配置加载测试资源
+item_food,食物,Food,仓库存放的粮食资源。,icon_food,false,true,配置加载测试资源
+item_drainage_map,排水图,TaskItem,用于公文和剧情提交测试的任务道具。,icon_drainage_map,true,true,背包提交流程测试道具
+item_archivist_badge,档案员徽记,Character,用于验证剧情奖励和角色类道具显示的徽记。,icon_archivist_badge,true,false,背包奖励流程测试道具

@@ -18,13 +18,14 @@ namespace TwelveMoons.EditorTools.Runtime
             try
             {
                 PrepareFlow(context);
+                LogPlannedFlow(context);
 
                 if (!context.RuntimeDataService.Data.StoryQueue.Any(candidate => candidate.QueuedRound == 1) ||
                     !context.RuntimeDataService.Data.Letters.Any(candidate => candidate.LetterId == "letter_relief_start") ||
                     !context.DocumentService.TryGetNextPendingDocument(out var firstEntry, out var firstDocument) ||
                     firstEntry.DocumentId != "document_relief_prepare")
                 {
-                    throw new InvalidDataException("Round 1 did not queue start story, start letter, and first task document.");
+                    throw new InvalidDataException("第 1 回合没有排入开始剧情、开始信件和第一份任务公文。");
                 }
 
                 AssertDocumentRequirements(firstDocument);
@@ -34,9 +35,10 @@ namespace TwelveMoons.EditorTools.Runtime
                 var result = context.DocumentService.ResolveDocument(firstEntry, DocumentOptionType.A);
                 if (!result.Success)
                 {
-                    throw new InvalidDataException($"Round 1 document option A failed: {result.Message}");
+                    throw new InvalidDataException($"第 1 回合公文甲选项处理失败：{result.Message}");
                 }
 
+                ResolveAllPendingDocuments(context, DocumentOptionType.B);
                 context.LoopController.EndCurrentRound();
                 DrainStories(context);
                 context.LoopController.EndCurrentRound();
@@ -46,7 +48,7 @@ namespace TwelveMoons.EditorTools.Runtime
                     !newspaper.BuildBodyText().Contains("公文处理") ||
                     !context.RuntimeDataService.Data.DocumentQueue.Any(candidate => candidate.DocumentId == "document_relief_followup" && candidate.QueuedRound <= 2))
                 {
-                    throw new InvalidDataException("Round 1 did not settle into round 2 with newspaper and due follow-up document.");
+                    throw new InvalidDataException("第 1 回合没有结算到第 2 回合，或缺少报纸与到期后续公文。");
                 }
 
                 ResolveAllPendingDocuments(context, DocumentOptionType.B);
@@ -57,7 +59,7 @@ namespace TwelveMoons.EditorTools.Runtime
                 if (context.RuntimeDataService.Data.CurrentRound != 3 ||
                     !context.RuntimeDataService.Data.TryGetNewspaper(2, out _))
                 {
-                    throw new InvalidDataException("Round 2 did not settle into round 3 with a newspaper.");
+                    throw new InvalidDataException("第 2 回合没有带着报纸结算到第 3 回合。");
                 }
 
                 DrainStories(context);
@@ -69,10 +71,10 @@ namespace TwelveMoons.EditorTools.Runtime
                 if (context.RuntimeDataService.Data.CurrentRound != 4 ||
                     !context.RuntimeDataService.Data.TryGetNewspaper(3, out _))
                 {
-                    throw new InvalidDataException("Desk loop did not run through three full rounds.");
+                    throw new InvalidDataException("桌面最小循环没有跑完三个完整回合。");
                 }
 
-                Debug.Log("Desk loop smoke test passed. Three non-city rounds can play queued stories, resolve documents, generate newspapers, and advance rounds.");
+                Debug.Log("桌面最小循环冒烟测试通过：三个非城区回合可以播放队列剧情、处理公文、生成报纸并推进回合。");
             }
             finally
             {
@@ -109,7 +111,7 @@ namespace TwelveMoons.EditorTools.Runtime
 
             if (guard >= 80)
             {
-                throw new InvalidDataException("Story queue did not drain.");
+                throw new InvalidDataException("剧情队列没有正常清空。");
             }
         }
 
@@ -126,7 +128,7 @@ namespace TwelveMoons.EditorTools.Runtime
 
                 if (!result.Success)
                 {
-                    throw new InvalidDataException($"Pending document could not resolve: {entry.DocumentId}.");
+                    throw new InvalidDataException($"待处理公文无法结算：{entry.DocumentId}。");
                 }
 
                 guard++;
@@ -134,7 +136,7 @@ namespace TwelveMoons.EditorTools.Runtime
 
             if (guard >= 20)
             {
-                throw new InvalidDataException("Document queue did not drain.");
+                throw new InvalidDataException("公文队列没有正常清空。");
             }
         }
 
@@ -142,10 +144,9 @@ namespace TwelveMoons.EditorTools.Runtime
         {
             if (document == null ||
                 document.OptionA.MoneyChange >= 0 ||
-                document.OptionA.MaterialChange >= 0 ||
                 string.IsNullOrEmpty(document.OptionA.AddItemId))
             {
-                throw new InvalidDataException("Demo document no longer exercises resource requirements in document text.");
+                throw new InvalidDataException("测试公文不再覆盖正文中的资源需求显示。");
             }
         }
 
@@ -166,15 +167,76 @@ namespace TwelveMoons.EditorTools.Runtime
                 var text = method?.Invoke(view, new object[] { document }) as string;
                 if (string.IsNullOrEmpty(text) ||
                     !text.Contains("所需物品") ||
-                    !text.Contains("Money x5") ||
-                    !text.Contains("Material x3"))
+                    !text.Contains("金币 x5") ||
+                    text.Contains("建材 x3"))
                 {
-                    throw new InvalidDataException("Document body does not include configured resource requirements.");
+                    throw new InvalidDataException("公文正文没有显示配置中的资源需求。");
                 }
             }
             finally
             {
                 Object.DestroyImmediate(viewObject);
+            }
+        }
+
+        private static void LogPlannedFlow(TestContext context)
+        {
+            var builder = new System.Text.StringBuilder();
+            builder.AppendLine("桌面最小循环测试内容：");
+            foreach (var task in context.TaskService.Definitions)
+            {
+                if (!task.ShowInTaskPanel && string.IsNullOrEmpty(task.StartRound.ToString()))
+                {
+                    continue;
+                }
+
+                builder.AppendLine($"任务：{task.TaskName}（{task.TaskId}），回合 {task.StartRound}-{task.EndRound}，成功分 {task.SuccessScore}，失败分 {task.FailScore}");
+                foreach (var stage in context.TaskService.GetStages(task.TaskId))
+                {
+                    builder.AppendLine($"  阶段：{stage.StageDescription}（{stage.TaskStageId}），相对回合 {stage.StartOffsetRound}-{stage.EndOffsetRound}");
+                    AppendStory(builder, context, "开始剧情", stage.StartStoryId);
+                    AppendStory(builder, context, "公文前剧情", stage.BeforeDocumentStoryId);
+                    AppendStory(builder, context, "结束剧情", stage.EndStoryId);
+                    if (!string.IsNullOrEmpty(stage.BeforeDocumentCharacterId))
+                    {
+                        builder.AppendLine($"    公文前角色：{stage.BeforeDocumentCharacterId}");
+                    }
+
+                    foreach (var documentId in stage.LinkedDocumentIds)
+                    {
+                        if (context.DocumentService.TryGetDefinition(documentId, out var document))
+                        {
+                            builder.AppendLine($"    阶段公文：{document.Title}（{document.DocumentId}），甲：{document.OptionA.Text}，乙：{document.OptionB.Text}");
+                        }
+                    }
+                }
+            }
+
+            foreach (var document in context.DocumentService.Definitions)
+            {
+                if (document.DocumentType == "Global" || document.DocumentType == "Disaster" || document.DocumentType == "FollowUp")
+                {
+                    builder.AppendLine($"额外公文：{document.Title}（{document.DocumentId}，{document.DocumentType}），甲：{document.OptionA.Text}，乙：{document.OptionB.Text}");
+                }
+            }
+
+            Debug.Log(builder.ToString());
+        }
+
+        private static void AppendStory(System.Text.StringBuilder builder, TestContext context, string label, string storyId)
+        {
+            if (string.IsNullOrEmpty(storyId))
+            {
+                return;
+            }
+
+            if (context.StoryService.TryGetStory(storyId, out var story))
+            {
+                builder.AppendLine($"    {label}：{story.StoryName}（{story.StoryId}，{story.StoryType}）");
+            }
+            else
+            {
+                builder.AppendLine($"    {label}：未找到配置 {storyId}");
             }
         }
 

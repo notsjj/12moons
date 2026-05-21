@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace TwelveMoons.UI
 {
-    public sealed class DocumentSubmitSlot : MonoBehaviour, IDropHandler
+    public sealed class DocumentSubmitSlot : MonoBehaviour, IDropHandler, IPointerClickHandler
     {
         [Header("依赖服务：拖入卡牌时扣除或返还背包数量")]
         [SerializeField] private InventoryService inventoryService;
@@ -96,6 +96,20 @@ namespace TwelveMoons.UI
             acceptedItemCommitted = false;
             ShowSubmittedCard();
             SetStatus("已放入公文要求的物品。");
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData == null || eventData.button != PointerEventData.InputButton.Right || !HasAcceptedItem)
+            {
+                return;
+            }
+
+            RefundUncommittedAcceptedItem();
+            HasAcceptedItem = false;
+            acceptedItemCommitted = false;
+            HideSubmittedCard();
+            SetStatus("已退回提交卡牌。");
         }
 
         private void RefundUncommittedAcceptedItem()

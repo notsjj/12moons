@@ -65,6 +65,9 @@ namespace TwelveMoons.UI
         private Vector2 leftScrollClosedPosition;
         private Vector2 contentClosedPosition;
 
+        public bool IsDocumentFlowActive =>
+            gameObject.activeInHierarchy && (currentDocument != null || currentEntry != null || waitingForContinue);
+
         private void Awake()
         {
             ResolveDependencies();
@@ -681,12 +684,9 @@ namespace TwelveMoons.UI
                 return string.Empty;
             }
 
-            var builder = new StringBuilder();
-            AppendRequirement(builder, option.RequiredItemId, option.RequiredItemCount);
-            AppendResourceRequirement(builder, InventoryItemType.Money, option.MoneyChange);
-            AppendResourceRequirement(builder, InventoryItemType.Material, option.MaterialChange);
-            AppendResourceRequirement(builder, InventoryItemType.Food, option.FoodChange);
-            return builder.ToString();
+            return TryGetSubmittedRequirement(option, out var itemId, out var count)
+                ? $"{GetItemDisplayName(itemId)} x{count}"
+                : string.Empty;
         }
 
         private void AppendResourceRequirement(StringBuilder builder, InventoryItemType itemType, int delta)

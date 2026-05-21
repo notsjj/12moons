@@ -77,6 +77,13 @@ namespace TwelveMoons.UI
         public void StartOrContinueStoryQueue()
         {
             ResolveDependencies();
+            if (IsDocumentFlowActive())
+            {
+                SetStatus("正在处理公文，请先完成当前公文。");
+                RefreshButtons();
+                return;
+            }
+
             newspaperPanel?.Hide();
             storyService?.Continue();
             RefreshButtons();
@@ -85,6 +92,20 @@ namespace TwelveMoons.UI
         public void BeginDocumentFlow()
         {
             ResolveDependencies();
+            if (IsDocumentFlowActive())
+            {
+                SetStatus("正在处理公文，请先完成当前公文。");
+                RefreshButtons();
+                return;
+            }
+
+            if (HasActiveStory())
+            {
+                SetStatus("仍有剧情正在播放，请先结束剧情。");
+                RefreshButtons();
+                return;
+            }
+
             newspaperPanel?.Hide();
             documentService?.GenerateCurrentRoundDocumentQueue();
             documentPopupPanel?.BeginDocumentFlow();
@@ -94,6 +115,13 @@ namespace TwelveMoons.UI
         public void EndCurrentRound()
         {
             ResolveDependencies();
+            if (IsDocumentFlowActive())
+            {
+                SetStatus("正在处理公文，请先完成当前公文。");
+                RefreshButtons();
+                return;
+            }
+
             if (runtimeDataService == null || roundService == null)
             {
                 SetStatus("缺少回合服务，无法结束回合。");
@@ -119,6 +147,7 @@ namespace TwelveMoons.UI
                 roundWaitingForAdvance = endingRound;
                 if (HasQueuedStories())
                 {
+                    storyService?.StartNextQueuedStory();
                     SetStatus("已进入回合结束剧情，请先播放剧情后再推进回合。");
                     RefreshButtons();
                     return;
@@ -143,6 +172,13 @@ namespace TwelveMoons.UI
 
         public void ShowPreviousRoundNewspaper()
         {
+            if (IsDocumentFlowActive())
+            {
+                SetStatus("正在处理公文，请先完成当前公文。");
+                RefreshButtons();
+                return;
+            }
+
             newspaperPanel?.ShowPreviousRound();
         }
 
@@ -156,6 +192,11 @@ namespace TwelveMoons.UI
             ResolveDependencies();
             taskService?.ProcessCurrentRoundStart();
             documentService?.GenerateCurrentRoundDocumentQueue();
+            if (HasQueuedStories())
+            {
+                storyService?.StartNextQueuedStory();
+            }
+
             roundWaitingForAdvance = 0;
             SetStatus(runtimeDataService != null
                 ? $"第 {runtimeDataService.Data.CurrentRound} 回合：先播放剧情，再处理公文。"
@@ -164,13 +205,14 @@ namespace TwelveMoons.UI
 
         private void RefreshButtons()
         {
+            var isDocumentFlowActive = IsDocumentFlowActive();
             var hasActiveStory = HasActiveStory();
             var hasQueuedStories = HasQueuedStories();
             var hasPendingDocuments = HasPendingDocuments();
-            SetButtonInteractable(storyButton, hasActiveStory || hasQueuedStories);
-            SetButtonInteractable(documentButton, !hasActiveStory && hasPendingDocuments);
-            SetButtonInteractable(endRoundButton, !hasActiveStory && !hasPendingDocuments);
-            SetButtonInteractable(newspaperButton, HasPreviousNewspaper());
+            SetButtonInteractable(storyButton, !isDocumentFlowActive && (hasActiveStory || hasQueuedStories));
+            SetButtonInteractable(documentButton, !isDocumentFlowActive && !hasActiveStory && hasPendingDocuments);
+            SetButtonInteractable(endRoundButton, !isDocumentFlowActive && !hasActiveStory && !hasPendingDocuments);
+            SetButtonInteractable(newspaperButton, !isDocumentFlowActive && HasPreviousNewspaper());
         }
 
         private bool HasActiveStory()
@@ -211,6 +253,11 @@ namespace TwelveMoons.UI
         {
             return runtimeDataService != null &&
                 runtimeDataService.Data.TryGetNewspaper(runtimeDataService.Data.CurrentRound - 1, out _);
+        }
+
+        private bool IsDocumentFlowActive()
+        {
+            return documentPopupPanel != null && documentPopupPanel.IsDocumentFlowActive;
         }
 
         private void ResolveDependencies()

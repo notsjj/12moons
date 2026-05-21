@@ -1,9 +1,9 @@
 LetterId,Title,SenderName,BodyText,Remark
-letter_relief_start,Relief Stores Opened,Storehouse Clerk,The first relief ledger is ready for inspection.,Phase 6 task stage start letter
-letter_relief_prepare_end,Relief Stores Counted,Storehouse Clerk,The stores have been counted and sealed for travel.,Phase 6 task stage end letter
-letter_relief_deliver_start,Road Dispatch,Courier Captain,The convoy is ready to leave the city gate.,Phase 6 task stage start letter
-letter_relief_deliver_end,Road Return,Courier Captain,The convoy returned with its final account.,Phase 6 task stage end letter
-letter_noble_low_01,A Quiet Noble Note,Noble Council,The council records your restraint with guarded approval.,Demo low suspicion letter
-letter_academy_low_01,Academy Thanks,Academy Archive,Your recent decisions have reduced doubt among the academy.,Demo low suspicion letter
-letter_church_low_01,Church Candle,Church Envoy,The chapel sends thanks for easing its worries.,Demo low suspicion letter
-letter_civilian_low_01,Lower City Thanks,Lower City Residents,The lower city has noticed that the council listened.,Demo low suspicion letter
+letter_relief_start,赈济仓开启,库房书记,第一份赈济账册已经备好，可以开始查验。,任务阶段开始信件测试
+letter_relief_prepare_end,赈济仓清点完毕,库房书记,仓储已经清点并封车，随时可以出发。,任务阶段结束信件测试
+letter_relief_deliver_start,车队调度,信使队长,赈济车队已经在城门口等待出发。,任务阶段开始信件测试
+letter_relief_deliver_end,车队回报,信使队长,赈济车队已经带着最后一份回执返回。,任务阶段结束信件测试
+letter_noble_low_01,贵族静函,贵族议会,议会谨慎记录了你的克制处理。,低质疑度奖励信件测试
+letter_academy_low_01,学院谢函,学院档案室,学院注意到近期决策降低了疑虑。,低质疑度奖励信件测试
+letter_church_low_01,教会烛函,教会使者,礼拜堂感谢你缓解了教会的担忧。,低质疑度奖励信件测试
+letter_civilian_low_01,低城区谢函,低城区居民,低城区已经注意到议厅听见了他们的请求。,低质疑度奖励信件测试
