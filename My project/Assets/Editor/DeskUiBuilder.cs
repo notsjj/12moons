@@ -223,23 +223,34 @@ namespace TwelveMoons.EditorTools
         {
             var slot = FindOrCreateUiChild(parent, "SharedActorSlot");
             SetFixedRect(slot.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), new Vector2(-260f, 56f), new Vector2(240f, 280f), new Vector2(0f, 0.5f));
-            ConfigurePanelImage(slot, new Color(0.12f, 0.115f, 0.1f, 0.96f));
+            EnsureComponent<RectMask2D>(slot);
+            ClearLegacySharedActorSlotChildren(slot.transform);
+            var slotImage = slot.GetComponent<Image>();
+            if (slotImage != null)
+            {
+                slotImage.color = Color.clear;
+                slotImage.raycastTarget = false;
+            }
 
             var canvasGroup = EnsureComponent<CanvasGroup>(slot);
             canvasGroup.alpha = 0f;
             canvasGroup.blocksRaycasts = false;
             canvasGroup.interactable = false;
 
-            var portrait = FindOrCreateImage(slot.transform, "PortraitImage", new Color(0.18f, 0.17f, 0.15f, 1f));
+            var actorRoot = FindOrCreateUiChild(slot.transform, "ActorRoot");
+            SetFixedRect(actorRoot.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(240f, 280f), new Vector2(0f, 0.5f));
+            ConfigurePanelImage(actorRoot, new Color(0.12f, 0.115f, 0.1f, 0.96f));
+
+            var portrait = FindOrCreateImage(actorRoot.transform, "PortraitImage", new Color(0.18f, 0.17f, 0.15f, 1f));
             SetFixedRect(portrait.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -24f), new Vector2(192f, 174f), new Vector2(0.5f, 1f));
 
-            var nameText = FindOrCreateText(slot.transform, "NameText", "", 18, FontStyles.Bold, TextAlignmentOptions.Center);
+            var nameText = FindOrCreateText(actorRoot.transform, "NameText", "", 18, FontStyles.Bold, TextAlignmentOptions.Center);
             SetFixedRect(nameText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 48f), new Vector2(208f, 30f), new Vector2(0.5f, 0f));
 
-            var roleText = FindOrCreateText(slot.transform, "RoleText", "", 13, FontStyles.Normal, TextAlignmentOptions.Center);
+            var roleText = FindOrCreateText(actorRoot.transform, "RoleText", "", 13, FontStyles.Normal, TextAlignmentOptions.Center);
             SetFixedRect(roleText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(208f, 24f), new Vector2(0.5f, 0f));
 
-            var proposerFeedbackBackground = FindOrCreateImage(slot.transform, "ProposerFeedbackBackground", new Color(0.08f, 0.075f, 0.065f, 0.92f));
+            var proposerFeedbackBackground = FindOrCreateImage(actorRoot.transform, "ProposerFeedbackBackground", new Color(0.08f, 0.075f, 0.065f, 0.92f));
             SetFixedRect(proposerFeedbackBackground.rectTransform, new Vector2(1f, 0.5f), new Vector2(20f, 0f), new Vector2(244f, 144f), new Vector2(0f, 0.5f));
             var proposerFeedbackText = FindOrCreateText(proposerFeedbackBackground.transform, "ProposerFeedbackText", "", 13, FontStyles.Normal, TextAlignmentOptions.TopLeft);
             StretchRect(proposerFeedbackText.rectTransform, new Vector2(14f, 12f), new Vector2(-14f, -12f));
@@ -250,12 +261,33 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("portraitImage").objectReferenceValue = portrait;
             serializedObject.FindProperty("nameText").objectReferenceValue = nameText;
             serializedObject.FindProperty("roleText").objectReferenceValue = roleText;
+            serializedObject.FindProperty("visibleClipRoot").objectReferenceValue = slot.GetComponent<RectTransform>();
+            serializedObject.FindProperty("visibleClipMask").objectReferenceValue = slot.GetComponent<RectMask2D>();
+            serializedObject.FindProperty("proposerFeedbackBackground").objectReferenceValue = proposerFeedbackBackground.gameObject;
             serializedObject.FindProperty("proposerFeedbackText").objectReferenceValue = proposerFeedbackText;
-            serializedObject.FindProperty("actorRoot").objectReferenceValue = slot.GetComponent<RectTransform>();
+            serializedObject.FindProperty("actorRoot").objectReferenceValue = actorRoot.GetComponent<RectTransform>();
             serializedObject.FindProperty("hiddenMoveLeftDistance").floatValue = 284f;
             serializedObject.FindProperty("slideDuration").floatValue = 0.8f;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
             return slot;
+        }
+
+        private static void ClearLegacySharedActorSlotChildren(Transform slotTransform)
+        {
+            DestroyDirectChildIfExists(slotTransform, "PortraitImage");
+            DestroyDirectChildIfExists(slotTransform, "NameText");
+            DestroyDirectChildIfExists(slotTransform, "RoleText");
+            DestroyDirectChildIfExists(slotTransform, "ProposerFeedbackBackground");
+            DestroyDirectChildIfExists(slotTransform, "ProposerFeedbackText");
+        }
+
+        private static void DestroyDirectChildIfExists(Transform parent, string childName)
+        {
+            var child = parent.Find(childName);
+            if (child != null)
+            {
+                Object.DestroyImmediate(child.gameObject);
+            }
         }
 
         private static GameObject BuildDocumentPopupPanel(

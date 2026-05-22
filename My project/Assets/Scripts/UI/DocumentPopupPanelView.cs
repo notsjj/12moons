@@ -68,6 +68,8 @@ namespace TwelveMoons.UI
         public bool IsDocumentFlowActive =>
             gameObject.activeInHierarchy && (currentDocument != null || currentEntry != null || waitingForContinue);
 
+        public event Action DocumentFlowStateChanged;
+
         private void Awake()
         {
             ResolveDependencies();
@@ -94,6 +96,16 @@ namespace TwelveMoons.UI
 
         private void Update()
         {
+            if (waitingForContinue)
+            {
+                if (Input.GetMouseButtonDown(0))
+                {
+                    ContinueAfterResolution();
+                }
+
+                return;
+            }
+
             if (currentDocument == null || submitSlot == null)
             {
                 return;
@@ -157,6 +169,7 @@ namespace TwelveMoons.UI
 
             gameObject.SetActive(true);
             OpenScroll();
+            NotifyDocumentFlowStateChanged();
         }
 
         [ContextMenu("Hide")]
@@ -171,6 +184,7 @@ namespace TwelveMoons.UI
             lastSubmitAccepted = false;
             CloseInstant();
             gameObject.SetActive(false);
+            NotifyDocumentFlowStateChanged();
         }
 
         public void OnOptionAClicked()
@@ -199,6 +213,7 @@ namespace TwelveMoons.UI
             }
 
             waitingForContinue = false;
+            sharedActorSlot?.ClearFeedback();
             sharedActorSlot?.HideToRight();
             CloseScroll();
             DOVirtual.DelayedCall(scrollTweenDuration, ShowNextDocumentOrFinish);
@@ -225,6 +240,7 @@ namespace TwelveMoons.UI
             ShowProposer(document);
             gameObject.SetActive(true);
             OpenScroll();
+            NotifyDocumentFlowStateChanged();
         }
 
         private void ResolveCurrentDocument(DocumentOptionType optionType)
@@ -240,6 +256,7 @@ namespace TwelveMoons.UI
                 return;
             }
 
+            RefreshCurrentDocument();
             var option = currentDocument.GetOption(optionType);
             if (RequiresSubmittedItem(option) && !HasSubmittedRequirement(option))
             {
@@ -271,6 +288,7 @@ namespace TwelveMoons.UI
                 currentEntry = null;
                 currentDocument = null;
                 waitingForContinue = true;
+                NotifyDocumentFlowStateChanged();
             }
             else
             {
@@ -343,6 +361,12 @@ namespace TwelveMoons.UI
             }
 
             gameObject.SetActive(false);
+            NotifyDocumentFlowStateChanged();
+        }
+
+        private void NotifyDocumentFlowStateChanged()
+        {
+            DocumentFlowStateChanged?.Invoke();
         }
 
         private void OpenScroll()

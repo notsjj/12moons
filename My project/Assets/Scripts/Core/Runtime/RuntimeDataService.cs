@@ -40,12 +40,17 @@ namespace TwelveMoons.Core.Runtime
             new List<RuntimeInspectorStoryEntry>();
         [Tooltip("当前正在播放的剧情摘要；为空表示当前没有剧情播放状态。")]
         [SerializeField] private string inspectorCurrentStorySummary;
+        [Tooltip("运行时建筑状态快照；用于确认公文选项是否已经把建筑写入解锁状态。")]
+        [SerializeField] private List<RuntimeInspectorBuildingEntry> inspectorRuntimeBuildings =
+            new List<RuntimeInspectorBuildingEntry>();
 
         public GameRuntimeData Data { get; } = new GameRuntimeData();
 
         public event Action<RuntimeLetterState> LetterReceived;
 
         public event Action<string> LetterRemoved;
+
+        public event Action<RuntimeBuildingState> BuildingUnlocked;
 
         private void Awake()
         {
@@ -74,6 +79,7 @@ namespace TwelveMoons.Core.Runtime
             Data.Reset(disasterId, totalRound);
             InitializeConfiguredItems();
             InitializeConfiguredFactions();
+            InitializeConfiguredBuildings();
 
             Debug.Log(
                 $"Runtime data initialized. Disaster={Data.DisasterId}, Round={Data.CurrentRound}/{Data.TotalRound}, Items={Data.Items.Count}, Factions={Data.Factions.Count}.",
@@ -98,7 +104,13 @@ namespace TwelveMoons.Core.Runtime
         public RuntimeBuildingState UnlockBuilding(string buildingId)
         {
             var building = Data.GetOrCreateBuilding(buildingId);
+            var wasUnlocked = building.IsUnlocked;
             building.Unlock();
+            if (!wasUnlocked)
+            {
+                BuildingUnlocked?.Invoke(building);
+            }
+
             return building;
         }
 
@@ -143,6 +155,7 @@ namespace TwelveMoons.Core.Runtime
             RefreshInspectorConfiguredTasks(taskService);
             RefreshInspectorCurrentRoundStories(storyService);
             RefreshInspectorCurrentStory(storyService);
+            RefreshInspectorRuntimeBuildings();
         }
 
         private int GetDisasterTotalRound(string disasterId)
@@ -191,6 +204,29 @@ namespace TwelveMoons.Core.Runtime
 
                 var faction = Data.GetOrCreateFaction(factionId, row.GetInt("InitSuspicion"));
                 faction.SetSuspicion(faction.Suspicion, row.GetInt("MaxSuspicion", 100));
+            }
+        }
+
+        private void InitializeConfiguredBuildings()
+        {
+            if (configManager == null || !configManager.TryGetTable("CityBuildingConfig", out var buildingTable))
+            {
+                return;
+            }
+
+            foreach (var row in buildingTable.Rows)
+            {
+                var buildingId = row.GetString("BuildingId");
+                if (string.IsNullOrEmpty(buildingId))
+                {
+                    continue;
+                }
+
+                var building = Data.GetOrCreateBuilding(buildingId);
+                if (row.GetBool("DefaultVisible"))
+                {
+                    building.Unlock();
+                }
             }
         }
 
@@ -339,6 +375,20 @@ namespace TwelveMoons.Core.Runtime
             inspectorCurrentStorySummary = $"剧情={story.StoryId} {story.StoryName}, 类型={story.StoryType}, 行={lineId}, 已完成={playback.IsCompleted}, 等待提交={playback.IsWaitingForSubmission}";
         }
 
+        private void RefreshInspectorRuntimeBuildings()
+        {
+            inspectorRuntimeBuildings.Clear();
+            foreach (var state in Data.Buildings)
+            {
+                inspectorRuntimeBuildings.Add(new RuntimeInspectorBuildingEntry
+                {
+                    buildingId = state.BuildingId,
+                    isUnlocked = state.IsUnlocked,
+                    lastCollectedRound = state.LastCollectedRound
+                });
+            }
+        }
+
         private static string FirstNonEmpty(string first, string second)
         {
             return !string.IsNullOrEmpty(first) ? first : second ?? string.Empty;
@@ -454,5 +504,17 @@ namespace TwelveMoons.Core.Runtime
         public string triggerTaskId;
         public string addItemId;
         public int addItemCount;
+    }
+
+    [Serializable]
+    public sealed class RuntimeInspectorBuildingEntry
+    {
+        [Header("运行时建筑状态")]
+        [Tooltip("建筑 ID；来自 RuntimeBuildingState.BuildingId，应与 CityBuildingConfig.BuildingId 一致。")]
+        public string buildingId;
+        [Tooltip("当前建筑是否已经被公文或默认配置解锁。")]
+        public bool isUnlocked;
+        [Tooltip("上次领取建筑产出的回合；0 表示尚未领取。")]
+        public int lastCollectedRound;
     }
 }

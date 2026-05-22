@@ -18,6 +18,10 @@ namespace TwelveMoons.Core.Runtime
         [Tooltip("任务服务；用于在剧情结束后按 StoryConfig.TriggerTaskId 激活任务。")]
         [SerializeField] private TaskService taskService;
 
+        [Header("Inspector调试：当前正在播放的剧情类型")]
+        [Tooltip("只读观察字段；显示当前剧情类型，没有剧情时显示“无”。")]
+        [SerializeField] private string inspectorCurrentStoryType = "无";
+
         private readonly List<StoryDefinition> stories = new List<StoryDefinition>();
         private readonly Dictionary<string, StoryDefinition> storiesById =
             new Dictionary<string, StoryDefinition>(StringComparer.Ordinal);
@@ -90,13 +94,28 @@ namespace TwelveMoons.Core.Runtime
 
         public bool StartNextQueuedStory()
         {
+            return StartNextQueuedStory(null);
+        }
+
+        public bool StartNextQueuedStory(RuntimeStoryQueueTiming timing)
+        {
+            return StartNextQueuedStory((RuntimeStoryQueueTiming?)timing);
+        }
+
+        private bool StartNextQueuedStory(RuntimeStoryQueueTiming? timing)
+        {
             if (runtimeDataService == null)
             {
                 Debug.LogWarning("StoryService missing RuntimeDataService.", this);
                 return false;
             }
 
-            var entry = runtimeDataService.Data.StoryQueue.FirstOrDefault();
+            var currentRound = runtimeDataService.Data.CurrentRound;
+            var entry = runtimeDataService.Data.StoryQueue
+                .Where(candidate => candidate.QueuedRound <= currentRound &&
+                    (!timing.HasValue || candidate.Timing == timing.Value))
+                .OrderBy(candidate => GetStoryTimingPriority(candidate.Timing))
+                .FirstOrDefault();
             if (entry == null)
             {
                 CurrentPlayback = null;
@@ -107,7 +126,7 @@ namespace TwelveMoons.Core.Runtime
             if (!StartStory(entry.StoryId))
             {
                 runtimeDataService.Data.RemoveStoryQueueEntry(entry);
-                return StartNextQueuedStory();
+                return StartNextQueuedStory(timing);
             }
 
             runtimeDataService.Data.RemoveStoryQueueEntry(entry);
@@ -515,7 +534,25 @@ namespace TwelveMoons.Core.Runtime
 
         private void NotifyStoryChanged()
         {
+            inspectorCurrentStoryType = CurrentPlayback != null
+                ? CurrentPlayback.Story.StoryType.ToString()
+                : "无";
             StoryChanged?.Invoke();
+        }
+
+        private static int GetStoryTimingPriority(RuntimeStoryQueueTiming timing)
+        {
+            switch (timing)
+            {
+                case RuntimeStoryQueueTiming.StageEnd:
+                    return 0;
+                case RuntimeStoryQueueTiming.StageStart:
+                    return 1;
+                case RuntimeStoryQueueTiming.BeforeDocument:
+                    return 2;
+                default:
+                    return 99;
+            }
         }
 
         private void RecordStorySettlement(StoryDefinition story, string message)

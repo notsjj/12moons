@@ -8,6 +8,7 @@ namespace TwelveMoons.EditorTools
     public sealed class SpriteSheetSlicerWindow : EditorWindow
     {
         private Texture2D texture;
+        private readonly List<Texture2D> selectedPngTextures = new List<Texture2D>();
         private int pixelsPerUnit = 100;
         private Vector2 pivot = new Vector2(0.5f, 0.5f);
         private float alphaThreshold = 0.05f;
@@ -18,14 +19,17 @@ namespace TwelveMoons.EditorTools
         public static void OpenWithSelection()
         {
             var window = GetWindow<SpriteSheetSlicerWindow>("Sprite Slicer");
-            window.texture = Selection.activeObject as Texture2D;
+            window.RefreshSelectedPngTextures();
+            window.texture = window.selectedPngTextures.Count > 0
+                ? window.selectedPngTextures[0]
+                : LoadTextureFromSelectedObject(Selection.activeObject);
             window.Show();
         }
 
         [MenuItem("Twelve Moons/Tools/Auto Slice Selected PNG To Sprites", true)]
         public static bool CanOpenWithSelection()
         {
-            return Selection.activeObject is Texture2D;
+            return GetSelectedPngTextures().Count > 0;
         }
 
         private void OnGUI()
@@ -46,57 +50,116 @@ namespace TwelveMoons.EditorTools
             {
                 if (GUILayout.Button("Auto Slice And Set Compression None", GUILayout.Height(32f)))
                 {
-                    SliceSelectedTexture();
+                    SliceSelectedTextures();
                 }
             }
 
             if (texture != null)
             {
+                RefreshSelectedPngTextures();
+                var selectedCount = selectedPngTextures.Count;
+                var selectionInfo = selectedCount > 1
+                    ? $"Will process {selectedCount} selected PNG textures."
+                    : $"Texture size: {texture.width} x {texture.height}.";
+
                 EditorGUILayout.HelpBox(
-                    $"Texture size: {texture.width} x {texture.height}. The tool finds separated non-transparent regions and creates one sprite per region.",
+                    $"{selectionInfo} The tool finds separated non-transparent regions and creates one sprite per region.",
                     MessageType.Info);
             }
         }
 
-        private void SliceSelectedTexture()
+        private void SliceSelectedTextures()
         {
-            if (texture == null)
+            var skippedMessages = new List<string>();
+            var targets = GetSelectedPngTextures(skippedMessages);
+            if (targets.Count == 0 && texture != null)
             {
+                var assetPath = AssetDatabase.GetAssetPath(texture);
+                if (IsPngTexture(texture, assetPath))
+                {
+                    targets.Add(texture);
+                }
+            }
+
+            if (targets.Count == 0)
+            {
+                EditorUtility.DisplayDialog("Sprite Slicer", "Please select one or more PNG texture assets from the Project window.", "OK");
                 return;
             }
 
-            var assetPath = AssetDatabase.GetAssetPath(texture);
+            var successCount = 0;
+            var failedMessages = new List<string>();
+            Texture2D lastSlicedTexture = null;
+            foreach (var targetTexture in targets)
+            {
+                if (SliceTexture(targetTexture, failedMessages, out var slicedTexture))
+                {
+                    successCount++;
+                    lastSlicedTexture = slicedTexture;
+                }
+            }
+
+            AssetDatabase.Refresh();
+            if (lastSlicedTexture != null)
+            {
+                Selection.activeObject = lastSlicedTexture;
+                texture = lastSlicedTexture;
+            }
+
+            foreach (var message in skippedMessages)
+            {
+                Debug.LogWarning(message);
+            }
+
+            foreach (var message in failedMessages)
+            {
+                Debug.LogWarning(message);
+            }
+
+            Debug.Log($"Auto slice complete. Success: {successCount}, skipped or failed: {skippedMessages.Count + failedMessages.Count}.");
+        }
+
+        private bool SliceTexture(Texture2D targetTexture, List<string> failedMessages, out Texture2D slicedTexture)
+        {
+            slicedTexture = null;
+            if (targetTexture == null)
+            {
+                failedMessages.Add("Skipped a null texture selection.");
+                return false;
+            }
+
+            var assetPath = AssetDatabase.GetAssetPath(targetTexture);
             if (string.IsNullOrEmpty(assetPath))
             {
-                EditorUtility.DisplayDialog("Sprite Slicer", "Please select a texture asset from the Project window.", "OK");
-                return;
+                failedMessages.Add($"Skipped {targetTexture.name}: not a texture asset from the Project window.");
+                return false;
             }
 
             if (!string.Equals(Path.GetExtension(assetPath), ".png", System.StringComparison.OrdinalIgnoreCase))
             {
-                EditorUtility.DisplayDialog("Sprite Slicer", "Please select a PNG texture.", "OK");
-                return;
+                failedMessages.Add($"Skipped {assetPath}: not a PNG texture.");
+                return false;
             }
 
             var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
             if (importer == null)
             {
-                EditorUtility.DisplayDialog("Sprite Slicer", "Selected asset is not imported by TextureImporter.", "OK");
-                return;
+                failedMessages.Add($"Skipped {assetPath}: selected asset is not imported by TextureImporter.");
+                return false;
             }
 
             var wasReadable = importer.isReadable;
             ApplyImporterSettings(importer, true);
             importer.SaveAndReimport();
 
-            texture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
-            var sprites = BuildSpritesFromContent(texture, assetPath);
+            slicedTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+            var sprites = BuildSpritesFromContent(slicedTexture, assetPath);
             if (sprites.Count == 0)
             {
-                EditorUtility.DisplayDialog("Sprite Slicer", "No visible PNG regions were found. Lower Alpha Threshold or check the image alpha.", "OK");
                 importer.isReadable = wasReadable;
                 importer.SaveAndReimport();
-                return;
+                failedMessages.Add($"Skipped {assetPath}: no visible PNG regions were found. Lower Alpha Threshold or check the image alpha.");
+                return false;
             }
 
             importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
@@ -105,9 +168,86 @@ namespace TwelveMoons.EditorTools
             EditorUtility.SetDirty(importer);
             importer.SaveAndReimport();
 
-            AssetDatabase.Refresh();
-            Selection.activeObject = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
-            Debug.Log($"Auto sliced {assetPath} into {sprites.Count} sprites with compression set to None.", texture);
+            slicedTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+            Debug.Log($"Auto sliced {assetPath} into {sprites.Count} sprites with compression set to None.", slicedTexture);
+            return true;
+        }
+
+        private void RefreshSelectedPngTextures()
+        {
+            selectedPngTextures.Clear();
+            selectedPngTextures.AddRange(GetSelectedPngTextures());
+        }
+
+        private static List<Texture2D> GetSelectedPngTextures()
+        {
+            return GetSelectedPngTextures(null);
+        }
+
+        private static List<Texture2D> GetSelectedPngTextures(List<string> skippedMessages)
+        {
+            var textures = new List<Texture2D>();
+            foreach (var selectedObject in Selection.objects)
+            {
+                var selectedTexture = LoadTextureFromSelectedObject(selectedObject);
+                if (selectedTexture == null)
+                {
+                    if (selectedObject != null)
+                    {
+                        skippedMessages?.Add($"Skipped {selectedObject.name}: selected object is not a PNG Texture2D or sliced Sprite from a PNG.");
+                    }
+
+                    continue;
+                }
+
+                var assetPath = AssetDatabase.GetAssetPath(selectedTexture);
+                if (!IsPngTexture(selectedTexture, assetPath))
+                {
+                    skippedMessages?.Add($"Skipped {assetPath}: selected texture is not a PNG.");
+                    continue;
+                }
+
+                if (!textures.Contains(selectedTexture))
+                {
+                    textures.Add(selectedTexture);
+                }
+            }
+
+            return textures;
+        }
+
+        private static Texture2D LoadTextureFromSelectedObject(Object selectedObject)
+        {
+            if (selectedObject == null)
+            {
+                return null;
+            }
+
+            var assetPath = AssetDatabase.GetAssetPath(selectedObject);
+            if (string.IsNullOrEmpty(assetPath) ||
+                !string.Equals(Path.GetExtension(assetPath), ".png", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            if (selectedObject is Texture2D selectedTexture)
+            {
+                return selectedTexture;
+            }
+
+            if (selectedObject is Sprite)
+            {
+                return AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+            }
+
+            return null;
+        }
+
+        private static bool IsPngTexture(Texture2D selectedTexture, string assetPath)
+        {
+            return selectedTexture != null &&
+                !string.IsNullOrEmpty(assetPath) &&
+                string.Equals(Path.GetExtension(assetPath), ".png", System.StringComparison.OrdinalIgnoreCase);
         }
 
         private void ApplyImporterSettings(TextureImporter importer, bool isReadable)
@@ -156,13 +296,6 @@ namespace TwelveMoons.EditorTools
             }
 
             sprites.Sort(CompareSpritesTopLeft);
-            if (sprites.Count == 1)
-            {
-                var sprite = sprites[0];
-                sprite.rect = new Rect(0f, 0f, width, height);
-                sprites[0] = sprite;
-            }
-
             RenameSprites(baseName, sprites);
             return sprites;
         }

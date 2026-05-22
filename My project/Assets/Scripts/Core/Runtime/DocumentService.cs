@@ -91,6 +91,7 @@ namespace TwelveMoons.Core.Runtime
                 return false;
             }
 
+            LoadConfigs();
             GenerateCurrentRoundDocumentQueue();
 
             var currentRound = runtimeDataService.Data.CurrentRound;
@@ -158,6 +159,7 @@ namespace TwelveMoons.Core.Runtime
             DocumentOptionType optionType,
             bool requiredItemAlreadySubmitted)
         {
+            LoadConfigs();
             if (entry == null)
             {
                 return Fail("No document is selected.");
@@ -254,9 +256,14 @@ namespace TwelveMoons.Core.Runtime
 
         private void LoadDocuments()
         {
-            if (!configManager.TryGetTable("DocumentConfig", out var table))
+            ConfigTable table;
+            try
             {
-                Debug.LogWarning("DocumentService cannot load DocumentConfig.", this);
+                table = configManager.LoadTable("DocumentConfig");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"DocumentService cannot load DocumentConfig. {exception.Message}", this);
                 return;
             }
 
@@ -275,7 +282,12 @@ namespace TwelveMoons.Core.Runtime
 
         private void LoadCharacters()
         {
-            if (!configManager.TryGetTable("CharacterConfig", out var table))
+            ConfigTable table;
+            try
+            {
+                table = configManager.LoadTable("CharacterConfig");
+            }
+            catch
             {
                 return;
             }

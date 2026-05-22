@@ -65,6 +65,8 @@ namespace TwelveMoons.UI
         private int visibleTypewriterCharacters;
         private float typewriterTimer;
         private bool isTypewriting;
+        private bool finalContinueVisible;
+        private string finalContinueKey;
 
         private void Awake()
         {
@@ -137,13 +139,27 @@ namespace TwelveMoons.UI
 
         public void OnContinueClicked()
         {
-            OnStoryAreaClicked();
+            if (!finalContinueVisible)
+            {
+                return;
+            }
+
+            finalContinueVisible = false;
+            finalContinueKey = string.Empty;
+            storyService?.Continue();
         }
 
         public void OnStoryAreaClicked()
         {
             if (RevealTypewriterIfNeeded())
             {
+                return;
+            }
+
+            var playback = storyService != null ? storyService.CurrentPlayback : null;
+            if (playback != null && IsCurrentStoryStepLast(playback))
+            {
+                ShowFinalContinueButton(playback);
                 return;
             }
 
@@ -177,6 +193,7 @@ namespace TwelveMoons.UI
                 currentStoryId = string.Empty;
                 ResetDialogueCharacters();
                 ResetTypewriter();
+                ResetFinalContinue();
                 SetText(titleText, "Story");
                 SetText(feedbackText, "");
                 ShowOnlyPanel(null);
@@ -192,7 +209,10 @@ namespace TwelveMoons.UI
                 currentStoryId = story.StoryId;
                 ResetDialogueCharacters();
                 ResetTypewriter();
+                ResetFinalContinue();
             }
+
+            RefreshFinalContinueKey(playback);
 
             SetText(titleText, string.IsNullOrEmpty(story.StoryName) ? story.StoryId : story.StoryName);
             SetText(feedbackText, playback.Feedback);
@@ -221,14 +241,14 @@ namespace TwelveMoons.UI
         {
             ShowOnlyPanel(textStoryPanel);
             SetText(textContent, feedback);
-            SetButtonVisible(textContinueButton, textContinueButtonText, true, "Close");
+            SetButtonVisible(textContinueButton, textContinueButtonText, true, "继续");
         }
 
         private void RefreshDialogue(StoryPlaybackState playback)
         {
             ShowOnlyPanel(dialoguePanel);
             SetPanelActive(submissionPanel, false);
-            SetButtonVisible(dialogueContinueButton, dialogueContinueButtonText, true, "Continue");
+            SetButtonVisible(dialogueContinueButton, dialogueContinueButtonText, finalContinueVisible, "继续");
             SetButtonVisible(choiceButtonA, choiceButtonAText, false, "");
             SetButtonVisible(choiceButtonB, choiceButtonBText, false, "");
 
@@ -264,6 +284,7 @@ namespace TwelveMoons.UI
             }
 
             SetTypewriterText($"{playback.Story.StoryId}:{line.LineId}", line.Content, dialogueText);
+            SetButtonVisible(dialogueContinueButton, dialogueContinueButtonText, finalContinueVisible, "继续");
         }
 
         private void RefreshSubmission(DialogueLineDefinition line)
@@ -326,7 +347,7 @@ namespace TwelveMoons.UI
             var currentSegment = GetTextSegment(story, playback.PresentationIndex);
             var key = $"{story.StoryId}:text:{playback.PresentationIndex}";
             SetTypewriterText(key, currentSegment, textContent, builder.ToString());
-            SetButtonVisible(textContinueButton, textContinueButtonText, false, "");
+            SetButtonVisible(textContinueButton, textContinueButtonText, finalContinueVisible, "继续");
         }
 
         private void RefreshImageStory(StoryPlaybackState playback)
@@ -335,8 +356,6 @@ namespace TwelveMoons.UI
             ResetTypewriter();
             var story = playback.Story;
             var imageCount = Mathf.Max(1, story.ImageIds.Count);
-            var isLast = playback.PresentationIndex >= imageCount - 1;
-
             if (story.ImageDisplayMode == StoryImageDisplayMode.ComicPanels)
             {
                 RefreshComicPanels(story, playback.PresentationIndex);
@@ -351,7 +370,7 @@ namespace TwelveMoons.UI
                 SetText(imageCaptionText, story.GetImageCaption(playback.PresentationIndex));
             }
 
-            SetButtonVisible(imageContinueButton, imageContinueButtonText, isLast, "Continue");
+            SetButtonVisible(imageContinueButton, imageContinueButtonText, finalContinueVisible, "继续");
         }
 
         private void RefreshComicPanels(StoryDefinition story, int presentationIndex)
@@ -461,6 +480,77 @@ namespace TwelveMoons.UI
             visibleTypewriterCharacters = 0;
             typewriterTimer = 0f;
             isTypewriting = false;
+        }
+
+        private void ResetFinalContinue()
+        {
+            finalContinueVisible = false;
+            finalContinueKey = string.Empty;
+        }
+
+        private void RefreshFinalContinueKey(StoryPlaybackState playback)
+        {
+            var key = GetCurrentStoryStepKey(playback);
+            if (finalContinueKey != key)
+            {
+                finalContinueKey = key;
+                finalContinueVisible = false;
+            }
+        }
+
+        private void ShowFinalContinueButton(StoryPlaybackState playback)
+        {
+            finalContinueKey = GetCurrentStoryStepKey(playback);
+            finalContinueVisible = true;
+            Refresh();
+        }
+
+        private static string GetCurrentStoryStepKey(StoryPlaybackState playback)
+        {
+            if (playback == null || playback.Story == null)
+            {
+                return string.Empty;
+            }
+
+            if (playback.Story.StoryType == StoryType.Dialogue)
+            {
+                return playback.CurrentLine != null
+                    ? $"{playback.Story.StoryId}:dialogue:{playback.CurrentLine.LineId}"
+                    : $"{playback.Story.StoryId}:dialogue:none";
+            }
+
+            return $"{playback.Story.StoryId}:{playback.Story.StoryType}:{playback.PresentationIndex}";
+        }
+
+        private static bool IsCurrentStoryStepLast(StoryPlaybackState playback)
+        {
+            if (playback == null || playback.Story == null)
+            {
+                return false;
+            }
+
+            var story = playback.Story;
+            if (story.StoryType == StoryType.Image)
+            {
+                var imageCount = Mathf.Max(1, story.ImageIds.Count);
+                return playback.PresentationIndex >= imageCount - 1;
+            }
+
+            if (story.StoryType == StoryType.Text)
+            {
+                var textCount = Mathf.Max(1, story.TextSegments.Count);
+                return playback.PresentationIndex >= textCount - 1;
+            }
+
+            var line = playback.CurrentLine;
+            if (line == null || line.IsChoice || line.IsItemSubmissionLine())
+            {
+                return false;
+            }
+
+            var nextLineId = line.GetNextLineId(0);
+            return string.IsNullOrWhiteSpace(nextLineId) ||
+                string.Equals(nextLineId.Trim(), "END", System.StringComparison.OrdinalIgnoreCase);
         }
 
         private void UpdateDialogueCharacter(DialogueLineDefinition line)

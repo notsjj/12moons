@@ -1,11 +1,13 @@
 using TMPro;
+using System;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace TwelveMoons.UI
 {
-    public sealed class SharedActorSlotView : MonoBehaviour
+    public sealed class SharedActorSlotView : MonoBehaviour, IPointerClickHandler
     {
         [Header("人物显示：占位立绘、姓名和身份文本")]
         [SerializeField] private CanvasGroup canvasGroup;
@@ -16,13 +18,28 @@ namespace TwelveMoons.UI
         [SerializeField] private GameObject proposerFeedbackBackground;
         [SerializeField] private TMP_Text proposerFeedbackText;
         [SerializeField] private Color placeholderPortraitColor = new Color(0.42f, 0.45f, 0.5f, 1f);
+        [Header("点击区域：公文前剧情只允许点击人物框触发")]
+        [Tooltip("透明点击接收图；如果没有手动指定，会在人物框根节点自动补一个透明 Image，不改变可见布局。")]
+        [SerializeField] private Image clickRaycastImage;
 
         [Header("人物框移动：以当前摆放位置为显示位置")]
+        [Header("可视裁剪区域")]
+        [Tooltip("固定不动的角色可视区域；角色立绘滑入前和滑出后会被这个区域裁掉。")]
+        [SerializeField] private RectTransform visibleClipRoot;
+        [Tooltip("可视裁剪区域上的 RectMask2D；用于限制角色立绘只在指定区域内显示。")]
+        [SerializeField] private RectMask2D visibleClipMask;
+
+        [Header("角色移动设置")]
+        [Tooltip("实际执行滑入滑出的角色根节点；应作为可视裁剪区域的子物体，不能再指向 SharedActorSlot 自己。")]
         [SerializeField] private RectTransform actorRoot;
+        [Tooltip("角色隐藏时相对显示位置向左移动的距离。")]
         [SerializeField] private float hiddenMoveLeftDistance = 260f;
+        [Tooltip("角色滑入或滑出的动画时长。")]
         [SerializeField] private float slideDuration = 0.8f;
 
         private Vector2 visiblePosition;
+
+        public event Action Clicked;
 
         private void Awake()
         {
@@ -36,9 +53,13 @@ namespace TwelveMoons.UI
                 actorRoot = transform as RectTransform;
             }
 
+            ResolveClipReferences();
+
             if (proposerFeedbackText == null)
             {
-                var feedbackTransform = transform.Find("ProposerFeedbackText");
+                var feedbackTransform = transform.Find("ActorRoot/ProposerFeedbackBackground/ProposerFeedbackText")
+                    ?? transform.Find("ProposerFeedbackBackground/ProposerFeedbackText")
+                    ?? transform.Find("ProposerFeedbackText");
                 proposerFeedbackText = feedbackTransform != null
                     ? feedbackTransform.GetComponent<TMP_Text>()
                     : null;
@@ -46,13 +67,15 @@ namespace TwelveMoons.UI
 
             if (proposerFeedbackBackground == null)
             {
-                var feedbackBackgroundTransform = transform.Find("ProposerFeedbackBackground");
+                var feedbackBackgroundTransform = transform.Find("ActorRoot/ProposerFeedbackBackground")
+                    ?? transform.Find("ProposerFeedbackBackground");
                 proposerFeedbackBackground = feedbackBackgroundTransform != null
                     ? feedbackBackgroundTransform.gameObject
                     : null;
             }
 
             visiblePosition = actorRoot != null ? actorRoot.anchoredPosition : Vector2.zero;
+            ConfigureClickRaycast();
             ClearFeedback();
             SetVisible(false, true);
         }
@@ -101,6 +124,14 @@ namespace TwelveMoons.UI
             Hide();
         }
 
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData != null && eventData.button == PointerEventData.InputButton.Left)
+            {
+                Clicked?.Invoke();
+            }
+        }
+
         private void SetVisible(bool isVisible, bool immediate)
         {
             var hiddenPosition = GetHiddenLeftPosition();
@@ -140,6 +171,39 @@ namespace TwelveMoons.UI
         private Vector2 GetHiddenLeftPosition()
         {
             return visiblePosition + (Vector2.left * hiddenMoveLeftDistance);
+        }
+
+        private void ConfigureClickRaycast()
+        {
+            if (clickRaycastImage == null)
+            {
+                var target = actorRoot != null ? actorRoot.gameObject : gameObject;
+                clickRaycastImage = target.GetComponent<Image>();
+                if (clickRaycastImage == null)
+                {
+                    clickRaycastImage = target.AddComponent<Image>();
+                    clickRaycastImage.color = new Color(1f, 1f, 1f, 0f);
+                }
+            }
+
+            clickRaycastImage.raycastTarget = true;
+            if (portraitImage != null)
+            {
+                portraitImage.raycastTarget = false;
+            }
+        }
+
+        private void ResolveClipReferences()
+        {
+            if (visibleClipRoot == null)
+            {
+                visibleClipRoot = transform as RectTransform;
+            }
+
+            if (visibleClipMask == null && visibleClipRoot != null)
+            {
+                visibleClipMask = visibleClipRoot.GetComponent<RectMask2D>();
+            }
         }
 
         private static void SetText(TMP_Text target, string value)
