@@ -51,6 +51,8 @@ namespace TwelveMoons.City
 
         public string LastResult => inspectorLastResult;
 
+        public StoryService StoryService => storyService;
+
         private void Awake()
         {
             ResolveDependencies();
@@ -148,9 +150,8 @@ namespace TwelveMoons.City
 
             runtimeDataService.Data.GetOrCreateSideEvent(definition.SideEventId)
                 .RecordTriggered(runtimeDataService.Data.CurrentRound);
-            resultMessage = $"已播放支线事件 {definition.SideEventId}，剧情={definition.StoryId}。";
+            resultMessage = $"已播放支线事件 {definition.SideEventId}，剧情 {definition.StoryId}。";
             SetLastResult(resultMessage);
-            SideEventsChanged?.Invoke();
             return true;
         }
 

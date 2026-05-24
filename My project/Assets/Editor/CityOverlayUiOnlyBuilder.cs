@@ -1,6 +1,5 @@
 using System.Linq;
 using TMPro;
-using TwelveMoons.Core;
 using TwelveMoons.Core.Runtime;
 using TwelveMoons.UI;
 using TwelveMoons.UI.City;
@@ -17,90 +16,89 @@ namespace TwelveMoons.EditorTools
         [MenuItem("Twelve Moons/Setup/Create City Overlay UI Only")]
         public static void CreateCityOverlayUiOnly()
         {
-            var gameEntry = Object.FindFirstObjectByType<GameEntry>(FindObjectsInactive.Include);
-            var cityRoot = gameEntry != null && gameEntry.CityRoot != null
-                ? gameEntry.CityRoot.transform
-                : GameObject.Find("CityRoot")?.transform;
+            var cityRoot = FindCityRoot();
             if (cityRoot == null)
             {
-                Fail("找不到 CityRoot。本工具只创建城区界面本阶段要求的覆盖层，不会重建桌面或基础场景。");
+                Fail("找不到 CityRoot。本工具只做城区覆盖层局部更新，不会重建桌面或基础场景。");
                 return;
             }
 
-            var taskService = FindRequired<TaskService>("TaskService");
             var runtimeDataService = FindRequired<RuntimeDataService>("RuntimeDataService");
             var factionService = FindRequired<FactionService>("FactionService");
-            var roundService = FindRequired<RoundService>("RoundService");
-            if (taskService == null || runtimeDataService == null || factionService == null || roundService == null)
+            if (runtimeDataService == null || factionService == null)
             {
-                Fail("缺少任务、运行时、阵营或回合服务。请先保留已有基础服务后再运行本局部工具。");
+                Fail("缺少运行时或阵营服务。请先保留已有基础服务后再运行本局部工具。");
                 return;
             }
 
-            var overlay = FindOrCreateUiChild(cityRoot, "CityOverlayPanel");
-            SetStretchRect(overlay.GetComponent<RectTransform>(), Vector2.zero, Vector2.zero);
+            var sharedHudRoot = FindOrCreateSharedHudRoot(cityRoot.transform);
+            var taskPanel = FindSharedPanel<TaskPanelView>("TaskPanel", "任务栏");
+            var roundPanel = FindSharedPanel<RoundPanelView>("RoundPanel", "回合面板");
+            if (taskPanel == null || roundPanel == null)
+            {
+                Fail("找不到现有 TaskPanel 或 RoundPanel。本工具只复用已有桌面面板，不会新建城区副本。");
+                return;
+            }
 
-            var taskPanel = BuildTaskPanel(overlay.transform, taskService, runtimeDataService);
+            MoveSharedPanelToHudRoot(taskPanel.transform, sharedHudRoot);
+            MoveSharedPanelToHudRoot(roundPanel.transform, sharedHudRoot);
+
+            var overlay = FindOrCreateUiChild(cityRoot.transform, "CityOverlayPanel");
+            SetStretchRect(overlay.GetComponent<RectTransform>(), Vector2.zero, Vector2.zero);
+            RemoveObsoleteOverlayPanel(overlay.transform, "CityTaskPanel");
+            RemoveObsoleteOverlayPanel(overlay.transform, "CityRoundPanel");
+
             var suspicionPanel = BuildCitySuspicionPanel(overlay.transform, factionService, runtimeDataService);
-            var roundPanel = BuildRoundPanel(overlay.transform, roundService);
 
             var overlayView = EnsureComponent<CityOverlayPanelView>(overlay);
             var serializedObject = new SerializedObject(overlayView);
-            serializedObject.FindProperty("taskPanel").objectReferenceValue = taskPanel.GetComponent<TaskPanelView>();
+            serializedObject.FindProperty("taskPanel").objectReferenceValue = taskPanel;
             serializedObject.FindProperty("citySuspicionPanel").objectReferenceValue = suspicionPanel.GetComponent<SuspicionPanelView>();
-            serializedObject.FindProperty("roundPanel").objectReferenceValue = roundPanel.GetComponent<RoundPanelView>();
+            serializedObject.FindProperty("roundPanel").objectReferenceValue = roundPanel;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
             Selection.activeObject = overlay;
-            Debug.Log("城区覆盖层已局部创建：CityOverlayPanel 下只包含任务栏、城区质疑栏和回合面板。");
+            Debug.Log("城区覆盖层已局部更新：复用现有 TaskPanel 和 RoundPanel，仅保留城区专用质疑栏。");
         }
 
-        private static GameObject BuildTaskPanel(
-            Transform parent,
-            TaskService taskService,
-            RuntimeDataService runtimeDataService)
+        private static GameObject FindCityRoot()
         {
-            var panel = FindOrCreateUiChild(parent, "CityTaskPanel");
-            SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), new Vector2(24f, 0f), new Vector2(360f, 760f), new Vector2(0f, 0.5f));
-            ConfigurePanelImage(panel, new Color(0.09f, 0.1f, 0.11f, 0.88f));
+            var gameEntry = Object.FindFirstObjectByType<TwelveMoons.Core.GameEntry>(FindObjectsInactive.Include);
+            if (gameEntry != null && gameEntry.CityRoot != null)
+            {
+                return gameEntry.CityRoot;
+            }
 
-            var title = FindOrCreateText(panel.transform, "TitleText", "当前任务", 20, FontStyles.Bold, TextAlignmentOptions.Left);
-            SetStretchTopRect(title.rectTransform, new Vector2(18f, -48f), new Vector2(-18f, -14f));
+            return GameObject.Find("CityRoot");
+        }
 
-            var viewport = FindOrCreateUiChild(panel.transform, "Viewport");
-            SetStretchRect(viewport.GetComponent<RectTransform>(), new Vector2(16f, 56f), new Vector2(-16f, -64f));
-            var maskImage = EnsureComponent<Image>(viewport);
-            maskImage.color = new Color(1f, 1f, 1f, 0.02f);
-            EnsureComponent<Mask>(viewport).showMaskGraphic = false;
+        private static Transform FindOrCreateSharedHudRoot(Transform cityRoot)
+        {
+            var parent = cityRoot != null && cityRoot.parent != null ? cityRoot.parent : cityRoot;
+            var existing = parent != null ? parent.Find("SharedHudRoot") : null;
+            if (existing != null)
+            {
+                existing.gameObject.SetActive(true);
+                return existing;
+            }
 
-            var content = FindOrCreateUiChild(viewport.transform, "Content");
-            var contentRect = content.GetComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0f, 1f);
-            contentRect.anchorMax = new Vector2(1f, 1f);
-            contentRect.pivot = new Vector2(0.5f, 1f);
-            contentRect.anchoredPosition = Vector2.zero;
-            contentRect.sizeDelta = new Vector2(0f, 720f);
+            var sharedRoot = new GameObject("SharedHudRoot", typeof(RectTransform));
+            sharedRoot.transform.SetParent(parent, false);
+            SetStretchRect(sharedRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.zero);
+            return sharedRoot.transform;
+        }
 
-            var layout = EnsureComponent<VerticalLayoutGroup>(content);
-            layout.childControlHeight = false;
-            layout.childControlWidth = true;
-            layout.childForceExpandHeight = false;
-            layout.childForceExpandWidth = true;
-            layout.spacing = 8f;
+        private static void MoveSharedPanelToHudRoot(Transform panel, Transform sharedHudRoot)
+        {
+            if (panel == null || sharedHudRoot == null || panel.parent == sharedHudRoot)
+            {
+                return;
+            }
 
-            var emptyText = FindOrCreateText(panel.transform, "EmptyText", "", 16, FontStyles.Normal, TextAlignmentOptions.Center);
-            SetStretchRect(emptyText.rectTransform, new Vector2(28f, 100f), new Vector2(-28f, -100f));
-
-            var panelView = EnsureComponent<TaskPanelView>(panel);
-            var serializedObject = new SerializedObject(panelView);
-            serializedObject.FindProperty("taskService").objectReferenceValue = taskService;
-            serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
-            serializedObject.FindProperty("contentRoot").objectReferenceValue = contentRect;
-            serializedObject.FindProperty("rowPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TaskRowView>("Assets/Prefabs/UI/TaskRow.prefab");
-            serializedObject.FindProperty("emptyText").objectReferenceValue = emptyText;
-            serializedObject.ApplyModifiedPropertiesWithoutUndo();
-            return panel;
+            panel.SetParent(sharedHudRoot, false);
+            panel.gameObject.SetActive(true);
+            Debug.Log($"已将共享面板移动到 SharedHudRoot：{panel.name}");
         }
 
         private static GameObject BuildCitySuspicionPanel(
@@ -187,36 +185,6 @@ namespace TwelveMoons.EditorTools
             return row;
         }
 
-        private static GameObject BuildRoundPanel(Transform parent, RoundService roundService)
-        {
-            var panel = FindOrCreateUiChild(parent, "CityRoundPanel");
-            SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(1f, 1f), new Vector2(-28f, -24f), new Vector2(300f, 146f), new Vector2(1f, 1f));
-            ConfigurePanelImage(panel, new Color(0.08f, 0.09f, 0.1f, 0.88f));
-
-            var roundText = FindOrCreateText(panel.transform, "RoundText", "Round 1", 24, FontStyles.Bold, TextAlignmentOptions.Left);
-            SetStretchTopRect(roundText.rectTransform, new Vector2(16f, -48f), new Vector2(-16f, -12f));
-
-            var totalRoundText = FindOrCreateText(panel.transform, "TotalRoundText", "Total 18", 15, FontStyles.Normal, TextAlignmentOptions.Left);
-            SetStretchTopRect(totalRoundText.rectTransform, new Vector2(16f, -78f), new Vector2(-16f, -52f));
-
-            var stageText = FindOrCreateText(panel.transform, "DisasterStageText", "Stage", 16, FontStyles.Bold, TextAlignmentOptions.Left);
-            stageText.color = new Color(0.95f, 0.82f, 0.48f, 1f);
-            SetStretchTopRect(stageText.rectTransform, new Vector2(16f, -110f), new Vector2(-16f, -82f));
-
-            var feedbackText = FindOrCreateText(panel.transform, "RoundFeedbackText", "", 13, FontStyles.Normal, TextAlignmentOptions.Left);
-            SetStretchTopRect(feedbackText.rectTransform, new Vector2(16f, -136f), new Vector2(-16f, -112f));
-
-            var panelView = EnsureComponent<RoundPanelView>(panel);
-            var serializedObject = new SerializedObject(panelView);
-            serializedObject.FindProperty("roundService").objectReferenceValue = roundService;
-            serializedObject.FindProperty("roundText").objectReferenceValue = roundText;
-            serializedObject.FindProperty("totalRoundText").objectReferenceValue = totalRoundText;
-            serializedObject.FindProperty("disasterStageText").objectReferenceValue = stageText;
-            serializedObject.FindProperty("feedbackText").objectReferenceValue = feedbackText;
-            serializedObject.ApplyModifiedPropertiesWithoutUndo();
-            return panel;
-        }
-
         private static T FindRequired<T>(string label) where T : Object
         {
             var component = Object.FindFirstObjectByType<T>(FindObjectsInactive.Include);
@@ -226,6 +194,39 @@ namespace TwelveMoons.EditorTools
             }
 
             return component;
+        }
+
+        private static T FindSharedPanel<T>(string objectName, string displayName) where T : Component
+        {
+            var transforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var candidate in transforms)
+            {
+                if (candidate == null || candidate.name != objectName)
+                {
+                    continue;
+                }
+
+                var panel = candidate.GetComponent<T>();
+                if (panel != null)
+                {
+                    return panel;
+                }
+            }
+
+            Debug.LogWarning($"找不到现有 {objectName}，无法绑定城区共享{displayName}。");
+            return null;
+        }
+
+        private static void RemoveObsoleteOverlayPanel(Transform overlay, string childName)
+        {
+            var child = overlay != null ? overlay.Find(childName) : null;
+            if (child == null)
+            {
+                return;
+            }
+
+            Object.DestroyImmediate(child.gameObject);
+            Debug.Log($"已清理旧城区重复面板：{childName}");
         }
 
         private static GameObject FindOrCreateUiChild(Transform parent, string childName)

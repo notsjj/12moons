@@ -211,6 +211,18 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("defaultViewPoint").objectReferenceValue = globalPoint;
             serializedObject.FindProperty("moveDuration").floatValue = 0.6f;
             serializedObject.FindProperty("copyTargetRotation").boolValue = true;
+            serializedObject.FindProperty("enableKeyboardMove").boolValue = true;
+            serializedObject.FindProperty("keyboardMoveSpeed").floatValue = 6f;
+            serializedObject.FindProperty("enableRightMouseRotate").boolValue = true;
+            serializedObject.FindProperty("rightMouseRotateSpeed").floatValue = 3f;
+            serializedObject.FindProperty("minPitchAngle").floatValue = 18f;
+            serializedObject.FindProperty("maxPitchAngle").floatValue = 70f;
+            serializedObject.FindProperty("minPositionX").floatValue = -10f;
+            serializedObject.FindProperty("maxPositionX").floatValue = 10f;
+            serializedObject.FindProperty("minPositionZ").floatValue = -12f;
+            serializedObject.FindProperty("maxPositionZ").floatValue = 4f;
+            serializedObject.FindProperty("minPositionY").floatValue = 3f;
+            serializedObject.FindProperty("maxPositionY").floatValue = 9f;
 
             var pointsProperty = serializedObject.FindProperty("viewPoints");
             pointsProperty.arraySize = viewPoints.Count;

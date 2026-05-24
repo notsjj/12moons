@@ -69,10 +69,11 @@ namespace TwelveMoons.EditorTools.Runtime
                     throw new InvalidOperationException("Round 1 should only show the lower harbor side event.");
                 }
 
-                var lowerHarborView = lowerHarborPoint.GetComponentInChildren<CitySideEventView>(true);
+                var lowerHarborView = cityRoot.GetComponentsInChildren<CitySideEventView>(true)
+                    .FirstOrDefault(view => view.SideEventId == "side_event_lower_harbor_courier");
                 if (lowerHarborView == null || lowerHarborView.SideEventId != "side_event_lower_harbor_courier")
                 {
-                    throw new InvalidOperationException("CitySideEventRegistry did not create the side event view under the configured CityPointView.");
+                    throw new InvalidOperationException("CitySideEventRegistry did not create the side event view for the configured CityPointView.");
                 }
 
                 if (lowerHarborView.GetComponentInChildren<SpriteRenderer>(true) == null ||
@@ -80,6 +81,47 @@ namespace TwelveMoons.EditorTools.Runtime
                     lowerHarborView.GetComponentInChildren<BoxCollider>(true) == null)
                 {
                     throw new InvalidOperationException("CitySideEventRegistry should create a 2D sprite character, red TMP exclamation mark, and click collider for side event views.");
+                }
+
+                var exclamationTexts = lowerHarborView.GetComponentsInChildren<TextMeshPro>(true)
+                    .Count(text => text != null && text.text.Trim() == "!");
+                if (exclamationTexts != 1)
+                {
+                    throw new InvalidOperationException("Side event view should keep exactly one red exclamation mark, so display and bob movement target the same object.");
+                }
+
+                if (lowerHarborView.transform.Find("CharacterSprite/CharacterSpriteHoverOutline") != null)
+                {
+                    throw new InvalidOperationException("Side event hover highlight should use the Sprite outline shader, not a second scaled outline SpriteRenderer.");
+                }
+
+                lowerHarborView.OnPointerEnter(null);
+                if (!lowerHarborView.IsHoverOutlineVisible)
+                {
+                    throw new InvalidOperationException("Side event character should enable the Sprite outline shader when hovered.");
+                }
+
+                lowerHarborView.OnPointerExit(null);
+                if (lowerHarborView.IsHoverOutlineVisible)
+                {
+                    throw new InvalidOperationException("Side event character should restore its normal sprite material when hover ends.");
+                }
+
+                var manualSpriteViewObject = new GameObject("ManualSpriteSideEventView");
+                manualSpriteViewObject.transform.SetParent(cityRoot.transform, false);
+                var manualRenderer = manualSpriteViewObject.AddComponent<SpriteRenderer>();
+                manualRenderer.sprite = Sprite.Create(
+                    Texture2D.whiteTexture,
+                    new Rect(0f, 0f, Texture2D.whiteTexture.width, Texture2D.whiteTexture.height),
+                    new Vector2(0.5f, 0.5f),
+                    100f);
+                var manualSprite = manualRenderer.sprite;
+                var manualView = manualSpriteViewObject.AddComponent<CitySideEventView>();
+                manualView.Configure("manual_sprite_test");
+                manualView.EnsureDefaultWorldVisuals();
+                if (manualRenderer.sprite != manualSprite)
+                {
+                    throw new InvalidOperationException("Side event view should keep the Sprite manually assigned on its SpriteRenderer instead of replacing it with the fallback character.");
                 }
 
                 lowerHarborView.OnClicked();
@@ -91,7 +133,23 @@ namespace TwelveMoons.EditorTools.Runtime
                     throw new InvalidOperationException("Clicking the side event view did not start the configured story or record runtime trigger state.");
                 }
 
+                var spriteAfterClick = lowerHarborView.GetComponentInChildren<SpriteRenderer>(true);
+                var exclamationAfterClick = lowerHarborView.GetComponentInChildren<TextMeshPro>(true);
+                if (spriteAfterClick == null || !lowerHarborView.IsCharacterVisible ||
+                    exclamationAfterClick == null || !lowerHarborView.IsExclamationVisible ||
+                    lowerHarborView.CanStartStory)
+                {
+                    throw new InvalidOperationException("Side event character should remain visible with its exclamation mark while the clicked story is still playing, and the character should not be clickable again.");
+                }
+
                 storyService.EndCurrentStory();
+                if (spriteAfterClick == null || !lowerHarborView.IsCharacterVisible ||
+                    exclamationAfterClick == null || lowerHarborView.IsExclamationVisible ||
+                    lowerHarborView.CanStartStory)
+                {
+                    throw new InvalidOperationException("Completing the side event story should keep the character visible but hide the red exclamation mark.");
+                }
+
                 sideEventRegistry.RefreshAndBind();
                 if (sideEventService.GetVisibleEvents().Any(candidate => candidate.SideEventId == "side_event_lower_harbor_courier"))
                 {

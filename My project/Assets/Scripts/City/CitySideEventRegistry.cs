@@ -13,7 +13,7 @@ namespace TwelveMoons.City
         [SerializeField] private CityPointRegistry pointRegistry;
 
         [Header("支线角色生成：只在点位上生成当前回合角色")]
-        [Tooltip("支线角色图标父物体；留空时会在本物体下创建 SideEventViews。")]
+        [Tooltip("支线角色图标父物体；留空时会在本物体下创建 SideEventViews，运行时生成的 SideEvent_* 角色根物体会统一放在这里，方便 Inspector 检查脚本和状态。")]
         [SerializeField] private Transform sideEventViewRoot;
         [Tooltip("可选支线角色视图预制体；留空时会创建 2D SpriteRenderer 图标、点击碰撞体和红色感叹号。")]
         [SerializeField] private CitySideEventView sideEventViewPrefab;
@@ -100,8 +100,7 @@ namespace TwelveMoons.City
                     continue;
                 }
 
-                view.transform.SetParent(pointView.transform, false);
-                view.transform.localPosition = sideEventLocalOffset;
+                PlaceViewAtPoint(view.transform, pointView.transform);
                 view.Bind(definition, sideEventService);
                 viewsBySideEventId[definition.SideEventId] = view;
                 boundIds.Add(definition.SideEventId);
@@ -158,6 +157,12 @@ namespace TwelveMoons.City
         {
             if (viewsBySideEventId.TryGetValue(definition.SideEventId, out var existing) && existing != null)
             {
+                if (sideEventViewRoot != null && existing.transform.parent != sideEventViewRoot)
+                {
+                    existing.transform.SetParent(sideEventViewRoot, true);
+                }
+
+                existing.EnsureDefaultWorldVisuals();
                 return existing;
             }
 
@@ -168,19 +173,36 @@ namespace TwelveMoons.City
 
             if (sideEventViewPrefab != null)
             {
-                var instance = Instantiate(sideEventViewPrefab, pointTransform, false);
+                var instance = Instantiate(sideEventViewPrefab, sideEventViewRoot, false);
                 instance.name = $"SideEvent_{definition.SideEventId}";
                 instance.Configure(definition.SideEventId);
+                instance.EnsureDefaultWorldVisuals();
                 return instance;
             }
 
             var icon = new GameObject($"SideEvent_{definition.SideEventId}");
-            icon.transform.SetParent(pointTransform, false);
+            icon.transform.SetParent(sideEventViewRoot != null ? sideEventViewRoot : pointTransform, false);
             icon.transform.localScale = Vector3.one * Mathf.Max(0f, defaultIconScale);
             var view = icon.AddComponent<CitySideEventView>();
             view.Configure(definition.SideEventId);
             view.EnsureDefaultWorldVisuals();
             return view;
+        }
+
+        private void PlaceViewAtPoint(Transform viewTransform, Transform pointTransform)
+        {
+            if (viewTransform == null || pointTransform == null)
+            {
+                return;
+            }
+
+            if (sideEventViewRoot != null && viewTransform.parent != sideEventViewRoot)
+            {
+                viewTransform.SetParent(sideEventViewRoot, true);
+            }
+
+            viewTransform.position = pointTransform.TransformPoint(sideEventLocalOffset);
+            viewTransform.localScale = Vector3.one * Mathf.Max(0f, defaultIconScale);
         }
 
         private void OnValidate()

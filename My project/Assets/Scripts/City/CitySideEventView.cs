@@ -5,8 +5,11 @@ using UnityEngine.UI;
 
 namespace TwelveMoons.City
 {
-    public sealed class CitySideEventView : MonoBehaviour, IPointerClickHandler
+    public sealed class CitySideEventView : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
     {
+        private static readonly int OutlineColorId = Shader.PropertyToID("_OutlineColor");
+        private static readonly int OutlinePixelWidthId = Shader.PropertyToID("_OutlinePixelWidth");
+
         [Header("支线事件匹配：对应 SideEventConfig.SideEventId")]
         [Tooltip("支线事件 ID；必须与 SideEventConfig.SideEventId 完全一致，点击时会播放该行配置的 StoryId。")]
         [SerializeField] private string sideEventId;
@@ -14,11 +17,13 @@ namespace TwelveMoons.City
         [SerializeField] private bool allowClick = true;
 
         [Header("显示引用：2D 角色图标、感叹号和点击区域")]
-        [Tooltip("支线角色 2D 图片；运行时会优先使用此 SpriteRenderer 显示角色图标。")]
+        [Tooltip("支线角色 2D 图片；运行时优先使用此 SpriteRenderer 显示角色图标。若已在此组件上拖入 Sprite，不会被默认图覆盖。")]
         [SerializeField] private SpriteRenderer characterSpriteRenderer;
-        [Tooltip("正式角色图标 Sprite；留空时会按 DisplayCharacterId 尝试从 Resources 加载，仍为空则生成一个临时 2D 小人图片。")]
+        [Tooltip("旧版轮廓 SpriteRenderer；仅用于兼容旧场景。新高亮使用角色 SpriteRenderer 的轮廓 Shader，此对象会被自动隐藏。")]
+        [SerializeField] private SpriteRenderer hoverOutlineSpriteRenderer;
+        [Tooltip("正式角色图标 Sprite；留空时会保留 SpriteRenderer 上手动拖入的 Sprite，再按 DisplayCharacterId 从 Resources 加载，仍为空才生成临时默认图。")]
         [SerializeField] private Sprite characterSprite;
-        [Tooltip("红色感叹号根物体；位于角色上方，运行时会轻微上下浮动并始终朝向摄像机。")]
+        [Tooltip("红色感叹号根物体；位于角色上方，运行时只移动这一份根物体，避免出现一个显示、另一个移动。")]
         [SerializeField] private Transform exclamationRoot;
         [Tooltip("红色感叹号 TMP 文本；必须使用 TextMeshPro，不使用 legacy Text。")]
         [SerializeField] private TMP_Text exclamationText;
@@ -34,12 +39,20 @@ namespace TwelveMoons.City
         [Header("显示参数：位置、大小和浮动")]
         [Tooltip("红色感叹号相对角色图标的位置；用于放在角色上方一点。")]
         [SerializeField] private Vector3 exclamationLocalOffset = new Vector3(0f, 1.15f, 0f);
-        [Tooltip("红色感叹号上下轻微移动的幅度。")]
-        [SerializeField] private float exclamationBobDistance = 0.12f;
-        [Tooltip("红色感叹号上下轻微移动的速度。")]
-        [SerializeField] private float exclamationBobSpeed = 2.6f;
+        [Tooltip("红色感叹号上下轻微移动的幅度；会被限制为非负数。")]
+        [SerializeField] private float exclamationBobDistance = 0.16f;
+        [Tooltip("红色感叹号上下轻微移动的速度；会被限制为非负数。")]
+        [SerializeField] private float exclamationBobSpeed = 2.4f;
         [Tooltip("默认点击区域大小；自动创建 BoxCollider 时使用，所有数值都会限制为非负。")]
         [SerializeField] private Vector3 defaultClickSize = new Vector3(1.2f, 1.8f, 0.12f);
+
+        [Header("鼠标悬停：角色 Sprite 外轮廓 Shader 高亮")]
+        [Tooltip("鼠标移到支线角色上时的外轮廓颜色；作用在角色 Sprite 的透明边缘。")]
+        [SerializeField] private Color hoverOutlineColor = new Color(1f, 0.62f, 0.12f, 1f);
+        [Tooltip("鼠标移到支线角色上时的轮廓像素宽度；数值越大，Sprite 透明边缘外圈越粗。")]
+        [SerializeField] private int hoverOutlinePixelWidth = 3;
+        [Tooltip("角色 Sprite 外轮廓 Shader；留空时会自动查找 TwelveMoons/SpriteAlphaOutline。")]
+        [SerializeField] private Shader spriteOutlineShader;
 
         [Header("运行时只读快照：支线角色状态")]
         [Tooltip("当前支线角色是否已经绑定到 SideEventConfig 配置。")]
@@ -57,10 +70,24 @@ namespace TwelveMoons.City
         private CitySideEventService service;
         private SideEventDefinition definition;
         private bool isVisible;
+        private bool canStartStory = true;
+        private bool isWaitingForStoryCompletion;
+        private string waitingStoryId = string.Empty;
+        private Material originalSpriteMaterial;
+        private Material runtimeOutlineMaterial;
+        private bool isUsingOutlineMaterial;
 
         public string SideEventId => sideEventId;
 
         public bool IsBound => definition != null;
+
+        public bool IsCharacterVisible => characterSpriteRenderer != null && characterSpriteRenderer.enabled;
+
+        public bool IsExclamationVisible => exclamationRoot != null && exclamationRoot.gameObject.activeInHierarchy;
+
+        public bool CanStartStory => canStartStory;
+
+        public bool IsHoverOutlineVisible => isUsingOutlineMaterial;
 
         private void Awake()
         {
@@ -78,6 +105,26 @@ namespace TwelveMoons.City
             if (clickButton != null)
             {
                 clickButton.onClick.RemoveListener(OnClicked);
+            }
+
+            UnsubscribeStoryCompletion();
+            ApplyHoverHighlight(false);
+        }
+
+        private void OnDestroy()
+        {
+            if (runtimeOutlineMaterial != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(runtimeOutlineMaterial);
+                }
+                else
+                {
+                    DestroyImmediate(runtimeOutlineMaterial);
+                }
+
+                runtimeOutlineMaterial = null;
             }
         }
 
@@ -103,6 +150,8 @@ namespace TwelveMoons.City
                 characterSpriteRenderer.sortingOrder = 20;
             }
 
+            HideLegacyOutlineRenderer();
+
             if (clickableCollider == null)
             {
                 var boxCollider = gameObject.AddComponent<BoxCollider>();
@@ -123,6 +172,9 @@ namespace TwelveMoons.City
             inspectorDisplayCharacterId = definition != null ? definition.DisplayCharacterId : string.Empty;
             inspectorStoryId = definition != null ? definition.StoryId : string.Empty;
             inspectorPointId = definition != null ? definition.PointId : string.Empty;
+            canStartStory = definition != null;
+            isWaitingForStoryCompletion = false;
+            waitingStoryId = string.Empty;
 
             ResolveVisualReferences();
             EnsureDefaultWorldVisuals();
@@ -133,6 +185,8 @@ namespace TwelveMoons.City
 
         public void ClearBinding()
         {
+            UnsubscribeStoryCompletion();
+            ApplyHoverHighlight(false);
             definition = null;
             service = null;
             inspectorIsBound = false;
@@ -140,13 +194,16 @@ namespace TwelveMoons.City
             inspectorStoryId = string.Empty;
             inspectorPointId = string.Empty;
             inspectorLastClickResult = string.Empty;
+            canStartStory = false;
+            isWaitingForStoryCompletion = false;
+            waitingStoryId = string.Empty;
             RefreshLabel();
             ApplyVisible(false);
         }
 
         public void OnClicked()
         {
-            if (!allowClick || service == null || string.IsNullOrEmpty(sideEventId))
+            if (!allowClick || !canStartStory || service == null || string.IsNullOrEmpty(sideEventId))
             {
                 inspectorLastClickResult = "缺少服务或 SideEventId，无法播放支线剧情。";
                 return;
@@ -155,7 +212,9 @@ namespace TwelveMoons.City
             if (service.TryStartSideEvent(sideEventId, out var resultMessage))
             {
                 inspectorLastClickResult = resultMessage;
-                ApplyVisible(false);
+                canStartStory = false;
+                waitingStoryId = inspectorStoryId;
+                SubscribeStoryCompletion();
                 return;
             }
 
@@ -167,21 +226,88 @@ namespace TwelveMoons.City
             OnClicked();
         }
 
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            ApplyHoverHighlight(true);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            ApplyHoverHighlight(false);
+        }
+
         private void OnMouseDown()
         {
             OnClicked();
+        }
+
+        private void OnMouseEnter()
+        {
+            ApplyHoverHighlight(true);
+        }
+
+        private void OnMouseExit()
+        {
+            ApplyHoverHighlight(false);
         }
 
         private void ResolveVisualReferences()
         {
             if (characterSpriteRenderer == null)
             {
-                characterSpriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
+                foreach (var candidate in GetComponentsInChildren<SpriteRenderer>(true))
+                {
+                    if (candidate != null && candidate.gameObject.name != "CharacterSpriteHoverOutline")
+                    {
+                        characterSpriteRenderer = candidate;
+                        break;
+                    }
+                }
             }
+
+            if (hoverOutlineSpriteRenderer == null && characterSpriteRenderer != null)
+            {
+                var outlineTransform = characterSpriteRenderer.transform.Find("CharacterSpriteHoverOutline");
+                if (outlineTransform != null)
+                {
+                    hoverOutlineSpriteRenderer = outlineTransform.GetComponent<SpriteRenderer>();
+                }
+            }
+
+            ResolveExclamationReferences();
 
             if (clickableCollider == null)
             {
                 clickableCollider = GetComponentInChildren<Collider>(true);
+            }
+        }
+
+        private void ResolveExclamationReferences()
+        {
+            if (exclamationText == null)
+            {
+                foreach (var candidate in GetComponentsInChildren<TMP_Text>(true))
+                {
+                    if (candidate != null && candidate.text.Trim() == "!")
+                    {
+                        exclamationText = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (exclamationRoot == null && exclamationText != null)
+            {
+                exclamationRoot = exclamationText.transform;
+            }
+
+            if (exclamationRoot == null)
+            {
+                var existingRoot = transform.Find("SideEventExclamation");
+                if (existingRoot != null)
+                {
+                    exclamationRoot = existingRoot;
+                }
             }
 
             if (exclamationText == null && exclamationRoot != null)
@@ -218,7 +344,13 @@ namespace TwelveMoons.City
                 return;
             }
 
-            characterSpriteRenderer.sprite = ResolveCharacterSprite();
+            var resolvedSprite = ResolveCharacterSprite();
+            if (resolvedSprite != null)
+            {
+                characterSpriteRenderer.sprite = resolvedSprite;
+            }
+
+            HideLegacyOutlineRenderer();
         }
 
         private Sprite ResolveCharacterSprite()
@@ -226,6 +358,12 @@ namespace TwelveMoons.City
             if (characterSprite != null)
             {
                 return characterSprite;
+            }
+
+            if (characterSpriteRenderer != null && characterSpriteRenderer.sprite != null &&
+                characterSpriteRenderer.sprite != fallbackCharacterSprite)
+            {
+                return characterSpriteRenderer.sprite;
             }
 
             if (!string.IsNullOrEmpty(inspectorDisplayCharacterId))
@@ -242,23 +380,45 @@ namespace TwelveMoons.City
 
         private void EnsureExclamation()
         {
+            ResolveExclamationReferences();
+
             if (exclamationRoot == null)
             {
                 var exclamationObject = new GameObject("SideEventExclamation");
                 exclamationObject.transform.SetParent(transform, false);
-                exclamationObject.transform.localPosition = exclamationLocalOffset;
                 exclamationRoot = exclamationObject.transform;
             }
 
+            exclamationRoot.localPosition = exclamationLocalOffset;
+
             if (exclamationText == null)
             {
-                exclamationText = exclamationRoot.gameObject.AddComponent<TextMeshPro>();
-                exclamationText.text = "!";
-                exclamationText.color = new Color(1f, 0.05f, 0.05f, 1f);
-                exclamationText.fontSize = 5.2f;
-                exclamationText.fontStyle = FontStyles.Bold;
-                exclamationText.alignment = TextAlignmentOptions.Center;
-                exclamationText.textWrappingMode = TextWrappingModes.NoWrap;
+                exclamationText = exclamationRoot.GetComponent<TMP_Text>();
+                if (exclamationText == null)
+                {
+                    exclamationText = exclamationRoot.gameObject.AddComponent<TextMeshPro>();
+                }
+            }
+
+            exclamationText.text = "!";
+            exclamationText.color = new Color(1f, 0.05f, 0.05f, 1f);
+            exclamationText.fontSize = 5.2f;
+            exclamationText.fontStyle = FontStyles.Bold;
+            exclamationText.alignment = TextAlignmentOptions.Center;
+            exclamationText.textWrappingMode = TextWrappingModes.NoWrap;
+            HideDuplicateExclamationTexts();
+        }
+
+        private void HideDuplicateExclamationTexts()
+        {
+            foreach (var candidate in GetComponentsInChildren<TMP_Text>(true))
+            {
+                if (candidate == null || candidate == exclamationText || candidate.text.Trim() != "!")
+                {
+                    continue;
+                }
+
+                candidate.gameObject.SetActive(false);
             }
         }
 
@@ -269,6 +429,11 @@ namespace TwelveMoons.City
             if (characterSpriteRenderer != null)
             {
                 characterSpriteRenderer.enabled = visible;
+            }
+
+            if (!visible)
+            {
+                ApplyHoverHighlight(false);
             }
 
             if (exclamationRoot != null)
@@ -284,6 +449,144 @@ namespace TwelveMoons.City
             if (clickButton != null)
             {
                 clickButton.gameObject.SetActive(visible);
+                clickButton.interactable = visible && canStartStory;
+            }
+        }
+
+        private void SubscribeStoryCompletion()
+        {
+            var storyService = service != null ? service.StoryService : null;
+            if (storyService == null)
+            {
+                CompleteTriggeredStoryVisuals();
+                return;
+            }
+
+            isWaitingForStoryCompletion = true;
+            storyService.StoryChanged -= OnStoryChanged;
+            storyService.StoryChanged += OnStoryChanged;
+            OnStoryChanged();
+        }
+
+        private void UnsubscribeStoryCompletion()
+        {
+            var storyService = service != null ? service.StoryService : null;
+            if (storyService != null)
+            {
+                storyService.StoryChanged -= OnStoryChanged;
+            }
+        }
+
+        private void OnStoryChanged()
+        {
+            if (!isWaitingForStoryCompletion || service == null)
+            {
+                return;
+            }
+
+            var storyService = service.StoryService;
+            var currentStoryId = storyService != null && storyService.CurrentPlayback != null
+                ? storyService.CurrentPlayback.Story.StoryId
+                : string.Empty;
+            if (!string.IsNullOrEmpty(currentStoryId) &&
+                string.Equals(currentStoryId, waitingStoryId, System.StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            CompleteTriggeredStoryVisuals();
+        }
+
+        private void CompleteTriggeredStoryVisuals()
+        {
+            isWaitingForStoryCompletion = false;
+            waitingStoryId = string.Empty;
+            UnsubscribeStoryCompletion();
+
+            if (exclamationRoot != null)
+            {
+                exclamationRoot.gameObject.SetActive(false);
+            }
+
+            if (clickButton != null)
+            {
+                clickButton.interactable = false;
+            }
+        }
+
+        private void ApplyHoverHighlight(bool enabled)
+        {
+            HideLegacyOutlineRenderer();
+
+            if (!enabled || !isVisible || characterSpriteRenderer == null || !characterSpriteRenderer.enabled)
+            {
+                RestoreSpriteMaterial();
+                return;
+            }
+
+            var outlineMaterial = EnsureRuntimeOutlineMaterial();
+            if (outlineMaterial == null)
+            {
+                return;
+            }
+
+            if (!isUsingOutlineMaterial)
+            {
+                originalSpriteMaterial = characterSpriteRenderer.sharedMaterial;
+            }
+
+            outlineMaterial.mainTexture = characterSpriteRenderer.sprite != null
+                ? characterSpriteRenderer.sprite.texture
+                : null;
+            outlineMaterial.SetColor(OutlineColorId, hoverOutlineColor);
+            outlineMaterial.SetFloat(OutlinePixelWidthId, Mathf.Max(1, hoverOutlinePixelWidth));
+            characterSpriteRenderer.sharedMaterial = outlineMaterial;
+            isUsingOutlineMaterial = true;
+        }
+
+        private Material EnsureRuntimeOutlineMaterial()
+        {
+            if (spriteOutlineShader == null)
+            {
+                spriteOutlineShader = Shader.Find("TwelveMoons/SpriteAlphaOutline");
+            }
+
+            if (spriteOutlineShader == null)
+            {
+                Debug.LogWarning("缺少 TwelveMoons/SpriteAlphaOutline Shader，支线角色无法显示 Sprite 外轮廓高亮。", this);
+                return null;
+            }
+
+            if (runtimeOutlineMaterial == null)
+            {
+                runtimeOutlineMaterial = new Material(spriteOutlineShader)
+                {
+                    name = $"{name}_RuntimeSpriteOutlineMaterial",
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+            }
+
+            return runtimeOutlineMaterial;
+        }
+
+        private void RestoreSpriteMaterial()
+        {
+            if (!isUsingOutlineMaterial || characterSpriteRenderer == null)
+            {
+                isUsingOutlineMaterial = false;
+                return;
+            }
+
+            characterSpriteRenderer.sharedMaterial = originalSpriteMaterial;
+            originalSpriteMaterial = null;
+            isUsingOutlineMaterial = false;
+        }
+
+        private void HideLegacyOutlineRenderer()
+        {
+            if (hoverOutlineSpriteRenderer != null)
+            {
+                hoverOutlineSpriteRenderer.enabled = false;
             }
         }
 
@@ -397,6 +700,7 @@ namespace TwelveMoons.City
         {
             exclamationBobDistance = Mathf.Max(0f, exclamationBobDistance);
             exclamationBobSpeed = Mathf.Max(0f, exclamationBobSpeed);
+            hoverOutlinePixelWidth = Mathf.Max(1, hoverOutlinePixelWidth);
             defaultClickSize = ClampVector(defaultClickSize);
         }
     }

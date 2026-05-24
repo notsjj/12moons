@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
+using UnityEditor.U2D.Sprites;
 using UnityEngine;
 
 namespace TwelveMoons.EditorTools
@@ -164,8 +166,7 @@ namespace TwelveMoons.EditorTools
 
             importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
             ApplyImporterSettings(importer, wasReadable);
-            importer.spritesheet = sprites.ToArray();
-            EditorUtility.SetDirty(importer);
+            ApplySpriteSheetData(importer, sprites);
             importer.SaveAndReimport();
 
             slicedTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
@@ -298,6 +299,36 @@ namespace TwelveMoons.EditorTools
             sprites.Sort(CompareSpritesTopLeft);
             RenameSprites(baseName, sprites);
             return sprites;
+        }
+
+        private static void ApplySpriteSheetData(TextureImporter importer, IReadOnlyList<SpriteMetaData> sprites)
+        {
+            var factory = new SpriteDataProviderFactories();
+            factory.Init();
+
+            var dataProvider = factory.GetSpriteEditorDataProviderFromObject(importer);
+            dataProvider.InitSpriteEditorDataProvider();
+
+            var spriteRects = sprites
+                .Select(sprite => new SpriteRect
+                {
+                    name = sprite.name,
+                    rect = sprite.rect,
+                    alignment = (SpriteAlignment)sprite.alignment,
+                    pivot = sprite.pivot,
+                    spriteID = GUID.Generate()
+                })
+                .ToArray();
+
+            dataProvider.SetSpriteRects(spriteRects);
+
+            var nameFileIdProvider = dataProvider.GetDataProvider<ISpriteNameFileIdDataProvider>();
+            nameFileIdProvider?.SetNameFileIdPairs(spriteRects
+                .Select(sprite => new SpriteNameFileIdPair(sprite.name, sprite.spriteID))
+                .ToList());
+
+            dataProvider.Apply();
+            EditorUtility.SetDirty(importer);
         }
 
         private RectInt FloodFillBounds(int startX, int startY, int width, int height, Color32[] pixels, bool[] visited)
