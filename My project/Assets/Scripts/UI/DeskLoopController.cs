@@ -1,4 +1,5 @@
 using TMPro;
+using TwelveMoons.Core;
 using TwelveMoons.Core.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,6 +19,9 @@ namespace TwelveMoons.UI
         [SerializeField] private StoryService storyService;
         [Tooltip("公文服务；用于生成并读取当前回合公文队列。")]
         [SerializeField] private DocumentService documentService;
+        [Header("场景切换：处理完公文后进入城区")]
+        [Tooltip("游戏入口对象；用于在当前回合公文全部处理完后，从桌面切换到城区界面。")]
+        [SerializeField] private GameEntry gameEntry;
 
         [Header("界面引用：流程按钮和面板")]
         [Tooltip("公文弹窗；点击处理公文时逐份展示当前回合公文。")]
@@ -32,6 +36,8 @@ namespace TwelveMoons.UI
         [SerializeField] private Button endRoundButton;
         [Tooltip("查看上一回合报纸的按钮。")]
         [SerializeField] private Button newspaperButton;
+        [Tooltip("进入城区按钮；只有在当前没有剧情、公文前角色、公文队列和公文弹窗时才允许点击。")]
+        [SerializeField] private Button cityButton;
         [Tooltip("桌面流程状态文本；用于显示当前可执行动作。")]
         [SerializeField] private TMP_Text statusText;
         [Tooltip("公文前剧情人物立绘框；只允许点击该人物进入公文前剧情。")]
@@ -218,6 +224,23 @@ namespace TwelveMoons.UI
             newspaperPanel?.ShowPreviousRound();
         }
 
+        public void EnterCity()
+        {
+            ResolveDependencies();
+            if (IsDocumentFlowActive() || HasActiveStory() || HasQueuedGameplayStories() ||
+                HasPendingBeforeDocumentStory() || HasPendingDocuments())
+            {
+                SetStatus("请先完成当前剧情和全部公文，再进入城区。");
+                RefreshButtons();
+                return;
+            }
+
+            newspaperPanel?.Hide();
+            gameEntry?.ShowCity();
+            SetStatus("已进入城区。");
+            RefreshButtons();
+        }
+
         public void HideNewspaper()
         {
             newspaperPanel?.Hide();
@@ -251,6 +274,7 @@ namespace TwelveMoons.UI
             SetButtonInteractable(documentButton, !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && hasPendingDocuments);
             SetButtonInteractable(endRoundButton, !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && !hasPendingDocuments);
             SetButtonInteractable(newspaperButton, !isDocumentFlowActive && HasPreviousNewspaper());
+            SetButtonInteractable(cityButton, !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && !hasPendingDocuments);
         }
 
         private bool HasActiveStory()
@@ -504,6 +528,11 @@ namespace TwelveMoons.UI
             if (documentService == null)
             {
                 documentService = FindFirstObjectByType<DocumentService>();
+            }
+
+            if (gameEntry == null)
+            {
+                gameEntry = FindFirstObjectByType<GameEntry>(FindObjectsInactive.Include);
             }
 
             if (documentPopupPanel == null)

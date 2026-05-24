@@ -10,3 +10,5 @@ story_demo_text,纯文本剧情测试,Text,,,,,一封封蜡便笺报告低城区
 story_demo_image,图片翻页剧情测试,Image,image_flood_map,PageSequence,image_flood_map|image_bridge_route|image_storehouse,地图标出三条被水淹没的街道。|石桥路线仍可通行。|仓库已经准备封车。,,false,,item_material,1,图片逐页剧情测试
 story_demo_comic_image,漫画分格剧情测试,Image,,ComicPanels,image_comic_panel_01|image_comic_panel_02|image_comic_panel_03|image_comic_panel_04,雨水漫到河渠边。|工人抬起木料。|信使穿过石桥。|新月升到低城区上空。,,false,,item_food,1,漫画分格图片剧情测试
 story_demo_submission,道具提交剧情测试,Dialogue,,,,,,false,,item_archivist_badge,1,对白中提交道具测试
+story_side_lower_harbor,下城区码头支线,Dialogue,,,,,,false,,item_food,1,阶段16支线角色点击剧情测试
+story_side_academy_archive,学院档案室支线,Text,,,,,档案室的排水旧图被重新摊开，工程师在边角标出一条还能通行的窄路。,false,,item_material,1,阶段16带任务条件的支线剧情测试

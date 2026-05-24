@@ -16,6 +16,7 @@ namespace TwelveMoons.Core.Runtime
         private readonly List<RuntimeStoryProgressState> storyProgress = new List<RuntimeStoryProgressState>();
         private readonly List<RuntimeDocumentQueueEntry> documentQueue = new List<RuntimeDocumentQueueEntry>();
         private readonly List<RuntimeFollowUpDocumentState> followUpDocuments = new List<RuntimeFollowUpDocumentState>();
+        private readonly List<RuntimeSideEventState> sideEvents = new List<RuntimeSideEventState>();
         private readonly List<RuntimeNewspaperState> newspapers = new List<RuntimeNewspaperState>();
         private readonly List<string> processedDocumentDrawKeys = new List<string>();
 
@@ -43,6 +44,8 @@ namespace TwelveMoons.Core.Runtime
 
         public IReadOnlyList<RuntimeFollowUpDocumentState> FollowUpDocuments => followUpDocuments;
 
+        public IReadOnlyList<RuntimeSideEventState> SideEvents => sideEvents;
+
         public IReadOnlyList<RuntimeNewspaperState> Newspapers => newspapers;
 
         public IReadOnlyList<string> ProcessedDocumentDrawKeys => processedDocumentDrawKeys;
@@ -61,6 +64,7 @@ namespace TwelveMoons.Core.Runtime
             storyProgress.Clear();
             documentQueue.Clear();
             followUpDocuments.Clear();
+            sideEvents.Clear();
             newspapers.Clear();
             processedDocumentDrawKeys.Clear();
         }
@@ -287,6 +291,25 @@ namespace TwelveMoons.Core.Runtime
             }
 
             return activated;
+        }
+
+        public RuntimeSideEventState GetOrCreateSideEvent(string sideEventId)
+        {
+            var state = sideEvents.FirstOrDefault(candidate => candidate.SideEventId == sideEventId);
+            if (state != null)
+            {
+                return state;
+            }
+
+            state = new RuntimeSideEventState(sideEventId);
+            sideEvents.Add(state);
+            return state;
+        }
+
+        public bool TryGetSideEvent(string sideEventId, out RuntimeSideEventState state)
+        {
+            state = sideEvents.FirstOrDefault(candidate => candidate.SideEventId == sideEventId);
+            return state != null;
         }
 
         public bool HasProcessedDocumentDraw(string key)

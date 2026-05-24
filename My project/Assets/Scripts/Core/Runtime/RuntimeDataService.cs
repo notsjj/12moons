@@ -43,6 +43,9 @@ namespace TwelveMoons.Core.Runtime
         [Tooltip("运行时建筑状态快照；用于确认公文选项是否已经把建筑写入解锁状态。")]
         [SerializeField] private List<RuntimeInspectorBuildingEntry> inspectorRuntimeBuildings =
             new List<RuntimeInspectorBuildingEntry>();
+        [Tooltip("运行时支线事件触发快照；用于确认支线角色点击后是否记录为已触发，以及一次性支线是否会隐藏。")]
+        [SerializeField] private List<RuntimeInspectorSideEventEntry> inspectorRuntimeSideEvents =
+            new List<RuntimeInspectorSideEventEntry>();
 
         public GameRuntimeData Data { get; } = new GameRuntimeData();
 
@@ -156,6 +159,7 @@ namespace TwelveMoons.Core.Runtime
             RefreshInspectorCurrentRoundStories(storyService);
             RefreshInspectorCurrentStory(storyService);
             RefreshInspectorRuntimeBuildings();
+            RefreshInspectorRuntimeSideEvents();
         }
 
         private int GetDisasterTotalRound(string disasterId)
@@ -389,6 +393,21 @@ namespace TwelveMoons.Core.Runtime
             }
         }
 
+        private void RefreshInspectorRuntimeSideEvents()
+        {
+            inspectorRuntimeSideEvents.Clear();
+            foreach (var state in Data.SideEvents)
+            {
+                inspectorRuntimeSideEvents.Add(new RuntimeInspectorSideEventEntry
+                {
+                    sideEventId = state.SideEventId,
+                    hasTriggered = state.HasTriggered,
+                    triggeredRound = state.TriggeredRound,
+                    triggerCount = state.TriggerCount
+                });
+            }
+        }
+
         private static string FirstNonEmpty(string first, string second)
         {
             return !string.IsNullOrEmpty(first) ? first : second ?? string.Empty;
@@ -516,5 +535,19 @@ namespace TwelveMoons.Core.Runtime
         public bool isUnlocked;
         [Tooltip("上次领取建筑产出的回合；0 表示尚未领取。")]
         public int lastCollectedRound;
+    }
+
+    [Serializable]
+    public sealed class RuntimeInspectorSideEventEntry
+    {
+        [Header("运行时支线事件状态")]
+        [Tooltip("支线事件 ID；来自 RuntimeSideEventState.SideEventId，应与 SideEventConfig.SideEventId 一致。")]
+        public string sideEventId;
+        [Tooltip("当前支线事件是否已经点击触发过。")]
+        public bool hasTriggered;
+        [Tooltip("最近一次触发该支线事件的回合。")]
+        public int triggeredRound;
+        [Tooltip("该支线事件累计触发次数；一次性支线通常为 0 或 1。")]
+        public int triggerCount;
     }
 }

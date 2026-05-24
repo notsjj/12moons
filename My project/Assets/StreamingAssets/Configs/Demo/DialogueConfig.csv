@@ -11,3 +11,5 @@ line_choice_refuse,story_demo_choice,END,character_steward,排水图仍留在你
 line_submit_001,story_demo_submission,line_submit_002,character_steward,档案室会先收下排水图，然后才会发出徽记。,0,false,,,,,,提交流程开场测试
 line_submit_002,story_demo_submission,line_submit_003,,提交排水图后继续。,0,false,item_drainage_map,1,true,,,提交行沿用左侧说话人并等待道具测试
 line_submit_003,story_demo_submission,END,character_engineer,提交的排水图已经封存，档案员徽记可以领取。,1,false,,,,,,提交成功结果测试
+line_side_lower_harbor_001,story_side_lower_harbor,line_side_lower_harbor_002,character_courier,码头水线比昨夜又高了一指。有人把临时栈桥的绳结解开了。,0,false,,,,,,阶段16支线开场对白
+line_side_lower_harbor_002,story_side_lower_harbor,END,character_steward,先记下这条线索，粮袋会从更高的石阶转运。,1,false,,,,,,阶段16支线结束对白

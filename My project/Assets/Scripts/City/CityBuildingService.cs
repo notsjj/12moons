@@ -180,7 +180,14 @@ namespace TwelveMoons.City
                     return false;
                 }
 
-                resultMessage = $"建筑 {definition.BuildingName} 已产出 {definition.ProduceItemId} x{definition.ProduceCount}。";
+                var itemName = definition.ProduceItemId;
+                if (inventoryService.TryGetDefinition(definition.ProduceItemId, out var itemDefinition) &&
+                    !string.IsNullOrEmpty(itemDefinition.ItemName))
+                {
+                    itemName = itemDefinition.ItemName;
+                }
+
+                resultMessage = $"获得 {itemName} x{definition.ProduceCount}";
                 return true;
             }
 
@@ -207,7 +214,14 @@ namespace TwelveMoons.City
                     return false;
                 }
 
-                resultMessage = $"建筑 {definition.BuildingName} 已降低 {definition.ReduceFactionId} 质疑度 {definition.ReduceSuspicionValue}。";
+                var factionName = definition.ReduceFactionId;
+                if (factionService.TryGetDefinition(definition.ReduceFactionId, out var factionDefinition) &&
+                    !string.IsNullOrEmpty(factionDefinition.FactionName))
+                {
+                    factionName = factionDefinition.FactionName;
+                }
+
+                resultMessage = $"{factionName} 质疑度 -{definition.ReduceSuspicionValue}";
                 return true;
             }
 

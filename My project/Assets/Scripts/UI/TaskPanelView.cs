@@ -7,13 +7,18 @@ namespace TwelveMoons.UI
 {
     public sealed class TaskPanelView : MonoBehaviour
     {
-        [Header("Dependencies")]
+        [Header("依赖服务：读取任务配置和运行时任务")]
+        [Tooltip("任务服务；用于读取任务配置、当前任务阶段和任务状态变化。")]
         [SerializeField] private TaskService taskService;
+        [Tooltip("运行时数据服务；用于读取当前已经激活的任务列表。")]
         [SerializeField] private RuntimeDataService runtimeDataService;
 
-        [Header("Rows")]
+        [Header("任务行显示：任务栏内容和空状态")]
+        [Tooltip("任务行父节点；新建的任务行会挂在这里。")]
         [SerializeField] private RectTransform contentRoot;
+        [Tooltip("任务行预制体；每个可见任务会实例化一个任务行。")]
         [SerializeField] private TaskRowView rowPrefab;
+        [Tooltip("没有可见任务或缺少依赖时显示的提示文本。")]
         [SerializeField] private TMP_Text emptyText;
 
         private readonly List<TaskRowView> rows = new List<TaskRowView>();
@@ -61,14 +66,14 @@ namespace TwelveMoons.UI
 
             if (taskService == null || runtimeDataService == null || contentRoot == null)
             {
-                SetEmptyText("TaskService missing.");
+                SetEmptyText("缺少任务服务。");
                 return;
             }
 
             var visibleCount = 0;
             if (rowPrefab == null)
             {
-                SetEmptyText("TaskRow prefab missing.");
+                SetEmptyText("缺少任务行预制体。");
                 return;
             }
 
@@ -85,7 +90,7 @@ namespace TwelveMoons.UI
                 visibleCount++;
             }
 
-            SetEmptyText(visibleCount == 0 ? "No active task." : "");
+            SetEmptyText(visibleCount == 0 ? "暂无进行中的任务。" : "");
         }
 
         private void CreateRow(TaskDefinition definition, RuntimeTaskState state, TaskStageDefinition stage)

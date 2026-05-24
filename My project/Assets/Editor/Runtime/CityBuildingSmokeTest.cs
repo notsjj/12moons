@@ -54,24 +54,31 @@ namespace TwelveMoons.EditorTools.Runtime
                 ConfigureFactionService(factionService, configManager, runtimeDataService);
                 factionService.Refresh();
 
-                var buildingService = root.AddComponent<CityBuildingService>();
+                var documentService = root.AddComponent<DocumentService>();
+                ConfigureDocumentService(documentService, configManager, runtimeDataService, inventoryService, factionService);
+                documentService.Refresh();
+
+                var cityRoot = new GameObject("CityRoot");
+                cityRoot.transform.SetParent(root.transform, false);
+
+                var buildingService = cityRoot.AddComponent<CityBuildingService>();
                 ConfigureBuildingService(buildingService, configManager, runtimeDataService, inventoryService, factionService);
                 buildingService.Refresh();
 
                 var reliefViewObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 reliefViewObject.name = "ReliefDepotBuildingView";
-                reliefViewObject.transform.SetParent(root.transform, false);
+                reliefViewObject.transform.SetParent(cityRoot.transform, false);
                 var reliefRenderer = reliefViewObject.GetComponent<Renderer>();
                 var reliefView = reliefViewObject.AddComponent<CityBuildingView>();
                 reliefView.Configure("building_relief_depot", "city_point_royal_gate");
 
                 var shelterViewObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 shelterViewObject.name = "ChurchShelterBuildingView";
-                shelterViewObject.transform.SetParent(root.transform, false);
+                shelterViewObject.transform.SetParent(cityRoot.transform, false);
                 var shelterView = shelterViewObject.AddComponent<CityBuildingView>();
                 shelterView.Configure("building_church_shelter", "city_point_church_square");
 
-                var registry = root.AddComponent<CityBuildingRegistry>();
+                var registry = cityRoot.AddComponent<CityBuildingRegistry>();
                 ConfigureRegistry(registry, buildingService, configManager, reliefView, shelterView);
                 registry.RefreshAndBind();
 
@@ -87,14 +94,18 @@ namespace TwelveMoons.EditorTools.Runtime
                     throw new InvalidOperationException("Locked building should be hidden before document unlock.");
                 }
 
-                buildingService.enabled = false;
-                registry.enabled = false;
-                runtimeDataService.UnlockBuilding("building_relief_depot");
-                buildingService.enabled = true;
-                registry.enabled = true;
+                cityRoot.SetActive(false);
+                var entry = runtimeDataService.Data.QueueDocument("document_market_notice", string.Empty, string.Empty, string.Empty);
+                var result = documentService.ResolveDocument(entry, DocumentOptionType.A);
+                cityRoot.SetActive(true);
+                if (!result.Success)
+                {
+                    throw new InvalidOperationException($"Document option A should unlock the relief depot building: {result.Message}");
+                }
+
                 if (!buildingService.IsUnlocked("building_relief_depot") || !reliefRenderer.enabled)
                 {
-                    throw new InvalidOperationException("Document building unlock did not make the building visible after the city root was re-enabled.");
+                    throw new InvalidOperationException("Document building unlock did not enable the MeshRenderer while the city root was inactive.");
                 }
 
                 var foodBefore = inventoryService.GetCount("item_food");
@@ -159,6 +170,21 @@ namespace TwelveMoons.EditorTools.Runtime
             var serializedObject = new SerializedObject(factionService);
             serializedObject.FindProperty("configManager").objectReferenceValue = configManager;
             serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureDocumentService(
+            DocumentService documentService,
+            ConfigManager configManager,
+            RuntimeDataService runtimeDataService,
+            InventoryService inventoryService,
+            FactionService factionService)
+        {
+            var serializedObject = new SerializedObject(documentService);
+            serializedObject.FindProperty("configManager").objectReferenceValue = configManager;
+            serializedObject.FindProperty("runtimeDataService").objectReferenceValue = runtimeDataService;
+            serializedObject.FindProperty("inventoryService").objectReferenceValue = inventoryService;
+            serializedObject.FindProperty("factionService").objectReferenceValue = factionService;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 

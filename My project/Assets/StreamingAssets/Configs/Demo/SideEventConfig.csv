@@ -1,0 +1,3 @@
+SideEventId,Round,CityAreaId,PointId,DisplayCharacterId,StoryId,ExpireRound,IsOneTime,RequiredTaskId,RequiredTaskState,RequiredItemId,RequiredItemCount,Remark
+side_event_lower_harbor_courier,1,city_lower,city_point_lower_harbor,character_courier,story_side_lower_harbor,2,true,,,,0,阶段16演示：第1到2回合在下城区码头出现，点击播放支线剧情
+side_event_academy_engineer,2,city_academy,city_point_academy_archive,character_engineer,story_side_academy_archive,0,true,task_demo_relief_01,Active,,0,阶段16演示：任务激活后第2回合在学院档案室出现

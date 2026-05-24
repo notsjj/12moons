@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TwelveMoons.City;
 using TwelveMoons.Core.Config;
 using UnityEngine;
 
@@ -451,6 +452,20 @@ namespace TwelveMoons.Core.Runtime
             if (!string.IsNullOrEmpty(option.UnlockBuildingId))
             {
                 runtimeDataService?.UnlockBuilding(option.UnlockBuildingId);
+                RefreshCityBuildingViews();
+            }
+        }
+
+        private static void RefreshCityBuildingViews()
+        {
+            foreach (var service in FindObjectsByType<CityBuildingService>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                service?.Refresh();
+            }
+
+            foreach (var registry in FindObjectsByType<CityBuildingRegistry>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                registry?.RefreshAndBind();
             }
         }
 

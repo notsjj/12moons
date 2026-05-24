@@ -37,12 +37,14 @@ namespace TwelveMoons.EditorTools
             var taskService = FindRequired<TaskService>("TaskService");
             var storyService = FindRequired<StoryService>("StoryService");
             var documentService = FindRequired<DocumentService>("DocumentService");
+            var gameEntryService = FindRequired<GameEntry>("GameEntry");
             var documentPopupPanel = Object.FindFirstObjectByType<DocumentPopupPanelView>(FindObjectsInactive.Include);
             if (runtimeDataService == null ||
                 roundService == null ||
                 taskService == null ||
                 storyService == null ||
                 documentService == null ||
+                gameEntryService == null ||
                 documentPopupPanel == null)
             {
                 Fail("缺少桌面循环依赖服务或 DocumentPopupPanelView。本工具只绑定已有系统，不重建其它 UI。");
@@ -57,6 +59,7 @@ namespace TwelveMoons.EditorTools
                 taskService,
                 storyService,
                 documentService,
+                gameEntryService,
                 documentPopupPanel,
                 newspaperPanel.GetComponent<NewspaperPanelView>());
 
@@ -108,11 +111,12 @@ namespace TwelveMoons.EditorTools
             TaskService taskService,
             StoryService storyService,
             DocumentService documentService,
+            GameEntry gameEntryService,
             DocumentPopupPanelView documentPopupPanel,
             NewspaperPanelView newspaperPanel)
         {
             var panel = FindOrCreateUiChild(parent, "DeskLoopControls");
-            SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 24f), new Vector2(720f, 92f), new Vector2(0.5f, 0f));
+            SetFixedRect(panel.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 24f), new Vector2(884f, 92f), new Vector2(0.5f, 0f));
             ConfigurePanelImage(panel, new Color(0.1f, 0.095f, 0.082f, 0.92f));
 
             var storyButton = FindOrCreateButton(panel.transform, "StoryButton", "播放剧情");
@@ -123,9 +127,11 @@ namespace TwelveMoons.EditorTools
             SetFixedRect(endRoundButton.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(346f, -16f), new Vector2(150f, 38f), new Vector2(0f, 1f));
             var newspaperButton = FindOrCreateButton(panel.transform, "NewspaperButton", "报纸");
             SetFixedRect(newspaperButton.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(510f, -16f), new Vector2(150f, 38f), new Vector2(0f, 1f));
+            var cityButton = FindOrCreateButton(panel.transform, "CityButton", "进入城区");
+            SetFixedRect(cityButton.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(674f, -16f), new Vector2(150f, 38f), new Vector2(0f, 1f));
 
             var statusText = FindOrCreateText(panel.transform, "StatusText", "", 14, FontStyles.Normal, TextAlignmentOptions.Left);
-            SetFixedRect(statusText.rectTransform, new Vector2(0f, 0f), new Vector2(18f, 12f), new Vector2(660f, 28f), new Vector2(0f, 0f));
+            SetFixedRect(statusText.rectTransform, new Vector2(0f, 0f), new Vector2(18f, 12f), new Vector2(824f, 28f), new Vector2(0f, 0f));
 
             var controller = EnsureComponent<DeskLoopController>(panel);
             var serializedObject = new SerializedObject(controller);
@@ -134,12 +140,14 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("taskService").objectReferenceValue = taskService;
             serializedObject.FindProperty("storyService").objectReferenceValue = storyService;
             serializedObject.FindProperty("documentService").objectReferenceValue = documentService;
+            serializedObject.FindProperty("gameEntry").objectReferenceValue = gameEntryService;
             serializedObject.FindProperty("documentPopupPanel").objectReferenceValue = documentPopupPanel;
             serializedObject.FindProperty("newspaperPanel").objectReferenceValue = newspaperPanel;
             serializedObject.FindProperty("storyButton").objectReferenceValue = storyButton;
             serializedObject.FindProperty("documentButton").objectReferenceValue = documentButton;
             serializedObject.FindProperty("endRoundButton").objectReferenceValue = endRoundButton;
             serializedObject.FindProperty("newspaperButton").objectReferenceValue = newspaperButton;
+            serializedObject.FindProperty("cityButton").objectReferenceValue = cityButton;
             serializedObject.FindProperty("statusText").objectReferenceValue = statusText;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
 
@@ -147,6 +155,7 @@ namespace TwelveMoons.EditorTools
             AddPersistentListenerIfMissing(documentButton, controller, nameof(DeskLoopController.BeginDocumentFlow), controller.BeginDocumentFlow);
             AddPersistentListenerIfMissing(endRoundButton, controller, nameof(DeskLoopController.EndCurrentRound), controller.EndCurrentRound);
             AddPersistentListenerIfMissing(newspaperButton, controller, nameof(DeskLoopController.ShowPreviousRoundNewspaper), controller.ShowPreviousRoundNewspaper);
+            AddPersistentListenerIfMissing(cityButton, controller, nameof(DeskLoopController.EnterCity), controller.EnterCity);
             return panel;
         }
 
