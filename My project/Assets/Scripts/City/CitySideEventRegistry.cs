@@ -12,17 +12,17 @@ namespace TwelveMoons.City
         [Tooltip("城区点位注册器；用于把 SideEventConfig.PointId 定位到场景中的 CityPointView。")]
         [SerializeField] private CityPointRegistry pointRegistry;
 
-        [Header("支线角色生成：只在点位上生成当前阶段角色")]
+        [Header("支线角色生成：只在点位上生成当前回合角色")]
         [Tooltip("支线角色图标父物体；留空时会在本物体下创建 SideEventViews。")]
         [SerializeField] private Transform sideEventViewRoot;
-        [Tooltip("可选支线角色视图预制体；留空时会创建一个简单 3D 球体图标，后续可替换为正式角色图标 Prefab。")]
+        [Tooltip("可选支线角色视图预制体；留空时会创建 2D SpriteRenderer 图标、点击碰撞体和红色感叹号。")]
         [SerializeField] private CitySideEventView sideEventViewPrefab;
         [Tooltip("启用后刷新时会为当前回合可显示但场景中缺少的支线事件创建图标。")]
         [SerializeField] private bool createMissingViews = true;
-        [Tooltip("支线角色图标相对点位的本地偏移；用于避免与建筑图标完全重叠。")]
+        [Tooltip("支线角色图标相对点位的本地偏移；用于把 2D 角色图标放在地图点位上方。")]
         [SerializeField] private Vector3 sideEventLocalOffset = new Vector3(0f, 0.8f, 0f);
-        [Tooltip("默认 3D 支线角色图标缩放；数值会被限制为非负，避免生成反向或不可见图标。")]
-        [SerializeField] private float defaultIconScale = 0.35f;
+        [Tooltip("默认 2D 支线角色图标缩放；数值会被限制为非负，避免生成反向或不可见图标。")]
+        [SerializeField] private float defaultIconScale = 0.65f;
 
         [Header("运行时只读快照：生成与匹配状态")]
         [Tooltip("当前回合成功显示的支线事件数量。")]
@@ -174,21 +174,12 @@ namespace TwelveMoons.City
                 return instance;
             }
 
-            var icon = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            icon.name = $"SideEvent_{definition.SideEventId}";
+            var icon = new GameObject($"SideEvent_{definition.SideEventId}");
             icon.transform.SetParent(pointTransform, false);
             icon.transform.localScale = Vector3.one * Mathf.Max(0f, defaultIconScale);
-            var renderer = icon.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                renderer.sharedMaterial = new Material(Shader.Find("Standard"))
-                {
-                    color = new Color(0.2f, 0.75f, 1f, 0.95f)
-                };
-            }
-
             var view = icon.AddComponent<CitySideEventView>();
             view.Configure(definition.SideEventId);
+            view.EnsureDefaultWorldVisuals();
             return view;
         }
 

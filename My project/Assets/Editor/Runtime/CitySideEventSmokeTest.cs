@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using TMPro;
 using TwelveMoons.City;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
@@ -72,6 +73,13 @@ namespace TwelveMoons.EditorTools.Runtime
                 if (lowerHarborView == null || lowerHarborView.SideEventId != "side_event_lower_harbor_courier")
                 {
                     throw new InvalidOperationException("CitySideEventRegistry did not create the side event view under the configured CityPointView.");
+                }
+
+                if (lowerHarborView.GetComponentInChildren<SpriteRenderer>(true) == null ||
+                    lowerHarborView.GetComponentInChildren<TextMeshPro>(true) == null ||
+                    lowerHarborView.GetComponentInChildren<BoxCollider>(true) == null)
+                {
+                    throw new InvalidOperationException("CitySideEventRegistry should create a 2D sprite character, red TMP exclamation mark, and click collider for side event views.");
                 }
 
                 lowerHarborView.OnClicked();

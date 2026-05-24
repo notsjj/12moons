@@ -2,8 +2,8 @@ Shader "TwelveMoons/CityHoverOutline"
 {
     Properties
     {
-        _OutlineColor ("轮廓颜色", Color) = (1, 0.78, 0.18, 1)
-        _OutlineWidth ("轮廓宽度", Float) = 0.045
+        _OutlineColor ("轮廓颜色", Color) = (1, 0.62, 0.12, 1)
+        _OutlinePixelWidth ("轮廓像素宽度", Float) = 3
     }
 
     SubShader
@@ -11,51 +11,64 @@ Shader "TwelveMoons/CityHoverOutline"
         Tags
         {
             "RenderType" = "Transparent"
-            "Queue" = "Transparent"
             "RenderPipeline" = "UniversalPipeline"
         }
 
         Pass
         {
-            Name "City Hover Outline"
-            Cull Front
+            Name "City Hover Screen Space Outline"
             ZWrite Off
-            ZTest LEqual
-            Blend SrcAlpha OneMinusSrcAlpha
+            ZTest Always
+            Cull Off
+            Blend One Zero
 
             HLSLPROGRAM
-            #pragma vertex vert
+            #pragma vertex Vert
             #pragma fragment frag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
+
+            TEXTURE2D(_CityBuildingOutlineMaskTex);
+            SAMPLER(sampler_CityBuildingOutlineMaskTex);
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _OutlineColor;
-                float _OutlineWidth;
+                float _OutlinePixelWidth;
             CBUFFER_END
 
-            struct Attributes
+            half SampleMask(float2 uv)
             {
-                float4 positionOS : POSITION;
-                float3 normalOS : NORMAL;
-            };
-
-            struct Varyings
-            {
-                float4 positionHCS : SV_POSITION;
-            };
-
-            Varyings vert(Attributes input)
-            {
-                Varyings output;
-                float3 expandedPosition = input.positionOS.xyz + normalize(input.normalOS) * _OutlineWidth;
-                output.positionHCS = TransformObjectToHClip(expandedPosition);
-                return output;
+                return SAMPLE_TEXTURE2D(_CityBuildingOutlineMaskTex, sampler_CityBuildingOutlineMaskTex, uv).r;
             }
 
             half4 frag(Varyings input) : SV_Target
             {
-                return _OutlineColor;
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+                half4 source = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, input.texcoord);
+                half center = SampleMask(input.texcoord);
+
+                float2 texel = 1.0 / _ScreenParams.xy;
+                int width = clamp((int)round(_OutlinePixelWidth), 1, 6);
+                half neighbor = 0;
+
+                [loop]
+                for (int x = -6; x <= 6; x++)
+                {
+                    [loop]
+                    for (int y = -6; y <= 6; y++)
+                    {
+                        if (abs(x) <= width && abs(y) <= width)
+                        {
+                            float2 offset = float2(x, y) * texel;
+                            neighbor = max(neighbor, SampleMask(input.texcoord + offset));
+                        }
+                    }
+                }
+
+                half outline = saturate(neighbor - center);
+                return lerp(source, _OutlineColor, outline * _OutlineColor.a);
             }
             ENDHLSL
         }

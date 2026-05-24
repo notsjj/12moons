@@ -1,23 +1,30 @@
-using UnityEngine;
 using TMPro;
+using System;
+using System.Linq;
+using TwelveMoons.Core;
+using UnityEngine;
 
 namespace TwelveMoons.City
 {
     public sealed class CityBuildingView : MonoBehaviour
     {
         [Header("建筑配置匹配：对应 CityBuildingConfig.BuildingId")]
-        [Tooltip("建筑 ID；必须与 CityBuildingConfig 表中的 BuildingId 完全一致，建筑注册器会用它匹配配置和运行时解锁状态。")]
+        [Tooltip("建筑 ID；必须与 CityBuildingConfig 表中的 BuildingId 完全一致，用于匹配配置和运行时解锁状态。")]
         [SerializeField] private string buildingId;
-        [Tooltip("建筑所在点位 ID；建议与 CityBuildingConfig.PointId、CityPointConfig.PointId 保持一致，用于检查建筑和城区点位的对应关系。")]
+        [Tooltip("建筑所在点位 ID；建议与 CityBuildingConfig.PointId、CityPointConfig.PointId 保持一致，方便检查建筑和城区点位关系。")]
         [SerializeField] private string pointId;
 
         [Header("显示与点击：绑定实际 3D 模型")]
-        [Tooltip("建筑显示根物体；填写实际建筑模型子物体或包住模型的父物体。留空时会控制本物体下所有 Renderer 和 Collider。")]
+        [Tooltip("建筑显示根物体；填写实际建筑模型子物体或包住模型的父物体。留空时使用当前物体。")]
         [SerializeField] private GameObject visualRoot;
-        [Tooltip("可点击碰撞体；留空时会自动使用本物体或子物体上的 Collider。建筑未解锁或冷却中时会禁用点击。")]
+        [Tooltip("可点击碰撞体；留空时自动使用当前物体或子物体上的 Collider。已解锁建筑会保持 Collider 开启，以便领取后仍可悬停显示轮廓。")]
         [SerializeField] private Collider clickableCollider;
-        [Tooltip("启用后鼠标点击 Collider 会尝试领取建筑效果；关闭时只显示建筑，不响应点击。")]
+        [Tooltip("启用后，建筑在可领取时可通过鼠标点击领取产出；领取后仍可悬停高亮，但不会重复领取。")]
         [SerializeField] private bool allowMouseClick = true;
+        [Tooltip("启用后，只有 GameEntry 已切换到城区界面时，建筑才响应点击和悬停。")]
+        [SerializeField] private bool requireCityRootActive = true;
+        [Tooltip("游戏入口对象；用于确认是否已经通过进入城区按钮切换到 CityRoot。留空时运行时自动查找。")]
+        [SerializeField] private GameEntry gameEntry;
 
         [Header("领取提示：建筑上方红色感叹号和领取结果")]
         [Tooltip("未领取时显示的红色感叹号根物体；留空时运行时会在建筑下自动创建 3D TMP 感叹号。")]
@@ -37,13 +44,15 @@ namespace TwelveMoons.City
         [Tooltip("用于 Billboard 朝向的摄像机；留空时自动使用 Main Camera。")]
         [SerializeField] private Camera billboardCamera;
 
-        [Header("鼠标高亮：可领取建筑的悬停提示")]
-        [Tooltip("鼠标移上可领取建筑时参与高亮的 Renderer；留空时自动使用 VisualRoot 下所有 Renderer。")]
+        [Header("鼠标轮廓高亮：悬停时加粗建筑外圈")]
+        [Tooltip("鼠标移上已解锁建筑时参与轮廓高亮的 Renderer；留空时自动使用 VisualRoot 下所有 Renderer。")]
         [SerializeField] private Renderer[] highlightRenderers;
-        [Tooltip("鼠标悬停时叠加到建筑材质上的高亮颜色；当前实现不依赖额外 Shader。")]
-        [SerializeField] private Color hoverHighlightColor = new Color(1f, 0.82f, 0.25f, 1f);
-        [Tooltip("鼠标悬停时的自发光强度；材质支持 Emission 时会更明显。")]
-        [SerializeField] private float hoverEmissionIntensity = 0.8f;
+        [Tooltip("轮廓高亮组件；留空时运行时自动挂到当前建筑物体。")]
+        [SerializeField] private CityBuildingOutlineEffect outlineEffect;
+        [Tooltip("轮廓高亮颜色；只影响外圈描边，不改变建筑原材质颜色。")]
+        [SerializeField] private Color hoverOutlineColor = new Color(1f, 0.78f, 0.18f, 1f);
+        [Tooltip("轮廓高亮像素宽度；数值越大，鼠标移上去后屏幕空间外圈越粗。")]
+        [SerializeField] private int hoverOutlinePixelWidth = 3;
 
         [Header("运行时只读快照：建筑显示与领取状态")]
         [Tooltip("当前建筑是否已经匹配到 CityBuildingConfig 中的配置行。")]
@@ -54,9 +63,9 @@ namespace TwelveMoons.City
         [SerializeField] private string inspectorCityAreaId;
         [Tooltip("匹配到的点位 ID；来自 CityBuildingConfig.PointId，用于确认与本组件填写的 PointId 是否一致。")]
         [SerializeField] private string inspectorConfigPointId;
-        [Tooltip("匹配到的建筑效果类型；Resource 表示产出资源/道具，Suspicion 表示降低阵营质疑度。")]
+        [Tooltip("匹配到的建筑效果类型；Resource 表示产出资源或道具，Suspicion 表示降低阵营质疑度。")]
         [SerializeField] private string inspectorEffectType;
-        [Tooltip("当前运行时是否已经解锁；未解锁时建筑模型应隐藏且不可点击。")]
+        [Tooltip("当前运行时是否已经解锁；未解锁时建筑模型隐藏且不可点击。")]
         [SerializeField] private bool inspectorIsUnlocked;
         [Tooltip("当前回合是否可以点击领取；同回合重复点击或冷却未结束时为 false。")]
         [SerializeField] private bool inspectorCanCollect;
@@ -67,7 +76,6 @@ namespace TwelveMoons.City
         private CityBuildingService service;
         private Renderer[] cachedRenderers;
         private Collider[] cachedColliders;
-        private MaterialPropertyBlock highlightBlock;
         private bool isCollectHintVisible;
         private float collectResultHideAt = -1f;
 
@@ -103,6 +111,7 @@ namespace TwelveMoons.City
             inspectorEffectType = string.Empty;
             inspectorIsUnlocked = false;
             inspectorCanCollect = false;
+            ApplyHoverHighlight(false);
             inspectorSummary = string.IsNullOrEmpty(buildingId)
                 ? "BuildingId 为空，无法匹配 CityBuildingConfig。"
                 : $"BuildingId={buildingId} 尚未绑定。";
@@ -125,9 +134,9 @@ namespace TwelveMoons.City
                 ? $"BuildingId={definition.BuildingId}, 名称={definition.BuildingName}, 城区={definition.CityAreaId}, {pointStatus}, 已解锁={inspectorIsUnlocked}, 可领取={inspectorCanCollect}"
                 : $"BuildingId={buildingId} 未匹配到 CityBuildingConfig。";
 
-            ApplyVisibility(inspectorIsUnlocked, inspectorCanCollect);
+            ApplyVisibility(inspectorIsUnlocked);
             RefreshCollectIndicators();
-            if (!inspectorCanCollect)
+            if (!inspectorIsUnlocked)
             {
                 ApplyHoverHighlight(false);
             }
@@ -141,7 +150,7 @@ namespace TwelveMoons.City
 
         private void OnMouseDown()
         {
-            if (allowMouseClick)
+            if (IsCityInteractionEnabled() && allowMouseClick && inspectorCanCollect)
             {
                 TryCollect();
             }
@@ -149,7 +158,7 @@ namespace TwelveMoons.City
 
         private void OnMouseEnter()
         {
-            if (allowMouseClick && inspectorCanCollect)
+            if (IsCityInteractionEnabled() && inspectorIsUnlocked)
             {
                 ApplyHoverHighlight(true);
             }
@@ -183,12 +192,19 @@ namespace TwelveMoons.City
         private void CacheSceneComponents()
         {
             var root = visualRoot != null ? visualRoot : gameObject;
-            cachedRenderers = root.GetComponentsInChildren<Renderer>(true);
+            cachedRenderers = root.GetComponentsInChildren<Renderer>(true)
+                .Where(renderer => renderer != null &&
+                    !renderer.gameObject.name.EndsWith("_Outline", StringComparison.Ordinal) &&
+                    renderer.GetComponent<TMP_Text>() == null)
+                .ToArray();
             cachedColliders = root.GetComponentsInChildren<Collider>(true);
             if (highlightRenderers == null || highlightRenderers.Length == 0)
             {
                 highlightRenderers = cachedRenderers;
             }
+
+            EnsureOutlineEffect();
+            ResolveGameEntry();
 
             if (clickableCollider == null)
             {
@@ -200,7 +216,7 @@ namespace TwelveMoons.City
             }
         }
 
-        private void ApplyVisibility(bool visible, bool canClick)
+        private void ApplyVisibility(bool visible)
         {
             CacheSceneComponents();
 
@@ -222,13 +238,13 @@ namespace TwelveMoons.City
             {
                 if (collider != null)
                 {
-                    collider.enabled = visible && canClick;
+                    collider.enabled = visible;
                 }
             }
 
             if (clickableCollider != null)
             {
-                clickableCollider.enabled = visible && canClick;
+                clickableCollider.enabled = visible;
             }
         }
 
@@ -351,36 +367,43 @@ namespace TwelveMoons.City
 
         private void ApplyHoverHighlight(bool enabled)
         {
-            CacheSceneComponents();
-            if (highlightRenderers == null || highlightRenderers.Length == 0)
+            if (!enabled || !inspectorIsUnlocked)
             {
+                outlineEffect?.SetVisible(false);
                 return;
             }
 
-            if (highlightBlock == null)
+            CacheSceneComponents();
+            EnsureOutlineEffect();
+            outlineEffect.Configure(highlightRenderers, hoverOutlineColor, hoverOutlinePixelWidth);
+            outlineEffect.SetVisible(true);
+        }
+
+        private void EnsureOutlineEffect()
+        {
+            if (outlineEffect == null)
             {
-                highlightBlock = new MaterialPropertyBlock();
+                outlineEffect = GetComponent<CityBuildingOutlineEffect>() ??
+                    gameObject.AddComponent<CityBuildingOutlineEffect>();
+            }
+        }
+
+        private bool IsCityInteractionEnabled()
+        {
+            if (!requireCityRootActive)
+            {
+                return true;
             }
 
-            foreach (var targetRenderer in highlightRenderers)
+            ResolveGameEntry();
+            return gameEntry == null || gameEntry.CityRoot == null || gameEntry.CityRoot.activeInHierarchy;
+        }
+
+        private void ResolveGameEntry()
+        {
+            if (gameEntry == null)
             {
-                if (targetRenderer == null)
-                {
-                    continue;
-                }
-
-                if (!enabled)
-                {
-                    targetRenderer.SetPropertyBlock(null);
-                    continue;
-                }
-
-                highlightBlock.Clear();
-                var color = hoverHighlightColor;
-                highlightBlock.SetColor("_BaseColor", color);
-                highlightBlock.SetColor("_Color", color);
-                highlightBlock.SetColor("_EmissionColor", color * Mathf.Max(0f, hoverEmissionIntensity));
-                targetRenderer.SetPropertyBlock(highlightBlock);
+                gameEntry = FindFirstObjectByType<GameEntry>(FindObjectsInactive.Include);
             }
         }
     }
