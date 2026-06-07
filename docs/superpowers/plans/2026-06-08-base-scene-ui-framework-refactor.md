@@ -8,6 +8,8 @@
 
 **Tech Stack:** Unity 6000.2, C#, UGUI, TextMeshPro, DOTween, Unity Editor PrefabUtility, Unity Test Framework, Resources prefabs.
 
+**Final Scene Requirement:** After the migration is complete and before entering Play Mode, `Main Canvas` must not contain any concrete gameplay/business UI such as `DeskPanel`, `StoryPanel`, `SharedHudRoot`, `DocumentPopupPanel`, `NewspaperPanel`, `LetterArea`, `InventoryPanel`, `TaskPanel`, or debug button panels. It may only contain UIFramework container roots such as `PersistentRoot`, `PanelRoot`, `PopupRoot`, and `OverlayRoot`; all concrete UI must be instantiated dynamically at runtime from `Assets/Resources/Prefabs/UI`.
+
 ---
 
 ## Source Documents
@@ -910,6 +912,7 @@ Expected:
 - `SharedHudPanel` appears under `PersistentRoot`.
 - `DeskPanel` appears under `PanelRoot`.
 - No duplicate old concrete UI remains under `Main Canvas`.
+- Before entering Play Mode, `Main Canvas` contains only framework layer roots and no concrete business UI children.
 
 - [ ] **Step 4: Commit**
 
@@ -942,6 +945,7 @@ Validator checks:
 - `BaseScene` has `Main Canvas`.
 - `Main Canvas` has the four layer roots.
 - `BaseScene` no longer contains direct children named `DeskPanel`, `StoryPanel`, or `SharedHudRoot`.
+- `Main Canvas` has no concrete gameplay/business UI direct or nested children before Play Mode; only UIFramework layer roots are allowed.
 - `CityRoot` no longer contains `CityCameraControls` or `CityOverlayPanel`.
 
 - [ ] **Step 2: Emit Chinese errors**
@@ -1058,6 +1062,8 @@ Twelve Moons/UIFramework/Validate Base Scene UIFramework
 
 Expected: pass.
 
+The pass condition includes this explicit scene check: before Play Mode, `Main Canvas` has only UIFramework container roots and no concrete business UI instances. Runtime-created UI may appear under those roots only after the bootstrap runs.
+
 - [ ] **Step 2: Check compile errors**
 
 Run:
@@ -1092,4 +1098,3 @@ Final response must include:
 - Button OnClick 绑定及验证目的。
 - Unity 验证入口和通过标准。
 - 是否可以进入下一阶段。
-
