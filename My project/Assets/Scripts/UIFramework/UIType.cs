@@ -18,9 +18,22 @@ public sealed class UIType : IEquatable<UIType>
             throw new ArgumentException("UI Resources 路径不能为空。", nameof(path));
         }
 
-        Path = path.Replace("\\", "/");
+        var normalizedPath = path.Trim().Replace("\\", "/");
+        if (normalizedPath.EndsWith("/", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("UI Resources 路径不能以斜杠结尾。", nameof(path));
+        }
+
+        var nameStartIndex = normalizedPath.LastIndexOf('/') + 1;
+        var uiName = normalizedPath.Substring(nameStartIndex);
+        if (string.IsNullOrEmpty(uiName))
+        {
+            throw new ArgumentException("UI Resources 路径必须包含有效的 UI 名称。", nameof(path));
+        }
+
+        Path = normalizedPath;
         Layer = layer;
-        Name = Path.Substring(Path.LastIndexOf('/') + 1);
+        Name = uiName;
     }
 
     public bool Equals(UIType other)
