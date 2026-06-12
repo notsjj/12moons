@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a5790691942fb347b77bcda58688fd4, type: 3}
+  m_Name: document_flood_watch
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.DocumentDefinitionAsset
+  documentId: document_flood_watch
+  title: "\u6CB3\u95F8\u591C\u5DE1\u62A5\u544A"
+  bodyText: "\u5B88\u95F8\u4EBA\u62A5\u544A\u4F4E\u6CB3\u95F8\u591C\u95F4\u6DA8\u6C34\uFF0C\u9700\u8981\u4E00\u652F\u5C0F\u961F\u901A\u5BB5\u770B\u5B88\uFF0C\u5426\u5219\u6E05\u6668\u53EF\u80FD\u6765\u4E0D\u53CA\u5173\u95F8\u3002"
+  proposerCharacterId: character_courier
+  documentType: Disaster
+  disasterId: disaster_flood_01
+  disasterStageId: stage_warning
+  taskId: 
+  taskStageId: 
+  isRepeatable: 0
+  remark: "\u4E2D\u6587\u707E\u96BE\u516C\u6587\u6D4B\u8BD5"
+  optionA:
+    text: "\u96C7\u591C\u5DE1\u961F"
+    moneyChange: -1
+    materialChange: 0
+    foodChange: 0
+    nobleSuspicionChange: 0
+    academySuspicionChange: 0
+    churchSuspicionChange: 0
+    civilianSuspicionChange: -1
+    taskScoreChange: 0
+    requiredItemId: 
+    requiredItemCount: 0
+    consumeItem: 0
+    addItemId: 
+    addItemCount: 0
+    nextDocumentId: 
+    nextDocumentDelayRound: 0
+    unlockBuildingId: 
+    resultText: "\u591C\u5DE1\u961F\u5B88\u5230\u5929\u4EAE\uFF0C\u6CB3\u95F8\u6CA1\u6709\u5931\u63A7\u3002"
+    proposerFeedbackText: "\u4FE1\u4F7F\u628A\u591C\u5DE1\u540D\u5355\u9489\u5728\u6728\u677F\u4E0A\u3002"
+    feedbackFactionId: civilian
+    factionFeedbackText: "\u95F8\u53E3\u9644\u8FD1\u7684\u5C45\u6C11\u7EC8\u4E8E\u7761\u5F97\u5B89\u7A33\u4E9B\u3002"
+  optionB:
+    text: "\u4EA4\u7ED9\u5FD7\u613F\u8005"
+    moneyChange: 0
+    materialChange: 0
+    foodChange: 0
+    nobleSuspicionChange: 0
+    academySuspicionChange: 0
+    churchSuspicionChange: 1
+    civilianSuspicionChange: 1
+    taskScoreChange: 0
+    requiredItemId: 
+    requiredItemCount: 0
+    consumeItem: 0
+    addItemId: 
+    addItemCount: 0
+    nextDocumentId: 
+    nextDocumentDelayRound: 0
+    unlockBuildingId: 
+    resultText: "\u5FD7\u613F\u8005\u534A\u591C\u6563\u53BB\uFF0C\u95F8\u53E3\u53EA\u5269\u4E24\u76CF\u706F\u3002"
+    proposerFeedbackText: "\u4FE1\u4F7F\u8BB0\u4E0B\u6CA1\u6709\u96C7\u961F\u7684\u51B3\u5B9A\u3002"
+    feedbackFactionId: church
+    factionFeedbackText: "\u6559\u4F1A\u8D28\u7591\u8BAE\u5385\u628A\u5371\u9669\u4EA4\u7ED9\u4E34\u65F6\u4EBA\u624B\u3002"

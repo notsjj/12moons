@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a5790691942fb347b77bcda58688fd4, type: 3}
+  m_Name: document_relief_prepare
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.DocumentDefinitionAsset
+  documentId: document_relief_prepare
+  title: "\u8D48\u6D4E\u4ED3\u62E8\u4ED8\u4EE4"
+  bodyText: "\u5E93\u623F\u7BA1\u4E8B\u5448\u4E0A\u4E00\u5377\u6E7F\u8FB9\u8D26\u518C\uFF0C\u8BF7\u6C42\u7ACB\u523B\u62E8\u51FA\u94F6\u94B1\u4E0E\u5EFA\u6750\uFF0C\u5148\u628A\u7B2C\u4E00\u6279\u8D48\u6D4E\u8F66\u9001\u5230\u4F4E\u6D3C\u8857\u533A\u3002"
+  proposerCharacterId: character_steward
+  documentType: Task
+  disasterId: disaster_flood_01
+  disasterStageId: 
+  taskId: task_demo_relief_01
+  taskStageId: task_stage_relief_prepare
+  isRepeatable: 0
+  remark: "\u4E2D\u6587\u516C\u6587\u6D41\u7A0B\u6D4B\u8BD5"
+  optionA:
+    text: "\u51C6\u62E8\u4ED3\u50A8"
+    moneyChange: -5
+    materialChange: 0
+    foodChange: 0
+    nobleSuspicionChange: 1
+    academySuspicionChange: 0
+    churchSuspicionChange: 0
+    civilianSuspicionChange: -2
+    taskScoreChange: 1
+    requiredItemId: 
+    requiredItemCount: 0
+    consumeItem: 0
+    addItemId: item_drainage_map
+    addItemCount: 1
+    nextDocumentId: document_relief_followup
+    nextDocumentDelayRound: 1
+    unlockBuildingId: building_relief_depot
+    resultText: "\u7B2C\u4E00\u6279\u8D48\u6D4E\u8F66\u5E26\u7740\u5C01\u5370\u79BB\u5F00\u5E93\u623F\u3002"
+    proposerFeedbackText: "\u7BA1\u4E8B\u4F4E\u5934\u9886\u547D\uFF0C\u7ACB\u523B\u6D3E\u4EBA\u53BB\u4F4E\u6D3C\u8857\u533A\u3002"
+    feedbackFactionId: civilian
+    factionFeedbackText: "\u4F4E\u6D3C\u8857\u7684\u5C45\u6C11\u542C\u8BF4\u7CAE\u8F66\u5DF2\u7ECF\u51FA\u53D1\uFF0C\u8D28\u7591\u7565\u964D\u3002"
+  optionB:
+    text: "\u6682\u7F13\u590D\u6838"
+    moneyChange: 0
+    materialChange: 0
+    foodChange: 0
+    nobleSuspicionChange: 0
+    academySuspicionChange: 1
+    churchSuspicionChange: 0
+    civilianSuspicionChange: 3
+    taskScoreChange: -1
+    requiredItemId: 
+    requiredItemCount: 0
+    consumeItem: 0
+    addItemId: 
+    addItemCount: 0
+    nextDocumentId: 
+    nextDocumentDelayRound: 0
+    unlockBuildingId: 
+    resultText: "\u8FD9\u4EFD\u8BF7\u6C42\u88AB\u9000\u56DE\uFF0C\u7B49\u5F85\u4E0B\u4E00\u6B21\u590D\u6838\u3002"
+    proposerFeedbackText: "\u7BA1\u4E8B\u6536\u8D77\u5370\u7AE0\uFF0C\u62C5\u5FC3\u8F66\u961F\u8BEF\u65F6\u3002"
+    feedbackFactionId: civilian
+    factionFeedbackText: "\u5C45\u6C11\u542C\u8BF4\u4ED3\u95E8\u672A\u5F00\uFF0C\u8BAE\u8BBA\u58F0\u66F4\u5927\u3002"
