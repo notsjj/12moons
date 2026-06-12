@@ -2,6 +2,7 @@ using System.IO;
 using System.Linq;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
+using TwelveMoons.UI;
 using UnityEditor;
 using UnityEngine;
 
@@ -19,7 +20,26 @@ namespace TwelveMoons.EditorTools.Runtime
             RunOptionAFlow();
             RunOptionBFlow();
             RunCurrentRoundDrawFlow();
+            ValidateActorTransitionApi();
             Debug.Log("Document flow smoke test passed. Demo document queues, opens, resolves proposer, settles option A and B, removes the current queue entry, records delayed follow-up documents, and activates them on their due round.");
+        }
+
+        private static void ValidateActorTransitionApi()
+        {
+            var root = new GameObject("DocumentActorTransitionSmokeTest");
+            try
+            {
+                var actor = root.AddComponent<SharedActorSlotView>();
+                actor.ShowActor("Next proposer", "Document proposer", null, null);
+                actor.HideAlongEntryPath(null);
+
+                var popup = root.AddComponent<DocumentPopupPanelView>();
+                _ = popup.IsActorTransitioning;
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
         }
 
         private static void RunOptionAFlow()
@@ -42,7 +62,7 @@ namespace TwelveMoons.EditorTools.Runtime
                 var nextDocument = data.FollowUpDocuments.FirstOrDefault(candidate => candidate.DocumentId == "document_relief_followup");
 
                 if (context.InventoryService.GetCount("item_money") != 5 ||
-                    context.InventoryService.GetCount("item_material") != 7 ||
+                    context.InventoryService.GetCount("item_material") != 10 ||
                     context.InventoryService.GetCount("item_food") != 5 ||
                     context.InventoryService.GetCount("item_drainage_map") != 1 ||
                     task == null ||

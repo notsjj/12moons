@@ -11,6 +11,7 @@ namespace TwelveMoons.UI
         private static readonly UIType DocumentPopupPanel = new UIType("Prefabs/UI/DocumentPopupPanel", UILayer.Popup);
         private static readonly UIType NewspaperPanel = new UIType("Prefabs/UI/NewspaperPanel", UILayer.Popup);
         private static readonly UIType LetterReaderPanel = new UIType("Prefabs/UI/LetterReaderPanel", UILayer.Popup);
+        private static readonly UIType LoadingPanel = new UIType("Prefabs/UI/LoadingPanel", UILayer.Overlay);
 
         [Header("UI 上下文")]
         [Tooltip("BaseScene 中的 UI 上下文；为空时自动从当前物体或场景中查找。")]
@@ -23,6 +24,12 @@ namespace TwelveMoons.UI
         [Header("启动调试开关")]
         [Tooltip("进入游戏时是否显示各 UI Prefab 内的调试按钮。正式流程应保持关闭。")]
         [SerializeField] private bool showDebugControlsOnStart;
+
+        [Header("LoadingPanel 运行时调试")]
+        [Tooltip("启用后，在 Play 模式按 P 键会显示并重播 LoadingPanel 过场；此调试播放不会切换到城区。")]
+        [SerializeField] private bool enableLoadingPanelDebugHotkey = true;
+
+        public bool IsLoadingPanelDebugHotkeyEnabled => enableLoadingPanelDebugHotkey;
 
         private void Start()
         {
@@ -37,18 +44,32 @@ namespace TwelveMoons.UI
             uiContext.ResolveMissingReferences();
             uiManager.EnsureLayerRoots();
 
-            ShowAndPrepare(SharedHudPanel);
             ShowAndPrepare(DeskPanel);
+            ShowAndPrepare(StoryPanel);
+            uiManager?.HideUI(SharedHudPanel);
+        }
+
+        private void Update()
+        {
+            if (!enableLoadingPanelDebugHotkey || !Input.GetKeyDown(KeyCode.P))
+            {
+                return;
+            }
+
+            var loadingPanel = ShowLoadingPanel();
+            loadingPanel?.PlayDebugTransition();
         }
 
         public void ShowDesk()
         {
             ShowAndPrepare(DeskPanel);
+            uiManager?.HideUI(SharedHudPanel);
             uiManager?.HideUI(CityHudPanel);
         }
 
         public void ShowCity()
         {
+            ShowAndPrepare(SharedHudPanel);
             ShowAndPrepare(CityHudPanel);
             uiManager?.HideUI(DeskPanel);
         }
@@ -76,6 +97,28 @@ namespace TwelveMoons.UI
         public void ShowLetterReader()
         {
             ShowAndPrepare(LetterReaderPanel);
+        }
+
+        public LoadingPanelTransitionView ShowLoadingPanel()
+        {
+            var loadingObject = ShowAndPrepare(LoadingPanel);
+            if (loadingObject == null)
+            {
+                return null;
+            }
+
+            var loadingView = loadingObject.GetComponent<LoadingPanelTransitionView>();
+            if (loadingView == null)
+            {
+                loadingView = loadingObject.AddComponent<LoadingPanelTransitionView>();
+            }
+
+            return loadingView;
+        }
+
+        public void HideLoadingPanel()
+        {
+            uiManager?.HideUI(LoadingPanel);
         }
 
         public void HidePopup(UIType type)

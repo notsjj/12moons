@@ -1,6 +1,9 @@
 using TMPro;
+using TwelveMoons.City;
 using TwelveMoons.Core;
 using TwelveMoons.Core.Runtime;
+using System.Collections;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -42,12 +45,15 @@ namespace TwelveMoons.UI
         [SerializeField] private TMP_Text statusText;
         [Tooltip("公文前剧情人物立绘框；只允许点击该人物进入公文前剧情。")]
         [SerializeField] private SharedActorSlotView sharedActorSlot;
+        [SerializeField] private BaseSceneUIBootstrap uiBootstrap;
 
         private int roundWaitingForAdvance;
         private bool waitingToAdvanceAfterEndStories;
         private int roundPendingAdvanceAfterEndStories;
         private RuntimeStoryQueueEntry pendingBeforeDocumentStory;
         private bool waitingForBeforeDocumentActorClick;
+        private bool isEnteringCityWithTransition;
+        private CityCameraController cityCameraController;
 
         private void Awake()
         {
@@ -72,10 +78,7 @@ namespace TwelveMoons.UI
                 documentService.DocumentsChanged += RefreshButtons;
             }
 
-            if (documentPopupPanel != null)
-            {
-                documentPopupPanel.DocumentFlowStateChanged += RefreshButtons;
-            }
+            RegisterDocumentPopupStateListener(documentPopupPanel);
 
             if (sharedActorSlot != null)
             {
@@ -95,10 +98,7 @@ namespace TwelveMoons.UI
                 documentService.DocumentsChanged -= RefreshButtons;
             }
 
-            if (documentPopupPanel != null)
-            {
-                documentPopupPanel.DocumentFlowStateChanged -= RefreshButtons;
-            }
+            UnregisterDocumentPopupStateListener(documentPopupPanel);
 
             if (sharedActorSlot != null)
             {
@@ -148,6 +148,14 @@ namespace TwelveMoons.UI
 
             newspaperPanel?.Hide();
             documentService?.GenerateCurrentRoundDocumentQueue();
+            EnsureDocumentPopupVisible();
+            if (documentPopupPanel == null)
+            {
+                SetStatus("未找到公文界面，无法打开当前回合公文。");
+                RefreshButtons();
+                return;
+            }
+
             documentPopupPanel?.BeginDocumentFlow();
             RefreshButtons();
         }
@@ -227,6 +235,13 @@ namespace TwelveMoons.UI
         public void EnterCity()
         {
             ResolveDependencies();
+            if (isEnteringCityWithTransition)
+            {
+                SetStatus("正在进入城区过场，请稍候。");
+                RefreshButtons();
+                return;
+            }
+
             if (IsDocumentFlowActive() || HasActiveStory() || HasQueuedGameplayStories() ||
                 HasPendingBeforeDocumentStory() || HasPendingDocuments())
             {
@@ -236,9 +251,14 @@ namespace TwelveMoons.UI
             }
 
             newspaperPanel?.Hide();
-            gameEntry?.ShowCity();
-            SetStatus("已进入城区。");
-            RefreshButtons();
+            var loadingPanel = uiBootstrap?.ShowLoadingPanel();
+            if (loadingPanel == null)
+            {
+                EnterCityImmediately();
+                return;
+            }
+
+            StartCoroutine(PlayEnterCityTransition(loadingPanel));
         }
 
         public void HideNewspaper()
@@ -270,11 +290,52 @@ namespace TwelveMoons.UI
             var hasQueuedGameplayStories = HasQueuedGameplayStories();
             var hasPendingBeforeDocumentStory = HasPendingBeforeDocumentStory();
             var hasPendingDocuments = HasPendingDocuments();
-            SetButtonInteractable(storyButton, !isDocumentFlowActive && !hasPendingBeforeDocumentStory && (hasActiveStory || hasQueuedGameplayStories));
-            SetButtonInteractable(documentButton, !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && hasPendingDocuments);
-            SetButtonInteractable(endRoundButton, !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && !hasPendingDocuments);
-            SetButtonInteractable(newspaperButton, !isDocumentFlowActive && HasPreviousNewspaper());
-            SetButtonInteractable(cityButton, !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && !hasPendingDocuments);
+            var canContinueStory = !isEnteringCityWithTransition && !isDocumentFlowActive &&
+                (hasActiveStory || (!hasPendingBeforeDocumentStory && hasQueuedGameplayStories));
+            SetButtonInteractable(storyButton, canContinueStory);
+            SetButtonInteractable(documentButton, !isEnteringCityWithTransition && !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && hasPendingDocuments);
+            SetButtonInteractable(endRoundButton, !isEnteringCityWithTransition && !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && !hasPendingDocuments);
+            SetButtonInteractable(newspaperButton, !isEnteringCityWithTransition && !isDocumentFlowActive && HasPreviousNewspaper());
+            SetButtonInteractable(cityButton, !isEnteringCityWithTransition && !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && !hasPendingDocuments);
+        }
+
+        private IEnumerator PlayEnterCityTransition(LoadingPanelTransitionView loadingPanel)
+        {
+            isEnteringCityWithTransition = true;
+            SetStatus("正在进入城区过场。");
+            RefreshButtons();
+
+            var isFinished = false;
+            loadingPanel.PlayEnterCityTransition(
+                EnterCityImmediately,
+                () =>
+                {
+                    uiBootstrap?.HideLoadingPanel();
+                    if (cityCameraController != null)
+                    {
+                        cityCameraController.PlayEntryCinematic(() => isFinished = true);
+                    }
+                    else
+                    {
+                        isFinished = true;
+                    }
+                });
+
+            while (!isFinished)
+            {
+                yield return null;
+            }
+
+            isEnteringCityWithTransition = false;
+            RefreshButtons();
+        }
+
+        private void EnterCityImmediately()
+        {
+            uiBootstrap?.ShowCity();
+            gameEntry?.ShowCity();
+            SetStatus("已进入城区。");
+            RefreshButtons();
         }
 
         private bool HasActiveStory()
@@ -334,12 +395,21 @@ namespace TwelveMoons.UI
 
         private bool HasPendingDocuments()
         {
-            if (documentService == null)
+            if (runtimeDataService == null)
             {
                 return false;
             }
 
-            return documentService.TryGetNextPendingDocument(out _, out _);
+            var currentRound = runtimeDataService.Data.CurrentRound;
+            foreach (var entry in runtimeDataService.Data.DocumentQueue)
+            {
+                if (entry.QueuedRound <= currentRound)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool HasPreviousNewspaper()
@@ -439,11 +509,17 @@ namespace TwelveMoons.UI
                 if (documentService != null &&
                     documentService.TryGetCharacter(characterId, out var character))
                 {
-                    sharedActorSlot.ShowActor(character.CharacterName, "公文前剧情", null);
+                    sharedActorSlot.ShowActor(
+                        character.CharacterName,
+                        "公文前剧情",
+                        CharacterPlaceholderPortraitProvider.LoadPortrait(character.PortraitId));
                 }
                 else
                 {
-                    sharedActorSlot.ShowActor(string.IsNullOrEmpty(characterId) ? "公文前人物" : characterId, "公文前剧情", null);
+                    sharedActorSlot.ShowActor(
+                        string.IsNullOrEmpty(characterId) ? "公文前人物" : characterId,
+                        "公文前剧情",
+                        CharacterPlaceholderPortraitProvider.LoadPortrait(characterId));
                 }
             }
 
@@ -535,9 +611,14 @@ namespace TwelveMoons.UI
                 gameEntry = FindFirstObjectByType<GameEntry>(FindObjectsInactive.Include);
             }
 
+            if (uiBootstrap == null)
+            {
+                uiBootstrap = FindFirstObjectByType<BaseSceneUIBootstrap>(FindObjectsInactive.Include);
+            }
+
             if (documentPopupPanel == null)
             {
-                documentPopupPanel = FindFirstObjectByType<DocumentPopupPanelView>(FindObjectsInactive.Include);
+                documentPopupPanel = FindPreferredDocumentPopup();
             }
 
             if (newspaperPanel == null)
@@ -548,6 +629,11 @@ namespace TwelveMoons.UI
             if (sharedActorSlot == null)
             {
                 sharedActorSlot = FindFirstObjectByType<SharedActorSlotView>(FindObjectsInactive.Include);
+            }
+
+            if (cityCameraController == null)
+            {
+                cityCameraController = FindFirstObjectByType<CityCameraController>(FindObjectsInactive.Include);
             }
         }
 
@@ -564,6 +650,66 @@ namespace TwelveMoons.UI
             if (button != null)
             {
                 button.interactable = interactable;
+            }
+        }
+
+        private void EnsureDocumentPopupVisible()
+        {
+            uiBootstrap?.ShowDocumentPopup();
+            var popup = FindPreferredDocumentPopup();
+            if (popup == documentPopupPanel)
+            {
+                return;
+            }
+
+            UnregisterDocumentPopupStateListener(documentPopupPanel);
+            documentPopupPanel = popup;
+            RegisterDocumentPopupStateListener(documentPopupPanel);
+        }
+
+        private DocumentPopupPanelView FindPreferredDocumentPopup()
+        {
+            var popups = FindObjectsByType<DocumentPopupPanelView>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            return popups.FirstOrDefault(IsRuntimePopupInstance) ??
+                popups.FirstOrDefault(candidate => candidate != null && candidate.gameObject.activeInHierarchy) ??
+                popups.FirstOrDefault();
+        }
+
+        private static bool IsRuntimePopupInstance(DocumentPopupPanelView popup)
+        {
+            if (popup == null)
+            {
+                return false;
+            }
+
+            var current = popup.transform;
+            while (current != null)
+            {
+                if (current.name == "PopupRoot")
+                {
+                    return true;
+                }
+
+                current = current.parent;
+            }
+
+            return false;
+        }
+
+        private void RegisterDocumentPopupStateListener(DocumentPopupPanelView popup)
+        {
+            if (popup != null)
+            {
+                popup.DocumentFlowStateChanged -= RefreshButtons;
+                popup.DocumentFlowStateChanged += RefreshButtons;
+            }
+        }
+
+        private void UnregisterDocumentPopupStateListener(DocumentPopupPanelView popup)
+        {
+            if (popup != null)
+            {
+                popup.DocumentFlowStateChanged -= RefreshButtons;
             }
         }
     }

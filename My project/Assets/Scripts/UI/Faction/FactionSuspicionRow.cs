@@ -24,6 +24,24 @@ namespace TwelveMoons.UI
 
         public RectTransform RectTransform => transform as RectTransform;
 
+        public RectTransform PointerTargetRectTransform
+        {
+            get
+            {
+                if (rowBackgroundImage != null)
+                {
+                    return rowBackgroundImage.rectTransform;
+                }
+
+                if (sliderBackgroundImage != null)
+                {
+                    return sliderBackgroundImage.rectTransform;
+                }
+
+                return RectTransform;
+            }
+        }
+
         public void SetFactionId(string value)
         {
             factionId = value ?? string.Empty;

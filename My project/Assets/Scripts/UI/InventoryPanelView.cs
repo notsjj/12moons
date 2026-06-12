@@ -211,7 +211,7 @@ namespace TwelveMoons.UI
                 rectTransform.sizeDelta = cardSize;
                 var targetPosition = new Vector2(startX + step * index, y + GetCardLift(cards[index]));
                 rectTransform.DOKill();
-                if (animate && layoutMoveDuration > 0f && gameObject.activeInHierarchy)
+                if (animate && Application.isPlaying && layoutMoveDuration > 0f && gameObject.activeInHierarchy)
                 {
                     rectTransform.DOAnchorPos(targetPosition, layoutMoveDuration).SetEase(layoutMoveEase);
                 }

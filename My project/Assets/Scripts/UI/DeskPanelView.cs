@@ -65,11 +65,6 @@ namespace TwelveMoons.UI
                 taskPanel = GetComponentInChildren<TaskPanelView>(true);
             }
 
-            if (taskPanel == null)
-            {
-                taskPanel = FindScenePanel<TaskPanelView>("TaskPanel");
-            }
-
             if (suspicionPanel == null)
             {
                 suspicionPanel = GetComponentInChildren<SuspicionPanelView>(true);
@@ -94,26 +89,6 @@ namespace TwelveMoons.UI
             {
                 documentPopupPanel = GetComponentInChildren<DocumentPopupPanelView>(true);
             }
-        }
-
-        private static T FindScenePanel<T>(string objectName) where T : Component
-        {
-            var transforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (var candidate in transforms)
-            {
-                if (candidate == null || candidate.name != objectName)
-                {
-                    continue;
-                }
-
-                var panel = candidate.GetComponent<T>();
-                if (panel != null)
-                {
-                    return panel;
-                }
-            }
-
-            return null;
         }
     }
 }

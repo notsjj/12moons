@@ -1,3 +1,4 @@
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,81 +7,94 @@ namespace TwelveMoons.City
 {
     public sealed class CityCameraController : MonoBehaviour
     {
-        [Header("摄像机引用：只控制观察位置")]
-        [Tooltip("城区摄像机；留空时会使用当前物体上的 Camera 或场景 MainCamera。该组件只移动摄像机，不刷新城区数据。")]
+        [Header("\u6444\u50cf\u673a\u5f15\u7528\uff1a\u53ea\u63a7\u5236\u89c2\u5bdf\u4f4d\u7f6e")]
+        [Tooltip("\u57ce\u533a\u6444\u50cf\u673a\uff1b\u7559\u7a7a\u65f6\u4f1a\u4f7f\u7528\u5f53\u524d\u7269\u4f53\u4e0a\u7684 Camera \u6216\u573a\u666f MainCamera\u3002\u8be5\u7ec4\u4ef6\u53ea\u79fb\u52a8\u6444\u50cf\u673a\uff0c\u4e0d\u5237\u65b0\u57ce\u533a\u6570\u636e\u3002")]
         [SerializeField] private Camera cityCamera;
 
-        [Header("默认视角：回到全局地图")]
-        [Tooltip("全局地图观察点空物体；点击回到全局时摄像机会移动到这里。")]
+        [Header("\u9ed8\u8ba4\u89c6\u89d2\uff1a\u56de\u5230\u5168\u5c40\u5730\u56fe")]
+        [Tooltip("\u5168\u5c40\u5730\u56fe\u89c2\u5bdf\u70b9\u7a7a\u7269\u4f53\uff1b\u70b9\u51fb\u56de\u5230\u5168\u5c40\u65f6\u6444\u50cf\u673a\u4f1a\u79fb\u52a8\u5230\u8fd9\u91cc\u3002")]
         [SerializeField] private Transform defaultViewPoint;
 
-        [Header("观察点列表：按钮移动摄像机")]
-        [Tooltip("可切换的城区观察点；每一项必须绑定一个空物体 Transform，点击按钮只移动摄像机。")]
+        [Header("\u89c2\u5bdf\u70b9\u5217\u8868\uff1a\u6309\u94ae\u79fb\u52a8\u6444\u50cf\u673a")]
+        [Tooltip("\u53ef\u5207\u6362\u7684\u57ce\u533a\u89c2\u5bdf\u70b9\uff1b\u6bcf\u4e00\u9879\u5fc5\u987b\u7ed1\u5b9a\u4e00\u4e2a\u7a7a\u7269\u4f53 Transform\uff0c\u70b9\u51fb\u6309\u94ae\u53ea\u79fb\u52a8\u6444\u50cf\u673a\u3002")]
         [SerializeField] private List<CityCameraViewPoint> viewPoints = new List<CityCameraViewPoint>();
 
-        [Header("按钮移动参数：可在 Inspector 调整手感")]
-        [Tooltip("摄像机移动到点位所需秒数；设为 0 时立即跳转。")]
+        [Header("\u6309\u94ae\u79fb\u52a8\u53c2\u6570\uff1a\u53ef\u5728 Inspector \u8c03\u6574\u624b\u611f")]
+        [Tooltip("\u6444\u50cf\u673a\u79fb\u52a8\u5230\u70b9\u4f4d\u6240\u9700\u79d2\u6570\uff1b\u8bbe\u4e3a 0 \u65f6\u7acb\u5373\u8df3\u8f6c\u3002")]
         [SerializeField] private float moveDuration = 0.6f;
 
-        [Tooltip("勾选后移动结束时同步点位旋转；用于每个观察点设置固定朝向。")]
+        [Tooltip("\u52fe\u9009\u540e\u79fb\u52a8\u7ed3\u675f\u65f6\u540c\u6b65\u70b9\u4f4d\u65cb\u8f6c\uff1b\u7528\u4e8e\u6bcf\u4e2a\u89c2\u5bdf\u70b9\u8bbe\u7f6e\u56fa\u5b9a\u671d\u5411\u3002")]
         [SerializeField] private bool copyTargetRotation = true;
 
-        [Tooltip("移动插值曲线；横轴为时间进度，纵轴为位置插值。")]
+        [Tooltip("\u79fb\u52a8\u63d2\u503c\u66f2\u7ebf\uff1b\u6a2a\u8f74\u4e3a\u65f6\u95f4\u8fdb\u5ea6\uff0c\u7eb5\u8f74\u4e3a\u4f4d\u7f6e\u63d2\u503c\u3002")]
         [SerializeField] private AnimationCurve movementCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
-        [Header("手动观察：WASD 平移")]
-        [Tooltip("是否允许玩家用 WASD 在城区地图上手动移动摄像机；只改变观察位置，不刷新城区数据。")]
+        [Header("\u624b\u52a8\u89c2\u5bdf\uff1aWASD \u5e73\u79fb")]
+        [Tooltip("\u662f\u5426\u5141\u8bb8\u73a9\u5bb6\u7528 WASD \u5728\u57ce\u533a\u5730\u56fe\u4e0a\u624b\u52a8\u79fb\u52a8\u6444\u50cf\u673a\uff1b\u53ea\u6539\u53d8\u89c2\u5bdf\u4f4d\u7f6e\uff0c\u4e0d\u5237\u65b0\u57ce\u533a\u6570\u636e\u3002")]
         [SerializeField] private bool enableKeyboardMove = true;
 
-        [Tooltip("WASD 平移速度，单位为世界坐标/秒。")]
+        [Tooltip("WASD \u5e73\u79fb\u901f\u5ea6\uff0c\u5355\u4f4d\u4e3a\u4e16\u754c\u5750\u6807/\u79d2\u3002")]
         [SerializeField] private float keyboardMoveSpeed = 6f;
 
-        [Header("手动观察：鼠标右键旋转")]
-        [Tooltip("是否允许玩家按住鼠标右键旋转城区摄像机；只改变观察方向，不刷新城区数据。")]
+        [Header("\u624b\u52a8\u89c2\u5bdf\uff1a\u9f20\u6807\u53f3\u952e\u65cb\u8f6c")]
+        [Tooltip("\u662f\u5426\u5141\u8bb8\u73a9\u5bb6\u6309\u4f4f\u9f20\u6807\u53f3\u952e\u65cb\u8f6c\u57ce\u533a\u6444\u50cf\u673a\uff1b\u53ea\u6539\u53d8\u89c2\u5bdf\u65b9\u5411\uff0c\u4e0d\u5237\u65b0\u57ce\u533a\u6570\u636e\u3002")]
         [SerializeField] private bool enableRightMouseRotate = true;
 
-        [Tooltip("鼠标右键旋转灵敏度。")]
+        [Tooltip("\u9f20\u6807\u53f3\u952e\u65cb\u8f6c\u7075\u654f\u5ea6\u3002")]
         [SerializeField] private float rightMouseRotateSpeed = 3f;
 
-        [Tooltip("摄像机最低俯仰角；用于避免视角翻转或钻到地面下方。")]
+        [Tooltip("\u6444\u50cf\u673a\u6700\u4f4e\u4fef\u4ef0\u89d2\uff1b\u7528\u4e8e\u907f\u514d\u89c6\u89d2\u7ffb\u8f6c\u6216\u94bb\u5230\u5730\u9762\u4e0b\u65b9\u3002")]
         [SerializeField] private float minPitchAngle = 18f;
 
-        [Tooltip("摄像机最高俯仰角；用于避免视角抬得过高。")]
+        [Tooltip("\u6444\u50cf\u673a\u6700\u9ad8\u4fef\u4ef0\u89d2\uff1b\u7528\u4e8e\u907f\u514d\u89c6\u89d2\u62ac\u5f97\u8fc7\u9ad8\u3002")]
         [SerializeField] private float maxPitchAngle = 70f;
 
-        [Header("移动边界：不能超过地图四角和高度")]
-        [Tooltip("摄像机允许移动的世界坐标 X 最小值，对应地图左边界。")]
+        [Header("\u79fb\u52a8\u8fb9\u754c\uff1a\u4e0d\u80fd\u8d85\u8fc7\u5730\u56fe\u56db\u89d2\u548c\u9ad8\u5ea6")]
+        [Tooltip("\u6444\u50cf\u673a\u5141\u8bb8\u79fb\u52a8\u7684\u4e16\u754c\u5750\u6807 X \u6700\u5c0f\u503c\uff0c\u5bf9\u5e94\u5730\u56fe\u5de6\u8fb9\u754c\u3002")]
         [SerializeField] private float minPositionX = -10f;
 
-        [Tooltip("摄像机允许移动的世界坐标 X 最大值，对应地图右边界。")]
+        [Tooltip("\u6444\u50cf\u673a\u5141\u8bb8\u79fb\u52a8\u7684\u4e16\u754c\u5750\u6807 X \u6700\u5927\u503c\uff0c\u5bf9\u5e94\u5730\u56fe\u53f3\u8fb9\u754c\u3002")]
         [SerializeField] private float maxPositionX = 10f;
 
-        [Tooltip("摄像机允许移动的世界坐标 Z 最小值，对应地图下/近端边界。")]
+        [Tooltip("\u6444\u50cf\u673a\u5141\u8bb8\u79fb\u52a8\u7684\u4e16\u754c\u5750\u6807 Z \u6700\u5c0f\u503c\uff0c\u5bf9\u5e94\u5730\u56fe\u8fd1\u7aef\u8fb9\u754c\u3002")]
         [SerializeField] private float minPositionZ = -12f;
 
-        [Tooltip("摄像机允许移动的世界坐标 Z 最大值，对应地图上/远端边界。")]
+        [Tooltip("\u6444\u50cf\u673a\u5141\u8bb8\u79fb\u52a8\u7684\u4e16\u754c\u5750\u6807 Z \u6700\u5927\u503c\uff0c\u5bf9\u5e94\u5730\u56fe\u8fdc\u7aef\u8fb9\u754c\u3002")]
         [SerializeField] private float maxPositionZ = 4f;
 
-        [Tooltip("摄像机允许的最低高度；按钮点位和 WASD 移动都会被限制在该高度以上。")]
+        [Tooltip("\u6444\u50cf\u673a\u5141\u8bb8\u7684\u6700\u4f4e\u9ad8\u5ea6\uff1b\u6309\u94ae\u70b9\u4f4d\u548c WASD \u79fb\u52a8\u90fd\u4f1a\u88ab\u9650\u5236\u5728\u8be5\u9ad8\u5ea6\u4ee5\u4e0a\u3002")]
         [SerializeField] private float minPositionY = 3f;
 
-        [Tooltip("摄像机允许的最高高度；用于防止城区摄像机飞得过高。")]
+        [Tooltip("\u6444\u50cf\u673a\u5141\u8bb8\u7684\u6700\u9ad8\u9ad8\u5ea6\uff1b\u7528\u4e8e\u9632\u6b62\u57ce\u533a\u6444\u50cf\u673a\u98de\u5f97\u8fc7\u9ad8\u3002")]
         [SerializeField] private float maxPositionY = 9f;
 
-        [Header("运行时调试快照：只读观察当前视角")]
-        [Tooltip("当前摄像机观察点 ID；用来确认按钮是否切换到了正确点位。手动移动后会显示 manual。")]
+        [Header("\u8fd0\u884c\u65f6\u8c03\u8bd5\u5feb\u7167\uff1a\u53ea\u8bfb\u89c2\u5bdf\u5f53\u524d\u89c6\u89d2")]
+        [Tooltip("\u5f53\u524d\u6444\u50cf\u673a\u89c2\u5bdf\u70b9 ID\uff1b\u7528\u6765\u786e\u8ba4\u6309\u94ae\u662f\u5426\u5207\u6362\u5230\u4e86\u6b63\u786e\u70b9\u4f4d\u3002\u624b\u52a8\u79fb\u52a8\u540e\u4f1a\u663e\u793a manual\u3002")]
         [SerializeField] private string inspectorCurrentViewId;
 
-        [Tooltip("当前摄像机观察点中文名；用于 Play 模式下直接观察状态。手动移动后会显示手动观察。")]
+        [Tooltip("\u5f53\u524d\u6444\u50cf\u673a\u89c2\u5bdf\u70b9\u4e2d\u6587\u540d\uff1b\u7528\u4e8e Play \u6a21\u5f0f\u4e0b\u76f4\u63a5\u89c2\u5bdf\u72b6\u6001\u3002\u624b\u52a8\u79fb\u52a8\u540e\u4f1a\u663e\u793a\u624b\u52a8\u89c2\u5bdf\u3002")]
         [SerializeField] private string inspectorCurrentViewName;
 
-        [Tooltip("当前摄像机是否仍在按钮移动插值过程中。")]
+        [Tooltip("\u5f53\u524d\u6444\u50cf\u673a\u662f\u5426\u4ecd\u5728\u6309\u94ae\u79fb\u52a8\u63d2\u503c\u8fc7\u7a0b\u4e2d\u3002")]
         [SerializeField] private bool inspectorIsMoving;
 
-        [Tooltip("当前摄像机的位置、旋转和边界摘要；用于确认摄像机只是在允许范围内移动。")]
+        [Tooltip("\u5f53\u524d\u6444\u50cf\u673a\u7684\u4f4d\u7f6e\u3001\u65cb\u8f6c\u548c\u8fb9\u754c\u6458\u8981\uff1b\u7528\u4e8e\u786e\u8ba4\u6444\u50cf\u673a\u53ea\u662f\u5728\u5141\u8bb8\u8303\u56f4\u5185\u79fb\u52a8\u3002")]
         [SerializeField] private string inspectorTargetSummary;
 
+        [Header("入场镜头演出：保持当前距离缓慢旋转一圈")]
+        [Tooltip("是否允许播放城区入场镜头演出；演出只旋转观察位置，不拉近镜头、不刷新城区数据。")]
+        [SerializeField] private bool enableEntryCinematic = true;
+        [Tooltip("入场镜头保持当前距离绕焦点旋转一圈的时长；值越大，旋转越慢。")]
+        [SerializeField] private float entryOrbitDuration = 4.5f;
+        [Tooltip("从摄像机当前位置沿正前方计算旋转焦点的距离；旋转期间摄像机与该焦点保持当前距离。")]
+        [SerializeField] private float entryFocusDistance = 6f;
+        [Tooltip("入场镜头绕焦点旋转的总角度；360 表示完整旋转一圈。")]
+        [SerializeField] private float entryOrbitDegrees = 360f;
+        [Tooltip("当前是否正在播放城区入场镜头。")]
+        [SerializeField] private bool inspectorIsPlayingEntryCinematic;
+
         private Coroutine moveRoutine;
+        private Coroutine entryCinematicRoutine;
         private Vector3 lastMousePosition;
         private bool hasLastMousePosition;
 
@@ -89,6 +103,12 @@ namespace TwelveMoons.City
         public string CurrentViewName => inspectorCurrentViewName;
 
         public bool IsMoving => inspectorIsMoving;
+
+        public bool EntryUsesZoom => false;
+
+        public float EntryOrbitDuration => entryOrbitDuration;
+
+        public float EntryOrbitDegrees => entryOrbitDegrees;
 
         private void Awake()
         {
@@ -111,6 +131,11 @@ namespace TwelveMoons.City
                 return;
             }
 
+            if (inspectorIsPlayingEntryCinematic)
+            {
+                return;
+            }
+
             var moved = TryHandleKeyboardMove();
             var rotated = TryHandleRightMouseRotate();
             if (moved || rotated)
@@ -121,16 +146,16 @@ namespace TwelveMoons.City
             }
         }
 
-        [ContextMenu("移动到全局视角")]
+        [ContextMenu("\u79fb\u52a8\u5230\u5168\u5c40\u89c6\u89d2")]
         public void MoveToDefaultView()
         {
-            MoveToTarget("global", "全局地图", defaultViewPoint);
+            MoveToTarget("global", "\u5168\u5c40\u5730\u56fe", defaultViewPoint);
         }
 
-        [ContextMenu("立即跳到全局视角")]
+        [ContextMenu("\u7acb\u5373\u8df3\u5230\u5168\u5c40\u89c6\u89d2")]
         public void JumpToDefaultView()
         {
-            JumpToTarget("global", "全局地图", defaultViewPoint);
+            JumpToTarget("global", "\u5168\u5c40\u5730\u56fe", defaultViewPoint);
         }
 
         public void MoveToViewId(string viewId)
@@ -150,14 +175,14 @@ namespace TwelveMoons.City
                 }
             }
 
-            Debug.LogWarning($"找不到城区摄像机观察点：{viewId}", this);
+            Debug.LogWarning($"\u627e\u4e0d\u5230\u57ce\u533a\u6444\u50cf\u673a\u89c2\u5bdf\u70b9\uff1a{viewId}", this);
         }
 
         public void MoveToViewIndex(int index)
         {
             if (index < 0 || index >= viewPoints.Count)
             {
-                Debug.LogWarning($"城区摄像机观察点序号越界：{index}", this);
+                Debug.LogWarning($"\u57ce\u533a\u6444\u50cf\u673a\u89c2\u5bdf\u70b9\u5e8f\u53f7\u8d8a\u754c\uff1a{index}", this);
                 return;
             }
 
@@ -178,6 +203,24 @@ namespace TwelveMoons.City
         public void MoveToView3()
         {
             MoveToViewIndex(2);
+        }
+
+        public void PlayEntryCinematic(Action onCompleted = null)
+        {
+            ResolveCamera();
+            if (cityCamera == null || !enableEntryCinematic)
+            {
+                onCompleted?.Invoke();
+                return;
+            }
+
+            StopButtonMove();
+            if (entryCinematicRoutine != null)
+            {
+                StopCoroutine(entryCinematicRoutine);
+            }
+
+            entryCinematicRoutine = StartCoroutine(PlayEntryCinematicRoutine(onCompleted));
         }
 
         private bool TryHandleKeyboardMove()
@@ -274,7 +317,7 @@ namespace TwelveMoons.City
             ResolveCamera();
             if (cityCamera == null || target == null)
             {
-                Debug.LogWarning("城区摄像机或目标点位为空，无法移动。", this);
+                Debug.LogWarning("\u57ce\u533a\u6444\u50cf\u673a\u6216\u76ee\u6807\u70b9\u4f4d\u4e3a\u7a7a\uff0c\u65e0\u6cd5\u79fb\u52a8\u3002", this);
                 return;
             }
 
@@ -357,6 +400,42 @@ namespace TwelveMoons.City
             inspectorIsMoving = false;
         }
 
+        private IEnumerator PlayEntryCinematicRoutine(Action onCompleted)
+        {
+            inspectorIsPlayingEntryCinematic = true;
+            inspectorIsMoving = true;
+
+            var cameraTransform = cityCamera.transform;
+            var startPosition = cameraTransform.position;
+            var startRotation = cameraTransform.rotation;
+            var focusPoint = startPosition + (cameraTransform.forward.normalized * Mathf.Max(0.1f, entryFocusDistance));
+            var orbitStartOffset = startPosition - focusPoint;
+            var orbitElapsed = 0f;
+            var orbitDuration = Mathf.Max(0.01f, entryOrbitDuration);
+            while (orbitElapsed < orbitDuration)
+            {
+                orbitElapsed += Time.deltaTime;
+                var normalizedTime = Mathf.Clamp01(orbitElapsed / orbitDuration);
+                var eased = movementCurve != null ? movementCurve.Evaluate(normalizedTime) : normalizedTime;
+                var angle = Mathf.LerpUnclamped(0f, entryOrbitDegrees, eased);
+                var rotatedOffset = Quaternion.AngleAxis(angle, Vector3.up) * orbitStartOffset;
+                cameraTransform.position = ClampPosition(focusPoint + rotatedOffset);
+                cameraTransform.rotation = Quaternion.LookRotation((focusPoint - cameraTransform.position).normalized, Vector3.up);
+                ClampCameraRotationPitch();
+                inspectorTargetSummary = BuildCameraSummary();
+                yield return null;
+            }
+
+            cameraTransform.position = ClampPosition(startPosition);
+            cameraTransform.rotation = startRotation;
+            ClampCameraRotationPitch();
+            inspectorTargetSummary = BuildCameraSummary();
+            inspectorIsPlayingEntryCinematic = false;
+            inspectorIsMoving = false;
+            entryCinematicRoutine = null;
+            onCompleted?.Invoke();
+        }
+
         private void ClampCameraTransform()
         {
             cityCamera.transform.position = ClampPosition(cityCamera.transform.position);
@@ -403,14 +482,14 @@ namespace TwelveMoons.City
             inspectorCurrentViewName = viewName ?? string.Empty;
             inspectorIsMoving = isMoving;
             inspectorTargetSummary = target == null
-                ? "目标点位为空"
+                ? "鐩爣鐐逛綅涓虹┖"
                 : BuildCameraSummary();
         }
 
         private void SetManualInspectorSnapshot()
         {
             inspectorCurrentViewId = "manual";
-            inspectorCurrentViewName = "手动观察";
+            inspectorCurrentViewName = "\u624b\u52a8\u89c2\u5bdf";
             inspectorIsMoving = false;
             inspectorTargetSummary = BuildCameraSummary();
         }
@@ -419,11 +498,11 @@ namespace TwelveMoons.City
         {
             if (cityCamera == null)
             {
-                return "摄像机为空";
+                return "\u6444\u50cf\u673a\u4e3a\u7a7a";
             }
 
             var cameraTransform = cityCamera.transform;
-            return $"位置={cameraTransform.position}, 旋转={cameraTransform.eulerAngles}, X范围=[{Mathf.Min(minPositionX, maxPositionX)}, {Mathf.Max(minPositionX, maxPositionX)}], Z范围=[{Mathf.Min(minPositionZ, maxPositionZ)}, {Mathf.Max(minPositionZ, maxPositionZ)}], 高度范围=[{Mathf.Min(minPositionY, maxPositionY)}, {Mathf.Max(minPositionY, maxPositionY)}]";
+            return $"浣嶇疆={cameraTransform.position}, 鏃嬭浆={cameraTransform.eulerAngles}, X鑼冨洿=[{Mathf.Min(minPositionX, maxPositionX)}, {Mathf.Max(minPositionX, maxPositionX)}], Z鑼冨洿=[{Mathf.Min(minPositionZ, maxPositionZ)}, {Mathf.Max(minPositionZ, maxPositionZ)}], 楂樺害鑼冨洿=[{Mathf.Min(minPositionY, maxPositionY)}, {Mathf.Max(minPositionY, maxPositionY)}]";
         }
 
         private void ResolveCamera()

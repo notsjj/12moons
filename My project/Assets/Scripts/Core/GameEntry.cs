@@ -19,6 +19,7 @@ namespace TwelveMoons.Core
 
         private void Awake()
         {
+            ResolveMissingReferences();
             ValidateReferences();
         }
 
@@ -53,6 +54,33 @@ namespace TwelveMoons.Core
             {
                 Debug.LogWarning($"{nameof(GameEntry)} missing CityRoot reference.", this);
             }
+        }
+
+        private void ResolveMissingReferences()
+        {
+            if (deskRoot == null)
+            {
+                deskRoot = FindRootByName("DeskRoot");
+            }
+
+            if (cityRoot == null)
+            {
+                cityRoot = FindRootByName("CityRoot");
+            }
+        }
+
+        private static GameObject FindRootByName(string objectName)
+        {
+            var transforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var candidate in transforms)
+            {
+                if (candidate != null && candidate.name == objectName)
+                {
+                    return candidate.gameObject;
+                }
+            }
+
+            return null;
         }
 
         private static void SetRootActive(GameObject root, bool isActive)

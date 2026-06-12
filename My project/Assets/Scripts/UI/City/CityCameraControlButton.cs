@@ -66,6 +66,11 @@ namespace TwelveMoons.UI.City
 
         private void ResolveReferences()
         {
+            if (cameraController == null)
+            {
+                cameraController = FindFirstObjectByType<CityCameraController>(FindObjectsInactive.Include);
+            }
+
             if (button == null)
             {
                 button = GetComponent<Button>();

@@ -34,6 +34,9 @@ namespace TwelveMoons.UI
         [SerializeField] private RectTransform actorRoot;
         [Tooltip("角色隐藏时相对显示位置向左移动的距离。")]
         [SerializeField] private float hiddenMoveLeftDistance = 260f;
+        [Header("\u53f3\u4fa7\u9000\u573a\u8bbe\u7f6e")]
+        [Tooltip("\u89d2\u8272\u5411\u53f3\u9000\u573a\u65f6\u7684\u79fb\u52a8\u8ddd\u79bb\uff1b\u5c0f\u4e8e\u7b49\u4e8e 0 \u65f6\u4f1a\u81ea\u52a8\u4f7f\u7528\u5de6\u4fa7\u9690\u85cf\u8ddd\u79bb\u3002")]
+        [SerializeField] private float hiddenMoveRightDistance = 260f;
         [Tooltip("角色滑入或滑出的动画时长。")]
         [SerializeField] private float slideDuration = 0.8f;
 
@@ -57,9 +60,13 @@ namespace TwelveMoons.UI
 
             if (proposerFeedbackText == null)
             {
-                var feedbackTransform = transform.Find("ActorRoot/ProposerFeedbackBackground/ProposerFeedbackText")
-                    ?? transform.Find("ProposerFeedbackBackground/ProposerFeedbackText")
-                    ?? transform.Find("ProposerFeedbackText");
+                var feedbackTransform = FindFirstExistingTransform(
+                    "ActorRoot/ProposerFeedbackBackground/ProposerFeedbackText",
+                    "角色根节点/提出者反馈背景/提出者反馈文本",
+                    "ProposerFeedbackBackground/ProposerFeedbackText",
+                    "提出者反馈背景/提出者反馈文本",
+                    "ProposerFeedbackText",
+                    "提出者反馈文本");
                 proposerFeedbackText = feedbackTransform != null
                     ? feedbackTransform.GetComponent<TMP_Text>()
                     : null;
@@ -67,8 +74,11 @@ namespace TwelveMoons.UI
 
             if (proposerFeedbackBackground == null)
             {
-                var feedbackBackgroundTransform = transform.Find("ActorRoot/ProposerFeedbackBackground")
-                    ?? transform.Find("ProposerFeedbackBackground");
+                var feedbackBackgroundTransform = FindFirstExistingTransform(
+                    "ActorRoot/ProposerFeedbackBackground",
+                    "角色根节点/提出者反馈背景",
+                    "ProposerFeedbackBackground",
+                    "提出者反馈背景");
                 proposerFeedbackBackground = feedbackBackgroundTransform != null
                     ? feedbackBackgroundTransform.gameObject
                     : null;
@@ -82,6 +92,11 @@ namespace TwelveMoons.UI
 
         public void ShowActor(string actorName, string role, Sprite portrait)
         {
+            ShowActor(actorName, role, portrait, null);
+        }
+
+        public void ShowActor(string actorName, string role, Sprite portrait, Action onComplete)
+        {
             SetText(nameText, actorName);
             SetText(roleText, role);
 
@@ -92,7 +107,7 @@ namespace TwelveMoons.UI
                 portraitImage.enabled = true;
             }
 
-            SetVisible(true, false);
+            SetVisible(true, false, false, onComplete);
         }
 
         public void ShowFeedback(string feedback)
@@ -121,7 +136,12 @@ namespace TwelveMoons.UI
 
         public void HideToRight()
         {
-            Hide();
+            SetVisible(false, false, true);
+        }
+
+        public void HideAlongEntryPath(Action onComplete)
+        {
+            SetVisible(false, false, false, onComplete);
         }
 
         public void OnPointerClick(PointerEventData eventData)
@@ -134,7 +154,17 @@ namespace TwelveMoons.UI
 
         private void SetVisible(bool isVisible, bool immediate)
         {
-            var hiddenPosition = GetHiddenLeftPosition();
+            SetVisible(isVisible, immediate, false, null);
+        }
+
+        private void SetVisible(bool isVisible, bool immediate, bool hideToRight)
+        {
+            SetVisible(isVisible, immediate, hideToRight, null);
+        }
+
+        private void SetVisible(bool isVisible, bool immediate, bool hideToRight, Action onComplete)
+        {
+            var hiddenPosition = hideToRight ? GetHiddenRightPosition() : GetHiddenLeftPosition();
             var targetPosition = isVisible ? visiblePosition : hiddenPosition;
 
             if (canvasGroup != null)
@@ -156,21 +186,40 @@ namespace TwelveMoons.UI
                 if (immediate || slideDuration <= 0f)
                 {
                     actorRoot.anchoredPosition = targetPosition;
+                    if (!isVisible && canvasGroup != null)
+                    {
+                        canvasGroup.alpha = 0f;
+                    }
+                    onComplete?.Invoke();
                 }
                 else
                 {
                     var tween = actorRoot.DOAnchorPos(targetPosition, slideDuration);
-                    if (!isVisible && canvasGroup != null)
+                    tween.OnComplete(() =>
                     {
-                        tween.OnComplete(() => canvasGroup.alpha = 0f);
-                    }
+                        if (!isVisible && canvasGroup != null)
+                        {
+                            canvasGroup.alpha = 0f;
+                        }
+                        onComplete?.Invoke();
+                    });
                 }
+            }
+            else
+            {
+                onComplete?.Invoke();
             }
         }
 
         private Vector2 GetHiddenLeftPosition()
         {
             return visiblePosition + (Vector2.left * hiddenMoveLeftDistance);
+        }
+
+        private Vector2 GetHiddenRightPosition()
+        {
+            var distance = hiddenMoveRightDistance > 0f ? hiddenMoveRightDistance : hiddenMoveLeftDistance;
+            return visiblePosition + (Vector2.right * distance);
         }
 
         private void ConfigureClickRaycast()
@@ -220,6 +269,25 @@ namespace TwelveMoons.UI
             {
                 proposerFeedbackBackground.SetActive(visible);
             }
+        }
+
+        private Transform FindFirstExistingTransform(params string[] candidatePaths)
+        {
+            foreach (var candidatePath in candidatePaths)
+            {
+                if (string.IsNullOrWhiteSpace(candidatePath))
+                {
+                    continue;
+                }
+
+                var result = transform.Find(candidatePath);
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+
+            return null;
         }
     }
 }

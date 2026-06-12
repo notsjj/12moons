@@ -23,9 +23,9 @@ namespace TwelveMoons.EditorTools.Runtime
             }
 
             var letter = new LetterDefinition(letterRow);
-            if (letter.Title != "Relief Stores Opened" ||
-                letter.SenderName != "Storehouse Clerk" ||
-                string.IsNullOrEmpty(letter.BodyText))
+            if (letter.Title != "赈济仓开启" ||
+                letter.SenderName != "库房书记" ||
+                letter.BodyText != "第一份赈济账册已经备好，可以开始查验。")
             {
                 throw new InvalidDataException("LetterConfig did not parse title, sender, or body text correctly.");
             }

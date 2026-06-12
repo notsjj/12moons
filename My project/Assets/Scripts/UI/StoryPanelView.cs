@@ -615,13 +615,11 @@ namespace TwelveMoons.UI
                 storyService != null &&
                 storyService.TryGetCharacter(characterId, out var character))
             {
-                portrait.sprite = string.IsNullOrEmpty(character.PortraitId)
-                    ? null
-                    : Resources.Load<Sprite>(character.PortraitId);
+                portrait.sprite = CharacterPlaceholderPortraitProvider.LoadPortrait(character.PortraitId);
             }
             else
             {
-                portrait.sprite = null;
+                portrait.sprite = CharacterPlaceholderPortraitProvider.LoadPortrait(characterId);
             }
 
             portrait.enabled = portrait.sprite != null;

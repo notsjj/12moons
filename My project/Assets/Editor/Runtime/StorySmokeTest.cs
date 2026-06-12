@@ -74,7 +74,7 @@ namespace TwelveMoons.EditorTools.Runtime
             var choiceLineRow = dialogueTable.Rows.First(row => row.GetString("LineId") == "line_choice_001");
             var choiceLine = new DialogueLineDefinition(choiceLineRow);
             if (!choiceLine.IsChoice ||
-                choiceLine.GetChoiceText(0) != "Spend the drainage map" ||
+                choiceLine.GetChoiceText(0) != "交出排水图" ||
                 choiceLine.GetNextLineId(0) != "line_choice_approve" ||
                 choiceLine.GetRequiredItemId(0) != "item_drainage_map" ||
                 choiceLine.GetRequiredItemCount(0) != 1 ||
@@ -204,7 +204,7 @@ namespace TwelveMoons.EditorTools.Runtime
                 }
 
                 storyService.Continue();
-                if (!storyService.CurrentPlayback.IsCompleted ||
+                if (storyService.CurrentPlayback != null ||
                     inventoryService.GetCount("item_archivist_badge") != 1)
                 {
                     throw new InvalidDataException("StoryService did not complete submission story and grant StoryConfig reward.");

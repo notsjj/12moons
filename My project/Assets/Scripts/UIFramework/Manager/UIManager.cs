@@ -68,7 +68,7 @@ public class UIManager : Singleton<UIManager>
             return null;
         }
 
-        var ui = Instantiate(prefab, parent);
+        var ui = Instantiate(prefab, parent, false);
         ui.name = type.Name;
 
         var handle = new UIHandle(type, ui);

@@ -41,6 +41,7 @@ namespace TwelveMoons.EditorTools
             SaveSceneObjectAsPrefab("NewspaperPanel", "NewspaperPanel", null);
             SaveSceneObjectAsPrefab("LetterReaderPanel", "LetterReaderPanel", null);
             SaveCityHudPanelPrefab();
+            UiArtChinesePrefabStyler.ApplyChineseUiArtAndRenamePrefabs();
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -99,12 +100,12 @@ namespace TwelveMoons.EditorTools
             if (deskPanel != null)
             {
                 var serializedObject = new SerializedObject(deskPanel);
-                SetObjectReference(serializedObject, "taskPanel", null);
+                ClearObjectReference(serializedObject, "taskPanel");
                 SetObjectReference(serializedObject, "suspicionPanel", FindComponent<TwelveMoons.UI.SuspicionPanelView>(root, "SuspicionPanel"));
                 SetObjectReference(serializedObject, "letterArea", FindComponent<TwelveMoons.UI.LetterAreaView>(root, "LetterArea"));
                 SetObjectReference(serializedObject, "inventoryPanel", FindComponent<TwelveMoons.UI.InventoryPanelView>(root, "InventoryPanel"));
                 SetObjectReference(serializedObject, "sharedActorSlot", FindComponent<TwelveMoons.UI.SharedActorSlotView>(root, "SharedActorSlot"));
-                SetObjectReference(serializedObject, "documentPopupPanel", FindComponent<TwelveMoons.UI.DocumentPopupPanelView>(root, "DocumentPopupPanel"));
+                ClearObjectReference(serializedObject, "documentPopupPanel");
                 serializedObject.ApplyModifiedPropertiesWithoutUndo();
             }
 
@@ -231,10 +232,24 @@ namespace TwelveMoons.EditorTools
 
         private static void SetObjectReference(SerializedObject serializedObject, string propertyName, UnityEngine.Object value)
         {
+            if (value == null)
+            {
+                return;
+            }
+
             var property = serializedObject.FindProperty(propertyName);
             if (property != null)
             {
                 property.objectReferenceValue = value;
+            }
+        }
+
+        private static void ClearObjectReference(SerializedObject serializedObject, string propertyName)
+        {
+            var property = serializedObject.FindProperty(propertyName);
+            if (property != null)
+            {
+                property.objectReferenceValue = null;
             }
         }
 
@@ -247,16 +262,16 @@ namespace TwelveMoons.EditorTools
         private static T FindComponent<T>(GameObject root, string childName) where T : Component
         {
             var child = FindChild(root.transform, childName);
-            if (child != null && child.TryGetComponent<T>(out var component))
+            if (child != null && child.TryGetComponent<T>(out var directComponent))
             {
-                return component;
+                return directComponent;
             }
 
-            foreach (var component in root.GetComponentsInChildren<T>(true))
+            foreach (var nestedComponent in root.GetComponentsInChildren<T>(true))
             {
-                if (component.name == childName)
+                if (nestedComponent.name == childName)
                 {
-                    return component;
+                    return nestedComponent;
                 }
             }
 

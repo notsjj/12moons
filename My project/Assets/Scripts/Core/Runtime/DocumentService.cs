@@ -241,6 +241,9 @@ namespace TwelveMoons.Core.Runtime
 
         private void LoadConfigs()
         {
+#if UNITY_EDITOR
+            GeneratedGameDataSynchronizer.GenerateDocumentAndCharacterAssets(configManager);
+#endif
             definitions.Clear();
             definitionsById.Clear();
             charactersById.Clear();

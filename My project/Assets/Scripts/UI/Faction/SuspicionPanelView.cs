@@ -4,6 +4,7 @@ using DG.Tweening;
 using TMPro;
 using TwelveMoons.Core.Runtime;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace TwelveMoons.UI
 {
@@ -34,6 +35,13 @@ namespace TwelveMoons.UI
         private Tween pointerMoveTween;
         private Tween pointerBobTween;
         private float pointerInitialX;
+        private RectTransform panelRectTransform;
+        private RectTransformSnapshot panelSnapshot;
+        private RectTransformSnapshot contentSnapshot;
+        private RectTransformSnapshot[] rowSnapshots = Array.Empty<RectTransformSnapshot>();
+        private bool shouldLockDeskPanelRect;
+        private int remainingDeskPanelLockFrames;
+        private LayoutGroup contentLayoutGroup;
 
         private void Awake()
         {
@@ -56,6 +64,21 @@ namespace TwelveMoons.UI
             {
                 pointerInitialX = pointerIcon.anchoredPosition.x;
             }
+
+            panelRectTransform = transform as RectTransform;
+            shouldLockDeskPanelRect = GetComponentInParent<DeskPanelView>(true) != null &&
+                GetComponentInParent<City.CityOverlayPanelView>(true) == null;
+            remainingDeskPanelLockFrames = shouldLockDeskPanelRect ? 12 : 0;
+            panelSnapshot = RectTransformSnapshot.Capture(panelRectTransform);
+            contentSnapshot = RectTransformSnapshot.Capture(contentRoot);
+            rowSnapshots = CaptureRowSnapshots();
+            contentLayoutGroup = contentRoot != null ? contentRoot.GetComponent<LayoutGroup>() : null;
+            if (shouldLockDeskPanelRect && contentLayoutGroup != null)
+            {
+                contentLayoutGroup.enabled = false;
+            }
+
+            ApplyDeskPanelRectIfNeeded();
         }
 
         private void OnEnable()
@@ -67,6 +90,7 @@ namespace TwelveMoons.UI
             }
 
             Refresh();
+            ApplyDeskPanelRectIfNeeded();
         }
 
         private void OnDisable()
@@ -181,14 +205,14 @@ namespace TwelveMoons.UI
             if (pointerIcon == null ||
                 !rowsByFactionId.TryGetValue(factionId, out var row) ||
                 row == null ||
-                row.RectTransform == null ||
+                row.PointerTargetRectTransform == null ||
                 pointerIcon.parent == null)
             {
                 return;
             }
 
             StopPointerTweens();
-            var targetPosition = GetPointerTargetPosition(row.RectTransform);
+            var targetPosition = GetPointerTargetPosition(row.PointerTargetRectTransform);
             pointerMoveTween = pointerIcon
                 .DOAnchorPos(targetPosition, Mathf.Max(0f, pointerMoveDuration))
                 .SetEase(pointerMoveEase)
@@ -241,6 +265,117 @@ namespace TwelveMoons.UI
             pointerBobTween?.Kill();
             pointerMoveTween = null;
             pointerBobTween = null;
+        }
+
+        private void LateUpdate()
+        {
+            if (remainingDeskPanelLockFrames <= 0)
+            {
+                return;
+            }
+
+            ApplyDeskPanelRectIfNeeded();
+            remainingDeskPanelLockFrames--;
+        }
+
+        private void ApplyDeskPanelRectIfNeeded()
+        {
+            if (!shouldLockDeskPanelRect || panelRectTransform == null)
+            {
+                return;
+            }
+
+            panelSnapshot.Apply(panelRectTransform);
+            contentSnapshot.Apply(contentRoot);
+
+            if (factionRows == null)
+            {
+                return;
+            }
+
+            for (var index = 0; index < factionRows.Length && index < rowSnapshots.Length; index++)
+            {
+                var rowRect = factionRows[index] != null ? factionRows[index].RectTransform : null;
+                rowSnapshots[index].Apply(rowRect);
+            }
+        }
+
+        private RectTransformSnapshot[] CaptureRowSnapshots()
+        {
+            if (factionRows == null || factionRows.Length == 0)
+            {
+                return Array.Empty<RectTransformSnapshot>();
+            }
+
+            var snapshots = new RectTransformSnapshot[factionRows.Length];
+            for (var index = 0; index < factionRows.Length; index++)
+            {
+                var rowRect = factionRows[index] != null ? factionRows[index].RectTransform : null;
+                snapshots[index] = RectTransformSnapshot.Capture(rowRect);
+            }
+
+            return snapshots;
+        }
+
+        private struct RectTransformSnapshot
+        {
+            private readonly bool isValid;
+            private readonly Vector2 anchorMin;
+            private readonly Vector2 anchorMax;
+            private readonly Vector2 anchoredPosition;
+            private readonly Vector2 sizeDelta;
+            private readonly Vector2 pivot;
+            private readonly Vector3 localScale;
+
+            private RectTransformSnapshot(
+                bool isValid,
+                Vector2 anchorMin,
+                Vector2 anchorMax,
+                Vector2 anchoredPosition,
+                Vector2 sizeDelta,
+                Vector2 pivot,
+                Vector3 localScale)
+            {
+                this.isValid = isValid;
+                this.anchorMin = anchorMin;
+                this.anchorMax = anchorMax;
+                this.anchoredPosition = anchoredPosition;
+                this.sizeDelta = sizeDelta;
+                this.pivot = pivot;
+                this.localScale = localScale;
+            }
+
+            public static RectTransformSnapshot Capture(RectTransform target)
+            {
+                if (target == null)
+                {
+                    return default;
+                }
+
+                return new RectTransformSnapshot(
+                    true,
+                    target.anchorMin,
+                    target.anchorMax,
+                    target.anchoredPosition,
+                    target.sizeDelta,
+                    target.pivot,
+                    target.localScale);
+            }
+
+            public void Apply(RectTransform target)
+            {
+                if (!isValid || target == null)
+                {
+                    return;
+                }
+
+                target.anchorMin = anchorMin;
+                target.anchorMax = anchorMax;
+                target.anchoredPosition = anchoredPosition;
+                target.sizeDelta = sizeDelta;
+                target.pivot = pivot;
+                target.localScale = localScale;
+            }
         }
 
         [Serializable]
