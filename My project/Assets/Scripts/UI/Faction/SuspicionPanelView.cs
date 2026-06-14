@@ -224,7 +224,7 @@ namespace TwelveMoons.UI
             StopPointerTweens();
             var targetPosition = GetPointerTargetPosition(row.PointerTargetRectTransform);
             pointerMoveTween = pointerIcon
-                .DOAnchorPos(targetPosition, Mathf.Max(0f, pointerMoveDuration))
+                .DOAnchorPosY(targetPosition.y, Mathf.Max(0f, pointerMoveDuration))
                 .SetEase(pointerMoveEase)
                 .OnComplete(StartPointerShake);
         }
@@ -239,7 +239,11 @@ namespace TwelveMoons.UI
 
             var rowWorldCenter = rowRect.TransformPoint(rowRect.rect.center);
             var localCenter = parentRect.InverseTransformPoint(rowWorldCenter);
-            return new Vector2(pointerInitialX, localCenter.y);
+            var pointerAnchorCenter = (pointerIcon.anchorMin + pointerIcon.anchorMax) * 0.5f;
+            var anchorReference = new Vector2(
+                (pointerAnchorCenter.x - parentRect.pivot.x) * parentRect.rect.width,
+                (pointerAnchorCenter.y - parentRect.pivot.y) * parentRect.rect.height);
+            return new Vector2(pointerInitialX, localCenter.y - anchorReference.y);
         }
 
         private void StartPointerShake()

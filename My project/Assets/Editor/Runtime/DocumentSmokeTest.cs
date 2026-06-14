@@ -1,11 +1,13 @@
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
 using TwelveMoons.UI;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace TwelveMoons.EditorTools.Runtime
 {
@@ -106,6 +108,41 @@ namespace TwelveMoons.EditorTools.Runtime
                 popup.FeedbackHoldAfterTypewriterDuration < 1f)
             {
                 throw new InvalidDataException("DocumentPopupPanelView must configure body and feedback typewriter gating.");
+            }
+
+            AssertMaskDoesNotFadeInAgainWhileAlreadyVisible(popup);
+        }
+
+        private static void AssertMaskDoesNotFadeInAgainWhileAlreadyVisible(DocumentPopupPanelView popup)
+        {
+            var maskObject = new GameObject("主界面遮罩_测试", typeof(RectTransform), typeof(Image));
+            try
+            {
+                var maskImage = maskObject.GetComponent<Image>();
+                maskImage.color = new Color(1f, 1f, 1f, popup.MainInterfaceMaskTargetAlpha);
+                maskObject.SetActive(true);
+
+                typeof(DocumentPopupPanelView)
+                    .GetField("mainInterfaceMaskImage", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.SetValue(popup, maskImage);
+
+                var method = typeof(DocumentPopupPanelView).GetMethod(
+                    "ShowMainInterfaceMask",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                if (method == null)
+                {
+                    throw new InvalidDataException("Document main interface mask show method not found.");
+                }
+
+                method.Invoke(popup, null);
+                if (maskImage.color.a < popup.MainInterfaceMaskTargetAlpha - 0.01f)
+                {
+                    throw new InvalidDataException("Document main interface mask must not reset alpha when switching documents.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(maskObject);
             }
         }
 

@@ -786,8 +786,13 @@ namespace TwelveMoons.UI
             }
 
             KillMainInterfaceMaskTween();
+            var wasActive = mainInterfaceMaskImage.gameObject.activeSelf;
             mainInterfaceMaskImage.gameObject.SetActive(true);
-            SetMainInterfaceMaskAlpha(0f);
+            if (!wasActive)
+            {
+                SetMainInterfaceMaskAlpha(0f);
+            }
+
             mainInterfaceMaskTween = mainInterfaceMaskImage
                 .DOFade(Mathf.Clamp01(mainInterfaceMaskTargetAlpha), Mathf.Max(0f, mainInterfaceMaskFadeDuration))
                 .SetEase(Ease.OutCubic);
