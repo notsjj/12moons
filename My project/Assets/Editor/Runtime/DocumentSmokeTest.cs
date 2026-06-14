@@ -63,6 +63,28 @@ namespace TwelveMoons.EditorTools.Runtime
                 throw new InvalidDataException("DocumentPopupPanel prefab must bind the exit hint image.");
             }
 
+            if (!popup.AllowsMainInterfaceMaskAutoBinding)
+            {
+                throw new InvalidDataException("DocumentPopupPanelView must support binding an existing main interface mask.");
+            }
+
+            var deskPanelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/UI/DeskPanel.prefab");
+            var mainMask = FindChild(deskPanelPrefab != null ? deskPanelPrefab.transform : null, "主界面遮罩");
+            if (mainMask == null)
+            {
+                throw new InvalidDataException("DeskPanel prefab must contain the existing main interface mask.");
+            }
+
+            if (mainMask.gameObject.activeSelf)
+            {
+                throw new InvalidDataException("DeskPanel main interface mask must be inactive by default.");
+            }
+
+            if (popup.MainInterfaceMaskTargetAlpha < 0.79f || popup.MainInterfaceMaskTargetAlpha > 0.81f)
+            {
+                throw new InvalidDataException($"Document main interface mask target alpha must be 0.8, got {popup.MainInterfaceMaskTargetAlpha}.");
+            }
+
             if (popup.ExitHintImageObject.activeSelf)
             {
                 throw new InvalidDataException("Document exit hint image must be inactive by default.");
@@ -77,6 +99,38 @@ namespace TwelveMoons.EditorTools.Runtime
             {
                 throw new InvalidDataException("DocumentPopupPanelView must handle drag events for right-side exit.");
             }
+
+            if (popup.BodyTypewriterCharactersPerSecond <= 0f ||
+                popup.FeedbackTypewriterCharactersPerSecond <= 0f ||
+                !popup.HidesOptionsUntilBodyTypewriterFinished ||
+                popup.FeedbackHoldAfterTypewriterDuration < 1f)
+            {
+                throw new InvalidDataException("DocumentPopupPanelView must configure body and feedback typewriter gating.");
+            }
+        }
+
+        private static Transform FindChild(Transform root, string childName)
+        {
+            if (root == null)
+            {
+                return null;
+            }
+
+            if (root.name == childName)
+            {
+                return root;
+            }
+
+            foreach (Transform child in root)
+            {
+                var result = FindChild(child, childName);
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+
+            return null;
         }
 
         private static void RunOptionAFlow()

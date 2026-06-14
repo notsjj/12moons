@@ -26,14 +26,18 @@ namespace TwelveMoons.UI
         [SerializeField] private RectTransform pointerIcon;
         [SerializeField] private float pointerMoveDuration = 0.25f;
         [SerializeField] private Ease pointerMoveEase = Ease.OutCubic;
-        [SerializeField] private float pointerBobDistance = 12f;
-        [SerializeField] private float pointerBobDuration = 0.45f;
+        [Tooltip("质疑度变化后，指针移动到对应质疑行后持续抖动的时间。")]
+        [SerializeField] private float pointerShakeDuration = 2f;
+        [Tooltip("质疑指针抖动的水平和垂直幅度。")]
+        [SerializeField] private float pointerShakeDistance = 12f;
+        [Tooltip("质疑指针每一次抖动的基础时长。")]
+        [SerializeField] private float pointerShakeStepDuration = 0.08f;
 
         private readonly Dictionary<string, FactionSuspicionRow> rowsByFactionId =
             new Dictionary<string, FactionSuspicionRow>(StringComparer.Ordinal);
 
         private Tween pointerMoveTween;
-        private Tween pointerBobTween;
+        private Tween pointerShakeTween;
         private float pointerInitialX;
         private RectTransform panelRectTransform;
         private RectTransformSnapshot panelSnapshot;
@@ -42,6 +46,12 @@ namespace TwelveMoons.UI
         private bool shouldLockDeskPanelRect;
         private int remainingDeskPanelLockFrames;
         private LayoutGroup contentLayoutGroup;
+
+        public float PointerShakeDuration => pointerShakeDuration;
+
+        public float PointerShakeDistance => pointerShakeDistance;
+
+        public float PointerShakeStepDuration => pointerShakeStepDuration;
 
         private void Awake()
         {
@@ -216,7 +226,7 @@ namespace TwelveMoons.UI
             pointerMoveTween = pointerIcon
                 .DOAnchorPos(targetPosition, Mathf.Max(0f, pointerMoveDuration))
                 .SetEase(pointerMoveEase)
-                .OnComplete(StartPointerBob);
+                .OnComplete(StartPointerShake);
         }
 
         private Vector2 GetPointerTargetPosition(RectTransform rowRect)
@@ -232,18 +242,19 @@ namespace TwelveMoons.UI
             return new Vector2(pointerInitialX, localCenter.y);
         }
 
-        private void StartPointerBob()
+        private void StartPointerShake()
         {
-            if (pointerIcon == null || pointerBobDistance <= 0f || pointerBobDuration <= 0f)
+            if (pointerIcon == null || pointerShakeDistance <= 0f || pointerShakeDuration <= 0f)
             {
                 return;
             }
 
-            var targetY = pointerIcon.anchoredPosition.y + pointerBobDistance;
-            pointerBobTween = pointerIcon
-                .DOAnchorPosY(targetY, pointerBobDuration)
-                .SetEase(Ease.InOutSine)
-                .SetLoops(-1, LoopType.Yoyo);
+            var startPosition = pointerIcon.anchoredPosition;
+            var vibrato = Mathf.Max(1, Mathf.RoundToInt(pointerShakeDuration / Mathf.Max(0.01f, pointerShakeStepDuration)));
+            pointerShakeTween = pointerIcon
+                .DOShakeAnchorPos(pointerShakeDuration, new Vector2(0f, pointerShakeDistance), vibrato, 90f, false, true)
+                .SetEase(Ease.OutQuad)
+                .OnComplete(() => pointerIcon.anchoredPosition = startPosition);
         }
 
         private Sprite FindFactionIcon(string factionId)
@@ -262,9 +273,9 @@ namespace TwelveMoons.UI
         private void StopPointerTweens()
         {
             pointerMoveTween?.Kill();
-            pointerBobTween?.Kill();
+            pointerShakeTween?.Kill();
             pointerMoveTween = null;
-            pointerBobTween = null;
+            pointerShakeTween = null;
         }
 
         private void LateUpdate()

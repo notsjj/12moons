@@ -41,8 +41,14 @@ namespace TwelveMoons.UI
         [SerializeField] private float slideDuration = 0.8f;
 
         private Vector2 visiblePosition;
+        private Tween feedbackTypewriterTween;
+        private string feedbackTypewriterFullText = string.Empty;
+        private Action feedbackTypewriterCompleteCallback;
+        private bool isFeedbackTypewriterPlaying;
 
         public event Action Clicked;
+
+        public bool IsFeedbackTypewriterPlaying => isFeedbackTypewriterPlaying;
 
         private void Awake()
         {
@@ -112,12 +118,65 @@ namespace TwelveMoons.UI
 
         public void ShowFeedback(string feedback)
         {
+            KillFeedbackTypewriter();
             SetText(proposerFeedbackText, feedback);
             SetFeedbackBackgroundVisible(!string.IsNullOrEmpty(feedback));
         }
 
+        public void ShowFeedbackTypewriter(string feedback, float charactersPerSecond, Action onComplete)
+        {
+            KillFeedbackTypewriter();
+            feedbackTypewriterFullText = feedback ?? string.Empty;
+            feedbackTypewriterCompleteCallback = onComplete;
+            SetFeedbackBackgroundVisible(!string.IsNullOrEmpty(feedbackTypewriterFullText));
+
+            if (proposerFeedbackText == null || string.IsNullOrEmpty(feedbackTypewriterFullText) || charactersPerSecond <= 0f)
+            {
+                SetText(proposerFeedbackText, feedbackTypewriterFullText);
+                CompleteFeedbackTypewriter();
+                return;
+            }
+
+            proposerFeedbackText.text = feedbackTypewriterFullText;
+            proposerFeedbackText.maxVisibleCharacters = 0;
+            isFeedbackTypewriterPlaying = true;
+            var visibleCount = feedbackTypewriterFullText.Length;
+            var duration = visibleCount / Mathf.Max(1f, charactersPerSecond);
+            feedbackTypewriterTween = DOTween
+                .To(
+                    () => proposerFeedbackText.maxVisibleCharacters,
+                    value => proposerFeedbackText.maxVisibleCharacters = value,
+                    visibleCount,
+                    duration)
+                .SetEase(Ease.Linear)
+                .OnComplete(CompleteFeedbackTypewriter);
+        }
+
+        public void CompleteFeedbackTypewriter()
+        {
+            feedbackTypewriterTween?.Kill();
+            feedbackTypewriterTween = null;
+
+            if (proposerFeedbackText != null)
+            {
+                proposerFeedbackText.text = feedbackTypewriterFullText;
+                proposerFeedbackText.maxVisibleCharacters = int.MaxValue;
+            }
+
+            if (!isFeedbackTypewriterPlaying && feedbackTypewriterCompleteCallback == null)
+            {
+                return;
+            }
+
+            isFeedbackTypewriterPlaying = false;
+            var callback = feedbackTypewriterCompleteCallback;
+            feedbackTypewriterCompleteCallback = null;
+            callback?.Invoke();
+        }
+
         public void ClearFeedback()
         {
+            KillFeedbackTypewriter();
             SetText(proposerFeedbackText, string.Empty);
             SetFeedbackBackgroundVisible(false);
         }
@@ -260,7 +319,16 @@ namespace TwelveMoons.UI
             if (target != null)
             {
                 target.text = value ?? string.Empty;
+                target.maxVisibleCharacters = int.MaxValue;
             }
+        }
+
+        private void KillFeedbackTypewriter()
+        {
+            feedbackTypewriterTween?.Kill();
+            feedbackTypewriterTween = null;
+            feedbackTypewriterCompleteCallback = null;
+            isFeedbackTypewriterPlaying = false;
         }
 
         private void SetFeedbackBackgroundVisible(bool visible)

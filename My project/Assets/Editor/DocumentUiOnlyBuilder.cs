@@ -187,6 +187,8 @@ namespace TwelveMoons.EditorTools
             ConfigurePanelImage(panel, new Color(0f, 0f, 0f, 0f));
             panel.GetComponent<Image>().raycastTarget = true;
 
+            var mainInterfaceMask = parent.Find("主界面遮罩")?.GetComponent<Image>();
+
             var rightScrollEnd = CreateImage(panel.transform, "RightScrollEndImage", new Color(0.33f, 0.21f, 0.1f, 1f));
             SetFixedRect(rightScrollEnd.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(340f, 0f), new Vector2(80f, 520f), new Vector2(0.5f, 0.5f));
 
@@ -288,6 +290,12 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("exitHintImage").objectReferenceValue = exitHintImage.gameObject;
             serializedObject.FindProperty("dragExitDistance").floatValue = 420f;
             serializedObject.FindProperty("dragReturnDuration").floatValue = 0.25f;
+            serializedObject.FindProperty("mainInterfaceMaskImage").objectReferenceValue = mainInterfaceMask;
+            serializedObject.FindProperty("mainInterfaceMaskTargetAlpha").floatValue = 0.8f;
+            serializedObject.FindProperty("mainInterfaceMaskFadeDuration").floatValue = 0.25f;
+            serializedObject.FindProperty("bodyTypewriterCharactersPerSecond").floatValue = 42f;
+            serializedObject.FindProperty("feedbackTypewriterCharactersPerSecond").floatValue = 36f;
+            serializedObject.FindProperty("feedbackHoldAfterTypewriterDuration").floatValue = 1f;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
 
             AddPersistentListenerIfMissing(optionAButton, panelView, nameof(DocumentPopupPanelView.OnOptionAClicked), panelView.OnOptionAClicked);

@@ -398,6 +398,9 @@ namespace TwelveMoons.EditorTools
             ConfigureFactionRows(serializedObject.FindProperty("factionRows"), factionRows);
             serializedObject.FindProperty("feedbackText").objectReferenceValue = feedbackText;
             serializedObject.FindProperty("pointerIcon").objectReferenceValue = pointerIcon;
+            serializedObject.FindProperty("pointerShakeDuration").floatValue = 2f;
+            serializedObject.FindProperty("pointerShakeDistance").floatValue = 12f;
+            serializedObject.FindProperty("pointerShakeStepDuration").floatValue = 0.08f;
             ConfigureFactionIconBindings(serializedObject.FindProperty("factionIcons"));
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }

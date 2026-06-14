@@ -73,6 +73,22 @@ namespace TwelveMoons.UI
         [Tooltip("\u62d6\u62fd\u672a\u8fbe\u5230\u9000\u51fa\u8ddd\u79bb\u65f6\uff0c\u516c\u6587\u754c\u9762\u56de\u5f39\u5230\u6253\u5f00\u4f4d\u7f6e\u7684\u65f6\u957f\u3002")]
         [SerializeField] private float dragReturnDuration = 0.25f;
 
+        [Header("主界面遮罩：公文打开时淡入，拖出关闭时淡出")]
+        [Tooltip("公文打开时覆盖主界面的黑色遮罩图片；默认关闭，打开公文时从透明淡入。")]
+        [SerializeField] private Image mainInterfaceMaskImage;
+        [Tooltip("公文打开后主界面遮罩的目标透明度。")]
+        [SerializeField] private float mainInterfaceMaskTargetAlpha = 0.8f;
+        [Tooltip("主界面遮罩淡入和淡出的时长。")]
+        [SerializeField] private float mainInterfaceMaskFadeDuration = 0.25f;
+
+        [Header("打字机效果：公文正文与角色反馈")]
+        [Tooltip("公文正文每秒显示的字符数；正文播放完毕后才显示选项。")]
+        [SerializeField] private float bodyTypewriterCharactersPerSecond = 42f;
+        [Tooltip("角色反馈每秒显示的字符数；反馈播放完毕后等待 1 秒再进入下一份公文。")]
+        [SerializeField] private float feedbackTypewriterCharactersPerSecond = 36f;
+        [Tooltip("角色反馈打字机播放完毕后，进入下一份公文前的停留时间。")]
+        [SerializeField] private float feedbackHoldAfterTypewriterDuration = 1f;
+
         [Header("\u516c\u6587\u4eba\u7269\u5207\u6362\u8c03\u8bd5\u5feb\u7167")]
         [Tooltip("\u53ea\u8bfb\u8fd0\u884c\u65f6\u72b6\u6001\uff1a\u4e0a\u4e00\u4f4d\u63d0\u51fa\u8005\u9000\u573a\u6216\u4e0b\u4e00\u4f4d\u63d0\u51fa\u8005\u5165\u573a\u65f6\u4e3a\u771f\u3002")]
         [SerializeField] private bool isActorTransitioningSnapshot;
@@ -101,10 +117,16 @@ namespace TwelveMoons.UI
         private Tween pendingOpenTween;
         private Tween pendingAutoAdvanceTween;
         private Tween dragReturnTween;
+        private Tween bodyTypewriterTween;
+        private Tween mainInterfaceMaskTween;
         private Vector2 dragStartPointerPosition;
         private Vector2 leftScrollDragStartPosition;
         private Vector2 rightScrollDragStartPosition;
         private Vector2 contentDragStartPosition;
+        private string bodyTypewriterFullText = string.Empty;
+        private bool isBodyTypewriterPlaying;
+        private bool isFeedbackTypewriterPlaying;
+        private bool startBodyTypewriterWhenOpened;
 
         public bool IsDocumentFlowActive =>
             gameObject.activeInHierarchy && (currentDocument != null || currentEntry != null || waitingForContinue || waitingForDragExit || isActorTransitioningSnapshot);
@@ -119,16 +141,32 @@ namespace TwelveMoons.UI
 
         public float RightSideOffscreenOffset => rightSideOffscreenOffset;
 
+        public GameObject MainInterfaceMaskObject => mainInterfaceMaskImage != null ? mainInterfaceMaskImage.gameObject : null;
+
+        public bool AllowsMainInterfaceMaskAutoBinding => true;
+
+        public float MainInterfaceMaskTargetAlpha => mainInterfaceMaskTargetAlpha;
+
+        public float BodyTypewriterCharactersPerSecond => bodyTypewriterCharactersPerSecond;
+
+        public float FeedbackTypewriterCharactersPerSecond => feedbackTypewriterCharactersPerSecond;
+
+        public float FeedbackHoldAfterTypewriterDuration => feedbackHoldAfterTypewriterDuration;
+
+        public bool HidesOptionsUntilBodyTypewriterFinished => bodyTypewriterCharactersPerSecond > 0f;
+
         public event Action DocumentFlowStateChanged;
 
         private void Awake()
         {
             ResolveDependencies();
             AutoBindAnimationReferences();
+            AutoBindMainInterfaceMask();
             ConfigureClickCatcher();
             CacheOpenLayout();
             CacheClosedLayout();
             HideExitHint();
+            HideMainInterfaceMask(true);
             CloseInstant();
         }
 
@@ -145,9 +183,12 @@ namespace TwelveMoons.UI
             KillPendingOpenTween();
             KillPendingAutoAdvanceTween();
             KillDragReturnTween();
+            KillBodyTypewriterTween();
+            KillMainInterfaceMaskTween();
             KillScrollTweens();
             isActorTransitioningSnapshot = false;
             SetDragExitState(false);
+            isFeedbackTypewriterPlaying = false;
 
             if (documentService != null)
             {
@@ -225,8 +266,9 @@ namespace TwelveMoons.UI
             ClearTransientFeedback();
             SetDragExitState(false);
             HideExitHint();
+            ShowMainInterfaceMask();
             SetText(titleText, title);
-            SetText(bodyText, body);
+            PrepareBodyTypewriter(body);
             SetText(optionAText, optionA);
             SetText(optionBText, optionB);
             SetText(proposerFeedbackText, string.Empty);
@@ -237,6 +279,7 @@ namespace TwelveMoons.UI
 
             gameObject.SetActive(true);
             CloseInstant();
+            startBodyTypewriterWhenOpened = true;
             ScheduleOpenScroll();
             NotifyDocumentFlowStateChanged();
         }
@@ -250,6 +293,7 @@ namespace TwelveMoons.UI
             SetDragExitState(false);
             ClearTransientFeedback();
             HideExitHint();
+            HideMainInterfaceMask(false);
             sharedActorSlot?.HideToRight();
             submitSlot?.Clear();
             lastSubmitAccepted = false;
@@ -272,6 +316,18 @@ namespace TwelveMoons.UI
 
         public void OnPointerClick(PointerEventData eventData)
         {
+            if (isBodyTypewriterPlaying)
+            {
+                CompleteBodyTypewriter();
+                return;
+            }
+
+            if (isFeedbackTypewriterPlaying)
+            {
+                CompleteFeedbackTypewriter();
+                return;
+            }
+
             if (waitingForContinue)
             {
                 ContinueAfterResolution();
@@ -374,8 +430,9 @@ namespace TwelveMoons.UI
             lastSubmitAccepted = false;
             ClearTransientFeedback();
             HideExitHint();
+            ShowMainInterfaceMask();
             SetText(titleText, document.Title);
-            SetText(bodyText, BuildBodyTextWithRequirements(document));
+            PrepareBodyTypewriter(BuildBodyTextWithRequirements(document));
             SetText(optionAText, document.OptionA.Text);
             SetText(optionBText, document.OptionB.Text);
             SetText(proposerFeedbackText, string.Empty);
@@ -384,6 +441,7 @@ namespace TwelveMoons.UI
             ClearStamps();
             ConfigureSubmitPanel(document);
             RefreshOptionLocks();
+            SetOptionsVisible(false);
 
             if (showProposer)
             {
@@ -393,11 +451,13 @@ namespace TwelveMoons.UI
             if (playOpenAnimation)
             {
                 CloseInstant();
+                startBodyTypewriterWhenOpened = true;
                 ScheduleOpenScroll();
             }
             else
             {
                 OpenInstant();
+                StartBodyTypewriter();
             }
 
             NotifyDocumentFlowStateChanged();
@@ -405,6 +465,12 @@ namespace TwelveMoons.UI
 
         private void ResolveCurrentDocument(DocumentOptionType optionType)
         {
+            if (isBodyTypewriterPlaying)
+            {
+                CompleteBodyTypewriter();
+                return;
+            }
+
             if (waitingForContinue)
             {
                 return;
@@ -440,20 +506,19 @@ namespace TwelveMoons.UI
                     submitSlot?.Clear();
                 }
 
-                sharedActorSlot?.ShowFeedback(result.ProposerFeedbackText);
+                PlayFeedbackTypewriter(result.ProposerFeedbackText);
                 suspicionPanel?.ShowDocumentChoiceImpact(result.FeedbackFactionId, result.FactionFeedbackText);
                 ShowStamp(optionType);
                 SetButtonsInteractable(false);
+                SetOptionsVisible(false);
                 SetText(flowStatusText, "\u5df2\u76d6\u7ae0\u3002");
                 currentEntry = null;
                 currentDocument = null;
-                waitingForContinue = true;
                 SetText(
                     flowStatusText,
                     documentService != null && documentService.TryGetNextPendingDocument(out _, out _)
-                        ? "\u5df2\u76d6\u7ae0\u3002\u6b63\u5728\u8fdb\u5165\u4e0b\u4e00\u4efd\u516c\u6587\u3002"
-                        : "\u5df2\u76d6\u7ae0\u3002\u8bf7\u7a0d\u540e\u5411\u53f3\u62d6\u51fa\u516c\u6587\u754c\u9762\u3002");
-                ScheduleAutoAdvanceAfterResolution();
+                        ? "\u5df2\u76d6\u7ae0\u3002\u63d0\u51fa\u8005\u6b63\u5728\u56de\u5e94\u3002"
+                        : "\u5df2\u76d6\u7ae0\u3002\u63d0\u51fa\u8005\u6b63\u5728\u56de\u5e94\u3002");
                 NotifyDocumentFlowStateChanged();
             }
             else
@@ -574,6 +639,7 @@ namespace TwelveMoons.UI
             KillDragReturnTween();
             KillScrollTweens();
             HideExitHint();
+            HideMainInterfaceMask(false);
             SetDragExitState(false);
 
             if (contentGroup != null)
@@ -599,6 +665,165 @@ namespace TwelveMoons.UI
             }
 
             scrollSequence.OnComplete(EndDocumentFlow);
+        }
+
+        private void PrepareBodyTypewriter(string body)
+        {
+            KillBodyTypewriterTween();
+            bodyTypewriterFullText = body ?? string.Empty;
+            if (bodyText != null)
+            {
+                bodyText.text = bodyTypewriterFullText;
+                bodyText.maxVisibleCharacters = 0;
+            }
+
+            isBodyTypewriterPlaying = false;
+            startBodyTypewriterWhenOpened = false;
+            SetOptionsVisible(false);
+        }
+
+        private void StartBodyTypewriter()
+        {
+            KillBodyTypewriterTween();
+            if (bodyText == null || string.IsNullOrEmpty(bodyTypewriterFullText) || bodyTypewriterCharactersPerSecond <= 0f)
+            {
+                CompleteBodyTypewriter();
+                return;
+            }
+
+            bodyText.text = bodyTypewriterFullText;
+            bodyText.maxVisibleCharacters = 0;
+            isBodyTypewriterPlaying = true;
+            var visibleCount = bodyTypewriterFullText.Length;
+            var duration = visibleCount / Mathf.Max(1f, bodyTypewriterCharactersPerSecond);
+            bodyTypewriterTween = DOTween
+                .To(
+                    () => bodyText.maxVisibleCharacters,
+                    value => bodyText.maxVisibleCharacters = value,
+                    visibleCount,
+                    duration)
+                .SetEase(Ease.Linear)
+                .OnComplete(CompleteBodyTypewriter);
+        }
+
+        private void CompleteBodyTypewriter()
+        {
+            KillBodyTypewriterTween();
+            isBodyTypewriterPlaying = false;
+            startBodyTypewriterWhenOpened = false;
+            if (bodyText != null)
+            {
+                bodyText.text = bodyTypewriterFullText;
+                bodyText.maxVisibleCharacters = int.MaxValue;
+            }
+
+            SetOptionsVisible(true);
+            RefreshOptionLocks();
+        }
+
+        private void PlayFeedbackTypewriter(string feedback)
+        {
+            isFeedbackTypewriterPlaying = true;
+            if (sharedActorSlot == null)
+            {
+                OnFeedbackTypewriterFinished();
+                return;
+            }
+
+            sharedActorSlot.ShowFeedbackTypewriter(
+                feedback,
+                feedbackTypewriterCharactersPerSecond,
+                OnFeedbackTypewriterFinished);
+        }
+
+        private void CompleteFeedbackTypewriter()
+        {
+            if (sharedActorSlot != null && sharedActorSlot.IsFeedbackTypewriterPlaying)
+            {
+                sharedActorSlot.CompleteFeedbackTypewriter();
+                return;
+            }
+
+            OnFeedbackTypewriterFinished();
+        }
+
+        private void OnFeedbackTypewriterFinished()
+        {
+            if (!isFeedbackTypewriterPlaying)
+            {
+                return;
+            }
+
+            isFeedbackTypewriterPlaying = false;
+            waitingForContinue = true;
+            SetText(
+                flowStatusText,
+                documentService != null && documentService.TryGetNextPendingDocument(out _, out _)
+                    ? "\u5df2\u56de\u5e94\u3002\u6b63\u5728\u8fdb\u5165\u4e0b\u4e00\u4efd\u516c\u6587\u3002"
+                    : "\u5df2\u56de\u5e94\u3002\u8bf7\u7a0d\u540e\u5411\u53f3\u62d6\u51fa\u516c\u6587\u754c\u9762\u3002");
+            ScheduleAutoAdvanceAfterResolution();
+            NotifyDocumentFlowStateChanged();
+        }
+
+        private void SetOptionsVisible(bool visible)
+        {
+            if (optionAButton != null)
+            {
+                optionAButton.gameObject.SetActive(visible);
+            }
+
+            if (optionBButton != null)
+            {
+                optionBButton.gameObject.SetActive(visible);
+            }
+        }
+
+        private void ShowMainInterfaceMask()
+        {
+            if (mainInterfaceMaskImage == null)
+            {
+                return;
+            }
+
+            KillMainInterfaceMaskTween();
+            mainInterfaceMaskImage.gameObject.SetActive(true);
+            SetMainInterfaceMaskAlpha(0f);
+            mainInterfaceMaskTween = mainInterfaceMaskImage
+                .DOFade(Mathf.Clamp01(mainInterfaceMaskTargetAlpha), Mathf.Max(0f, mainInterfaceMaskFadeDuration))
+                .SetEase(Ease.OutCubic);
+        }
+
+        private void HideMainInterfaceMask(bool immediate)
+        {
+            if (mainInterfaceMaskImage == null)
+            {
+                return;
+            }
+
+            KillMainInterfaceMaskTween();
+            if (immediate || mainInterfaceMaskFadeDuration <= 0f)
+            {
+                SetMainInterfaceMaskAlpha(0f);
+                mainInterfaceMaskImage.gameObject.SetActive(false);
+                return;
+            }
+
+            mainInterfaceMaskTween = mainInterfaceMaskImage
+                .DOFade(0f, mainInterfaceMaskFadeDuration)
+                .SetEase(Ease.OutCubic)
+                .OnComplete(() => mainInterfaceMaskImage.gameObject.SetActive(false));
+        }
+
+        private void SetMainInterfaceMaskAlpha(float alpha)
+        {
+            if (mainInterfaceMaskImage == null)
+            {
+                return;
+            }
+
+            var color = mainInterfaceMaskImage.color;
+            color.a = alpha;
+            mainInterfaceMaskImage.color = color;
         }
 
         private void ReturnDragToOpenPosition()
@@ -728,7 +953,7 @@ namespace TwelveMoons.UI
                 scrollSequence.Join(contentRoot.DOAnchorPos(contentOpenedPosition, scrollTweenDuration).SetEase(Ease.OutCubic));
             }
 
-            scrollSequence.OnComplete(EnableContentInteraction);
+            scrollSequence.OnComplete(OnScrollOpened);
         }
 
         private void CloseScroll()
@@ -953,6 +1178,24 @@ namespace TwelveMoons.UI
             }
         }
 
+        private void AutoBindMainInterfaceMask()
+        {
+            if (mainInterfaceMaskImage != null)
+            {
+                return;
+            }
+
+            var images = FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var image in images)
+            {
+                if (image != null && image.gameObject.name == "主界面遮罩")
+                {
+                    mainInterfaceMaskImage = image;
+                    return;
+                }
+            }
+        }
+
         private void EnsureAnimationLayoutCached()
         {
             if (leftScrollEnd == null || rightScrollEnd == null || contentRoot == null)
@@ -985,6 +1228,19 @@ namespace TwelveMoons.UI
             dragReturnTween = null;
         }
 
+        private void KillBodyTypewriterTween()
+        {
+            bodyTypewriterTween?.Kill();
+            bodyTypewriterTween = null;
+        }
+
+        private void KillMainInterfaceMaskTween()
+        {
+            mainInterfaceMaskTween?.Kill();
+            mainInterfaceMaskTween = null;
+            mainInterfaceMaskImage?.DOKill();
+        }
+
         private void ScheduleOpenScroll()
         {
             KillPendingOpenTween();
@@ -1008,13 +1264,14 @@ namespace TwelveMoons.UI
         {
             KillPendingAutoAdvanceTween();
 
-            if (autoAdvanceAfterStampDuration <= 0f)
+            var delay = Mathf.Max(feedbackHoldAfterTypewriterDuration, autoAdvanceAfterStampDuration);
+            if (delay <= 0f)
             {
                 ContinueAfterResolution();
                 return;
             }
 
-            pendingAutoAdvanceTween = DOVirtual.DelayedCall(autoAdvanceAfterStampDuration, ContinueAfterResolution);
+            pendingAutoAdvanceTween = DOVirtual.DelayedCall(delay, ContinueAfterResolution);
         }
 
         private void KillPendingAutoAdvanceTween()
@@ -1033,6 +1290,15 @@ namespace TwelveMoons.UI
             contentGroup.alpha = 1f;
             contentGroup.blocksRaycasts = true;
             contentGroup.interactable = true;
+        }
+
+        private void OnScrollOpened()
+        {
+            EnableContentInteraction();
+            if (startBodyTypewriterWhenOpened)
+            {
+                StartBodyTypewriter();
+            }
         }
 
         private void ConfigureClickCatcher()

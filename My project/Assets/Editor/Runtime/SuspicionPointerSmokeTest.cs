@@ -39,6 +39,16 @@ namespace TwelveMoons.EditorTools.Runtime
                     throw new InvalidDataException("Suspicion rows not configured.");
                 }
 
+                if (!Mathf.Approximately(panel.PointerShakeDuration, 2f))
+                {
+                    throw new InvalidDataException($"Suspicion pointer shake duration must be 2 seconds, got {panel.PointerShakeDuration}.");
+                }
+
+                if (panel.PointerShakeDistance <= 0f || panel.PointerShakeStepDuration <= 0f)
+                {
+                    throw new InvalidDataException("Suspicion pointer shake parameters must be positive.");
+                }
+
                 foreach (var row in rows)
                 {
                     if (row == null || row.PointerTargetRectTransform == null)
