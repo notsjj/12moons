@@ -367,6 +367,11 @@ namespace TwelveMoons.EditorTools
             flowStatus.color = new Color(0.16f, 0.09f, 0.04f, 1f);
             SetFixedRect(flowStatus.rectTransform, new Vector2(1f, 0f), new Vector2(-70f, 18f), new Vector2(260f, 28f), new Vector2(1f, 0f));
 
+            var exitHintImage = FindOrCreateImage(contentRoot.transform, "提示图片", new Color(1f, 1f, 1f, 0.45f));
+            exitHintImage.raycastTarget = false;
+            SetFixedRect(exitHintImage.rectTransform, new Vector2(1f, 0.5f), new Vector2(-80f, 0f), new Vector2(80f, 132f), new Vector2(0.5f, 0.5f));
+            exitHintImage.gameObject.SetActive(false);
+
             var leftScrollEnd = FindOrCreateImage(panel.transform, "LeftScrollEndImage", new Color(0.33f, 0.21f, 0.1f, 1f));
             SetFixedRect(leftScrollEnd.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-340f, 0f), new Vector2(80f, 520f), new Vector2(0.5f, 0.5f));
 
@@ -380,7 +385,7 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("rightScrollEnd").objectReferenceValue = rightScrollEnd.rectTransform;
             serializedObject.FindProperty("contentRoot").objectReferenceValue = contentRoot.GetComponent<RectTransform>();
             serializedObject.FindProperty("contentGroup").objectReferenceValue = contentGroup;
-            serializedObject.FindProperty("scrollMoveLeftDistance").floatValue = 700f;
+            serializedObject.FindProperty("rightSideOffscreenOffset").floatValue = 1200f;
             serializedObject.FindProperty("scrollTweenDuration").floatValue = 0.8f;
             serializedObject.FindProperty("contentBackgroundImage").objectReferenceValue = background;
             serializedObject.FindProperty("titleText").objectReferenceValue = titleText;
@@ -395,6 +400,9 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("optionBButton").objectReferenceValue = optionBButton;
             serializedObject.FindProperty("submitPanel").objectReferenceValue = submitPanel;
             serializedObject.FindProperty("submitSlot").objectReferenceValue = submitSlot;
+            serializedObject.FindProperty("exitHintImage").objectReferenceValue = exitHintImage.gameObject;
+            serializedObject.FindProperty("dragExitDistance").floatValue = 420f;
+            serializedObject.FindProperty("dragReturnDuration").floatValue = 0.25f;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
 
             AddPersistentListenerIfMissing(optionAButton, panelView, nameof(DocumentPopupPanelView.OnOptionAClicked), panelView.OnOptionAClicked);

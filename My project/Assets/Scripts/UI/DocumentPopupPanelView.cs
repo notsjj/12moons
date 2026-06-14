@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 namespace TwelveMoons.UI
 {
-    public sealed class DocumentPopupPanelView : MonoBehaviour, IPointerClickHandler
+    public sealed class DocumentPopupPanelView : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
 #pragma warning disable 0649
         [Serializable]
@@ -35,8 +35,9 @@ namespace TwelveMoons.UI
         [SerializeField] private RectTransform contentRoot;
         [SerializeField] private CanvasGroup contentGroup;
         [SerializeField] private float scrollTweenDuration = 0.8f;
-        [Header("\u5377\u8f74\u52a8\u753b\uff1a\u95ed\u5408\u65f6\u5de6\u53f3\u5377\u8f74\u4e4b\u95f4\u7684\u95f4\u9699")]
-        [SerializeField] private float closedScrollGap = 0f;
+        [Header("\u5377\u8f74\u52a8\u753b\uff1a\u53f3\u4fa7\u6ed1\u5165\u4f4d\u7f6e")]
+        [Tooltip("\u516c\u6587\u754c\u9762\u6253\u5f00\u65f6\uff0c\u5de6\u6eda\u8f74\u3001\u53f3\u6eda\u8f74\u548c\u5185\u5bb9\u89c6\u53e3\u4ece\u5c4f\u5e55\u53f3\u4fa7\u5916\u6ed1\u5165\u7684\u6c34\u5e73\u504f\u79fb\u3002")]
+        [SerializeField] private float rightSideOffscreenOffset = 1200f;
         [Header("\u5377\u8f74\u52a8\u753b\uff1a\u5173\u95ed\u72b6\u6001\u505c\u7559\u65f6\u957f")]
         [SerializeField] private float closedStateHoldDuration = 0.5f;
         [Header("\u516c\u6587\u7ed3\u7b97\uff1a\u76d6\u7ae0\u540e\u81ea\u52a8\u8fdb\u5165\u4e0b\u4e00\u4efd")]
@@ -64,13 +65,31 @@ namespace TwelveMoons.UI
         [SerializeField] private GameObject submitPanel;
         [SerializeField] private DocumentSubmitSlot submitSlot;
 
+        [Header("\u516c\u6587\u9000\u51fa\u63d0\u793a\uff1a\u5168\u90e8\u5904\u7406\u540e\u663e\u793a")]
+        [Tooltip("\u5168\u90e8\u516c\u6587\u5904\u7406\u5b8c\u6bd5\u540e\u624d\u663e\u793a\u7684\u63d0\u793a\u56fe\u7247\uff1b\u521d\u59cb\u5fc5\u987b\u5173\u95ed\uff0c\u7528\u4e8e\u63d0\u793a\u73a9\u5bb6\u5411\u53f3\u62d6\u51fa\u516c\u6587\u754c\u9762\u3002")]
+        [SerializeField] private GameObject exitHintImage;
+        [Tooltip("\u73a9\u5bb6\u5411\u53f3\u62d6\u62fd\u8d85\u8fc7\u8fd9\u4e2a\u8ddd\u79bb\u540e\uff0c\u5224\u5b9a\u516c\u6587\u754c\u9762\u9000\u51fa\u5e76\u5141\u8bb8\u8fdb\u5165\u57ce\u533a\u3002")]
+        [SerializeField] private float dragExitDistance = 420f;
+        [Tooltip("\u62d6\u62fd\u672a\u8fbe\u5230\u9000\u51fa\u8ddd\u79bb\u65f6\uff0c\u516c\u6587\u754c\u9762\u56de\u5f39\u5230\u6253\u5f00\u4f4d\u7f6e\u7684\u65f6\u957f\u3002")]
+        [SerializeField] private float dragReturnDuration = 0.25f;
+
         [Header("\u516c\u6587\u4eba\u7269\u5207\u6362\u8c03\u8bd5\u5feb\u7167")]
         [Tooltip("\u53ea\u8bfb\u8fd0\u884c\u65f6\u72b6\u6001\uff1a\u4e0a\u4e00\u4f4d\u63d0\u51fa\u8005\u9000\u573a\u6216\u4e0b\u4e00\u4f4d\u63d0\u51fa\u8005\u5165\u573a\u65f6\u4e3a\u771f\u3002")]
         [SerializeField] private bool isActorTransitioningSnapshot;
 
+        [Header("\u516c\u6587\u62d6\u51fa\u8c03\u8bd5\u5feb\u7167")]
+        [Tooltip("\u53ea\u8bfb\u8fd0\u884c\u65f6\u72b6\u6001\uff1a\u5168\u90e8\u516c\u6587\u5904\u7406\u5b8c\u6bd5\u540e\uff0c\u7b49\u5f85\u73a9\u5bb6\u5411\u53f3\u62d6\u51fa\u65f6\u4e3a\u771f\u3002")]
+        [SerializeField] private bool waitingForDragExitSnapshot;
+        [Tooltip("\u53ea\u8bfb\u8fd0\u884c\u65f6\u72b6\u6001\uff1a\u73a9\u5bb6\u6b63\u5728\u62d6\u52a8\u516c\u6587\u754c\u9762\u65f6\u4e3a\u771f\u3002")]
+        [SerializeField] private bool isDraggingExitSnapshot;
+        [Tooltip("\u53ea\u8bfb\u8fd0\u884c\u65f6\u72b6\u6001\uff1a\u5f53\u524d\u5411\u53f3\u62d6\u52a8\u7684\u6c34\u5e73\u8ddd\u79bb\u3002")]
+        [SerializeField] private float currentExitDragOffsetSnapshot;
+
         private RuntimeDocumentQueueEntry currentEntry;
         private DocumentDefinition currentDocument;
         private bool waitingForContinue;
+        private bool waitingForDragExit;
+        private bool isDraggingExit;
         private bool lastSubmitAccepted;
         private Vector2 leftScrollOpenedPosition;
         private Vector2 rightScrollOpenedPosition;
@@ -81,11 +100,24 @@ namespace TwelveMoons.UI
         private Sequence scrollSequence;
         private Tween pendingOpenTween;
         private Tween pendingAutoAdvanceTween;
+        private Tween dragReturnTween;
+        private Vector2 dragStartPointerPosition;
+        private Vector2 leftScrollDragStartPosition;
+        private Vector2 rightScrollDragStartPosition;
+        private Vector2 contentDragStartPosition;
 
         public bool IsDocumentFlowActive =>
-            gameObject.activeInHierarchy && (currentDocument != null || currentEntry != null || waitingForContinue || isActorTransitioningSnapshot);
+            gameObject.activeInHierarchy && (currentDocument != null || currentEntry != null || waitingForContinue || waitingForDragExit || isActorTransitioningSnapshot);
 
         public bool IsActorTransitioning => isActorTransitioningSnapshot;
+
+        public GameObject ExitHintImageObject => exitHintImage;
+
+        public bool IsWaitingForDragExit => waitingForDragExit;
+
+        public bool IsDraggingExit => isDraggingExitSnapshot;
+
+        public float RightSideOffscreenOffset => rightSideOffscreenOffset;
 
         public event Action DocumentFlowStateChanged;
 
@@ -96,6 +128,7 @@ namespace TwelveMoons.UI
             ConfigureClickCatcher();
             CacheOpenLayout();
             CacheClosedLayout();
+            HideExitHint();
             CloseInstant();
         }
 
@@ -111,8 +144,10 @@ namespace TwelveMoons.UI
         {
             KillPendingOpenTween();
             KillPendingAutoAdvanceTween();
+            KillDragReturnTween();
             KillScrollTweens();
             isActorTransitioningSnapshot = false;
+            SetDragExitState(false);
 
             if (documentService != null)
             {
@@ -188,6 +223,8 @@ namespace TwelveMoons.UI
             currentEntry = null;
             currentDocument = null;
             ClearTransientFeedback();
+            SetDragExitState(false);
+            HideExitHint();
             SetText(titleText, title);
             SetText(bodyText, body);
             SetText(optionAText, optionA);
@@ -210,7 +247,9 @@ namespace TwelveMoons.UI
             currentEntry = null;
             currentDocument = null;
             waitingForContinue = false;
+            SetDragExitState(false);
             ClearTransientFeedback();
+            HideExitHint();
             sharedActorSlot?.HideToRight();
             submitSlot?.Clear();
             lastSubmitAccepted = false;
@@ -239,6 +278,64 @@ namespace TwelveMoons.UI
             }
         }
 
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (!waitingForDragExit || eventData == null)
+            {
+                return;
+            }
+
+            KillDragReturnTween();
+            KillScrollTweens();
+            isDraggingExit = true;
+            isDraggingExitSnapshot = true;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                transform as RectTransform,
+                eventData.position,
+                eventData.pressEventCamera,
+                out dragStartPointerPosition);
+
+            leftScrollDragStartPosition = leftScrollEnd != null ? leftScrollEnd.anchoredPosition : Vector2.zero;
+            rightScrollDragStartPosition = rightScrollEnd != null ? rightScrollEnd.anchoredPosition : Vector2.zero;
+            contentDragStartPosition = contentRoot != null ? contentRoot.anchoredPosition : Vector2.zero;
+            currentExitDragOffsetSnapshot = 0f;
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (!waitingForDragExit || !isDraggingExit || eventData == null)
+            {
+                return;
+            }
+
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                transform as RectTransform,
+                eventData.position,
+                eventData.pressEventCamera,
+                out var currentPointerPosition);
+
+            var dragOffsetX = Mathf.Max(0f, currentPointerPosition.x - dragStartPointerPosition.x);
+            ApplyDragOffset(dragOffsetX);
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (!waitingForDragExit || !isDraggingExit)
+            {
+                return;
+            }
+
+            isDraggingExit = false;
+            isDraggingExitSnapshot = false;
+            if (currentExitDragOffsetSnapshot >= dragExitDistance)
+            {
+                CompleteDragExit();
+                return;
+            }
+
+            ReturnDragToOpenPosition();
+        }
+
         public void ContinueAfterResolution()
         {
             if (!waitingForContinue)
@@ -264,8 +361,7 @@ namespace TwelveMoons.UI
             HideActorAlongEntryPath(() =>
             {
                 isActorTransitioningSnapshot = false;
-                CloseScroll();
-                DOVirtual.DelayedCall(scrollTweenDuration, EndDocumentFlow);
+                BeginDragExitWait();
             });
         }
 
@@ -274,8 +370,10 @@ namespace TwelveMoons.UI
             currentEntry = entry;
             currentDocument = document;
             waitingForContinue = false;
+            SetDragExitState(false);
             lastSubmitAccepted = false;
             ClearTransientFeedback();
+            HideExitHint();
             SetText(titleText, document.Title);
             SetText(bodyText, BuildBodyTextWithRequirements(document));
             SetText(optionAText, document.OptionA.Text);
@@ -354,7 +452,7 @@ namespace TwelveMoons.UI
                     flowStatusText,
                     documentService != null && documentService.TryGetNextPendingDocument(out _, out _)
                         ? "\u5df2\u76d6\u7ae0\u3002\u6b63\u5728\u8fdb\u5165\u4e0b\u4e00\u4efd\u516c\u6587\u3002"
-                        : "\u5df2\u76d6\u7ae0\u3002\u6b63\u5728\u5408\u4e0a\u516c\u6587\u3002");
+                        : "\u5df2\u76d6\u7ae0\u3002\u8bf7\u7a0d\u540e\u5411\u53f3\u62d6\u51fa\u516c\u6587\u754c\u9762\u3002");
                 ScheduleAutoAdvanceAfterResolution();
                 NotifyDocumentFlowStateChanged();
             }
@@ -456,13 +554,133 @@ namespace TwelveMoons.UI
             EndDocumentFlow();
         }
 
+        private void BeginDragExitWait()
+        {
+            currentEntry = null;
+            currentDocument = null;
+            waitingForContinue = false;
+            SetButtonsInteractable(false);
+            submitSlot?.Clear();
+            lastSubmitAccepted = false;
+            OpenInstant();
+            ShowExitHint();
+            SetDragExitState(true);
+            SetText(flowStatusText, "\u5168\u90e8\u516c\u6587\u5df2\u5904\u7406\u3002\u5411\u53f3\u62d6\u51fa\u516c\u6587\u754c\u9762\u540e\u53ef\u8fdb\u5165\u57ce\u533a\u3002");
+            NotifyDocumentFlowStateChanged();
+        }
+
+        private void CompleteDragExit()
+        {
+            KillDragReturnTween();
+            KillScrollTweens();
+            HideExitHint();
+            SetDragExitState(false);
+
+            if (contentGroup != null)
+            {
+                contentGroup.blocksRaycasts = false;
+                contentGroup.interactable = false;
+            }
+
+            scrollSequence = DOTween.Sequence();
+            if (leftScrollEnd != null)
+            {
+                scrollSequence.Join(leftScrollEnd.DOAnchorPos(leftScrollClosedPosition, scrollTweenDuration).SetEase(Ease.InCubic));
+            }
+
+            if (rightScrollEnd != null)
+            {
+                scrollSequence.Join(rightScrollEnd.DOAnchorPos(rightScrollClosedPosition, scrollTweenDuration).SetEase(Ease.InCubic));
+            }
+
+            if (contentRoot != null)
+            {
+                scrollSequence.Join(contentRoot.DOAnchorPos(contentClosedPosition, scrollTweenDuration).SetEase(Ease.InCubic));
+            }
+
+            scrollSequence.OnComplete(EndDocumentFlow);
+        }
+
+        private void ReturnDragToOpenPosition()
+        {
+            KillDragReturnTween();
+            var sequence = DOTween.Sequence();
+            if (leftScrollEnd != null)
+            {
+                sequence.Join(leftScrollEnd.DOAnchorPos(leftScrollOpenedPosition, dragReturnDuration).SetEase(Ease.OutCubic));
+            }
+
+            if (rightScrollEnd != null)
+            {
+                sequence.Join(rightScrollEnd.DOAnchorPos(rightScrollOpenedPosition, dragReturnDuration).SetEase(Ease.OutCubic));
+            }
+
+            if (contentRoot != null)
+            {
+                sequence.Join(contentRoot.DOAnchorPos(contentOpenedPosition, dragReturnDuration).SetEase(Ease.OutCubic));
+            }
+
+            sequence.OnComplete(() => currentExitDragOffsetSnapshot = 0f);
+            dragReturnTween = sequence;
+        }
+
+        private void ApplyDragOffset(float offsetX)
+        {
+            currentExitDragOffsetSnapshot = offsetX;
+            var offset = new Vector2(offsetX, 0f);
+            if (leftScrollEnd != null)
+            {
+                leftScrollEnd.anchoredPosition = leftScrollDragStartPosition + offset;
+            }
+
+            if (rightScrollEnd != null)
+            {
+                rightScrollEnd.anchoredPosition = rightScrollDragStartPosition + offset;
+            }
+
+            if (contentRoot != null)
+            {
+                contentRoot.anchoredPosition = contentDragStartPosition + offset;
+            }
+        }
+
+        private void SetDragExitState(bool value)
+        {
+            waitingForDragExit = value;
+            waitingForDragExitSnapshot = value;
+            if (!value)
+            {
+                isDraggingExit = false;
+                isDraggingExitSnapshot = false;
+                currentExitDragOffsetSnapshot = 0f;
+            }
+        }
+
+        private void ShowExitHint()
+        {
+            if (exitHintImage != null)
+            {
+                exitHintImage.SetActive(true);
+            }
+        }
+
+        private void HideExitHint()
+        {
+            if (exitHintImage != null)
+            {
+                exitHintImage.SetActive(false);
+            }
+        }
+
         private void EndDocumentFlow()
         {
             currentEntry = null;
             currentDocument = null;
             waitingForContinue = false;
+            SetDragExitState(false);
             isActorTransitioningSnapshot = false;
             ClearTransientFeedback();
+            HideExitHint();
             submitSlot?.Clear();
             SetText(flowStatusText, "\u672c\u56de\u5408\u516c\u6587\u5df2\u5168\u90e8\u5904\u7406\u3002");
             if (cityExploreButton != null)
@@ -495,6 +713,7 @@ namespace TwelveMoons.UI
             if (leftScrollEnd != null)
             {
                 leftScrollEnd.anchoredPosition = leftScrollClosedPosition;
+                scrollSequence.Join(leftScrollEnd.DOAnchorPos(leftScrollOpenedPosition, scrollTweenDuration).SetEase(Ease.OutCubic));
             }
 
             if (rightScrollEnd != null)
@@ -527,7 +746,7 @@ namespace TwelveMoons.UI
 
             if (leftScrollEnd != null)
             {
-                leftScrollEnd.anchoredPosition = leftScrollClosedPosition;
+                scrollSequence.Join(leftScrollEnd.DOAnchorPos(leftScrollClosedPosition, scrollTweenDuration).SetEase(Ease.InCubic));
             }
 
             if (rightScrollEnd != null)
@@ -607,45 +826,10 @@ namespace TwelveMoons.UI
 
         private void CacheClosedLayout()
         {
-            if (leftScrollEnd != null)
-            {
-                leftScrollClosedPosition = leftScrollOpenedPosition;
-            }
-            else
-            {
-                leftScrollClosedPosition = Vector2.zero;
-            }
-
-            if (rightScrollEnd != null)
-            {
-                var leftRightEdge = leftScrollClosedPosition.x;
-                if (leftScrollEnd != null)
-                {
-                    var leftWidth = leftScrollEnd.rect.width * leftScrollEnd.localScale.x;
-                    leftRightEdge += leftWidth * (1f - leftScrollEnd.pivot.x);
-                }
-
-                var rightWidth = rightScrollEnd.rect.width * rightScrollEnd.localScale.x;
-                rightScrollClosedPosition = new Vector2(
-                    leftRightEdge + closedScrollGap + (rightWidth * rightScrollEnd.pivot.x),
-                    leftScrollClosedPosition.y);
-            }
-            else
-            {
-                rightScrollClosedPosition = Vector2.zero;
-            }
-
-            if (contentRoot != null)
-            {
-                var scrollTravelX = rightScrollOpenedPosition.x - rightScrollClosedPosition.x;
-                contentClosedPosition = new Vector2(
-                    contentOpenedPosition.x - scrollTravelX,
-                    contentOpenedPosition.y);
-            }
-            else
-            {
-                contentClosedPosition = Vector2.zero;
-            }
+            var rightOffset = new Vector2(Mathf.Max(100f, rightSideOffscreenOffset), 0f);
+            leftScrollClosedPosition = leftScrollEnd != null ? leftScrollOpenedPosition + rightOffset : Vector2.zero;
+            rightScrollClosedPosition = rightScrollEnd != null ? rightScrollOpenedPosition + rightOffset : Vector2.zero;
+            contentClosedPosition = contentRoot != null ? contentOpenedPosition + rightOffset : Vector2.zero;
         }
 
         private void ConfigureSubmitPanel(DocumentDefinition document)
@@ -793,6 +977,12 @@ namespace TwelveMoons.UI
             rightScrollEnd?.DOKill();
             contentRoot?.DOKill();
             contentGroup?.DOKill();
+        }
+
+        private void KillDragReturnTween()
+        {
+            dragReturnTween?.Kill();
+            dragReturnTween = null;
         }
 
         private void ScheduleOpenScroll()

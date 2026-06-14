@@ -5,6 +5,7 @@ using TwelveMoons.Core.Runtime;
 using TwelveMoons.UI;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace TwelveMoons.EditorTools.Runtime
 {
@@ -21,7 +22,8 @@ namespace TwelveMoons.EditorTools.Runtime
             RunOptionBFlow();
             RunCurrentRoundDrawFlow();
             ValidateActorTransitionApi();
-            Debug.Log("Document flow smoke test passed. Demo document queues, opens, resolves proposer, settles option A and B, removes the current queue entry, records delayed follow-up documents, and activates them on their due round.");
+            ValidatePopupExitDragPrefab();
+            Debug.Log("Document flow smoke test passed. Demo document queues, opens, resolves proposer, settles option A and B, removes the current queue entry, records delayed follow-up documents, activates them on their due round, and keeps drag-exit popup wiring.");
         }
 
         private static void ValidateActorTransitionApi()
@@ -39,6 +41,41 @@ namespace TwelveMoons.EditorTools.Runtime
             finally
             {
                 Object.DestroyImmediate(root);
+            }
+        }
+
+        private static void ValidatePopupExitDragPrefab()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/UI/DocumentPopupPanel.prefab");
+            if (prefab == null)
+            {
+                throw new InvalidDataException("DocumentPopupPanel prefab not found.");
+            }
+
+            var popup = prefab.GetComponent<DocumentPopupPanelView>();
+            if (popup == null)
+            {
+                throw new InvalidDataException("DocumentPopupPanel prefab is missing DocumentPopupPanelView.");
+            }
+
+            if (popup.ExitHintImageObject == null)
+            {
+                throw new InvalidDataException("DocumentPopupPanel prefab must bind the exit hint image.");
+            }
+
+            if (popup.ExitHintImageObject.activeSelf)
+            {
+                throw new InvalidDataException("Document exit hint image must be inactive by default.");
+            }
+
+            if (popup.RightSideOffscreenOffset <= 0f)
+            {
+                throw new InvalidDataException("DocumentPopupPanel must slide in from a positive right-side offset.");
+            }
+
+            if (popup is not IBeginDragHandler || popup is not IDragHandler || popup is not IEndDragHandler)
+            {
+                throw new InvalidDataException("DocumentPopupPanelView must handle drag events for right-side exit.");
             }
         }
 
