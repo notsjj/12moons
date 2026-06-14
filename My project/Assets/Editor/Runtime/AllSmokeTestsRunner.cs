@@ -25,7 +25,7 @@ namespace TwelveMoons.EditorTools.Runtime
             CityBuildingSmokeTest.Run();
             CitySideEventSmokeTest.Run();
             BaseSceneUIFrameworkSmokeTest.Run();
-            DeskPanelAtmosphereSmokeTest.Run();
+            DeskPanelVisualSmokeTest.Run();
             ValidateCityCameraEntryCinematic();
 
             Debug.Log("All core smoke tests passed.");

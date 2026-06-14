@@ -6,9 +6,9 @@ using UnityEngine.UI;
 
 namespace TwelveMoons.EditorTools.Runtime
 {
-    public static class DeskPanelAtmosphereSmokeTest
+    public static class DeskPanelVisualSmokeTest
     {
-        [MenuItem("Twelve Moons/Tests/Run DeskPanel Atmosphere Smoke Test")]
+        [MenuItem("Twelve Moons/Tests/Run DeskPanel Visual Smoke Test")]
         public static void Run()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/UI/DeskPanel.prefab");
@@ -25,51 +25,10 @@ namespace TwelveMoons.EditorTools.Runtime
 
             try
             {
-                var atmosphere = instance.GetComponent<DeskPanelAtmosphereView>();
-                if (atmosphere == null)
-                {
-                    throw new InvalidDataException("DeskPanelAtmosphereView not found.");
-                }
-
-                var childCountBeforeSetup = instance.transform.childCount;
-                if (atmosphere.VignetteImage == null ||
-                    atmosphere.CandleRect == null)
-                {
-                    throw new InvalidDataException("DeskPanel atmosphere references must be serialized in the prefab.");
-                }
-
-                atmosphere.EnsureSetup();
-                if (instance.transform.childCount != childCountBeforeSetup)
-                {
-                    throw new InvalidDataException("DeskPanel atmosphere setup created runtime GameObjects.");
-                }
-
-                atmosphere.ApplyVisualSettings();
-                if (atmosphere.OverallDimAlpha <= 0f)
-                {
-                    throw new InvalidDataException("DeskPanel does not lower the overall screen brightness.");
-                }
-
-                if (atmosphere.LightTargetCount <= 0)
-                {
-                    throw new InvalidDataException("DeskPanel atmosphere has no inspector-assigned light targets.");
-                }
-
-                if (atmosphere.LightEdgeSoftness < 0.35f)
-                {
-                    throw new InvalidDataException("DeskPanel light target edge is too sharp.");
-                }
-
-                if (!atmosphere.UsesRectangularVignette)
-                {
-                    throw new InvalidDataException("DeskPanel vignette is not using the rectangular edge-shadow mode.");
-                }
-
-                ValidateVignette(instance.transform, atmosphere);
-                ValidateCandleLightTargets(instance.transform, atmosphere);
+                ValidateAtmosphereRemoved(instance);
                 ValidateHoverShakeBadge(instance.transform, "徽章");
                 ValidateHoverShakeBadge(instance.transform, "徽章 (1)");
-                Debug.Log("DeskPanel atmosphere smoke test passed. Vignette light targets are configured without candle glow or UI input blocking.");
+                Debug.Log("DeskPanel visual smoke test passed. Atmosphere darkening and candle glow are absent, and badges keep hover shake.");
             }
             finally
             {
@@ -77,43 +36,24 @@ namespace TwelveMoons.EditorTools.Runtime
             }
         }
 
-        private static void ValidateVignette(Transform deskPanel, DeskPanelAtmosphereView atmosphere)
+        private static void ValidateAtmosphereRemoved(GameObject deskPanel)
         {
-            var vignette = deskPanel.Find("桌面暗角") as RectTransform;
-            if (vignette == null || atmosphere.VignetteImage == null)
+            foreach (var component in deskPanel.GetComponents<MonoBehaviour>())
             {
-                throw new InvalidDataException("DeskPanel vignette is missing or not bound.");
+                if (component != null && component.GetType().Name == "DeskPanelAtmosphereView")
+                {
+                    throw new InvalidDataException("DeskPanelAtmosphereView must be removed from DeskPanel.");
+                }
             }
 
-            if (atmosphere.VignetteImage.raycastTarget)
+            if (FindChild(deskPanel.transform, "桌面暗角") != null)
             {
-                throw new InvalidDataException("DeskPanel vignette blocks UI raycasts.");
+                throw new InvalidDataException("桌面暗角 must be removed from DeskPanel.");
             }
 
-            if (vignette.anchorMin != Vector2.zero || vignette.anchorMax != Vector2.one ||
-                vignette.offsetMin != Vector2.zero || vignette.offsetMax != Vector2.zero)
+            if (FindChild(deskPanel.transform, "蜡烛光晕") != null)
             {
-                throw new InvalidDataException("DeskPanel vignette does not stretch across the full panel.");
-            }
-        }
-
-        private static void ValidateCandleLightTargets(Transform deskPanel, DeskPanelAtmosphereView atmosphere)
-        {
-            var candle = deskPanel.Find("蜡烛");
-            var glow = deskPanel.Find("蜡烛光晕");
-            if (candle == null || atmosphere.CandleRect == null)
-            {
-                throw new InvalidDataException("Candle is missing or not bound.");
-            }
-
-            if (glow != null)
-            {
-                throw new InvalidDataException("Legacy candle glow object must be removed.");
-            }
-
-            if (!atmosphere.ContainsLightTarget(candle as RectTransform))
-            {
-                throw new InvalidDataException("Candle must be included in the inspector-assigned light targets.");
+                throw new InvalidDataException("蜡烛光晕 must be removed from DeskPanel.");
             }
         }
 
