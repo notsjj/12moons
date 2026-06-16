@@ -10,14 +10,14 @@ namespace TwelveMoons.EditorTools
     public static class FactionSuspicionRowPrefabBuilder
     {
         private const string PrefabDirectory = "Assets/Prefabs/UI";
-        private const string PrefabPath = PrefabDirectory + "/FactionSuspicionRow.prefab";
+        private const string PrefabPath = PrefabDirectory + "/阵营质疑行.prefab";
 
         [MenuItem("Twelve Moons/Setup/Create Faction Suspicion Row Prefab")]
         public static void CreateFactionSuspicionRowPrefab()
         {
             Directory.CreateDirectory(PrefabDirectory);
 
-            var rowObject = new GameObject("FactionSuspicionRow", typeof(RectTransform), typeof(Image));
+            var rowObject = new GameObject("阵营质疑行", typeof(RectTransform), typeof(Image));
             try
             {
                 var rowRect = rowObject.GetComponent<RectTransform>();

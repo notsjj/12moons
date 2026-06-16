@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using TMPro;
 using TwelveMoons.Core;
 using TwelveMoons.Core.Config;
@@ -17,7 +17,7 @@ namespace TwelveMoons.EditorTools
 {
     public static class DeskUiBuilder
     {
-        private const string InventoryCardPrefabPath = "Assets/Prefabs/UI/InventoryItemCard.prefab";
+        private const string InventoryCardPrefabPath = "Assets/Prefabs/UI/物品卡片.prefab";
 
         [MenuItem("Twelve Moons/Setup/Create Desk UI Framework")]
         public static void CreateDeskUiFramework()
@@ -993,8 +993,8 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("feedbackText").objectReferenceValue = feedbackText;
             serializedObject.FindProperty("pointerIcon").objectReferenceValue = pointerIcon;
             serializedObject.FindProperty("pointerShakeDuration").floatValue = 2f;
-            serializedObject.FindProperty("pointerShakeDistance").floatValue = 12f;
-            serializedObject.FindProperty("pointerShakeStepDuration").floatValue = 0.08f;
+            serializedObject.FindProperty("pointerSwingAngle").floatValue = 8f;
+            serializedObject.FindProperty("pointerSwingStepDuration").floatValue = 0.08f;
             ConfigureFactionIconBindings(serializedObject.FindProperty("factionIcons"));
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }

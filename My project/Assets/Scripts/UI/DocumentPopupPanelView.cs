@@ -155,6 +155,8 @@ namespace TwelveMoons.UI
 
         public bool HidesOptionsUntilBodyTypewriterFinished => bodyTypewriterCharactersPerSecond > 0f;
 
+        public bool ExitHintStartsImmediatelyAfterAllDocuments => true;
+
         public event Action DocumentFlowStateChanged;
 
         private void Awake()
@@ -414,10 +416,11 @@ namespace TwelveMoons.UI
 
             isActorTransitioningSnapshot = true;
             NotifyDocumentFlowStateChanged();
+            BeginDragExitWait();
             HideActorAlongEntryPath(() =>
             {
                 isActorTransitioningSnapshot = false;
-                BeginDragExitWait();
+                NotifyDocumentFlowStateChanged();
             });
         }
 
@@ -628,8 +631,8 @@ namespace TwelveMoons.UI
             submitSlot?.Clear();
             lastSubmitAccepted = false;
             OpenInstant();
-            ShowExitHint();
             SetDragExitState(true);
+            ShowExitHint();
             SetText(flowStatusText, "\u5168\u90e8\u516c\u6587\u5df2\u5904\u7406\u3002\u5411\u53f3\u62d6\u51fa\u516c\u6587\u754c\u9762\u540e\u53ef\u8fdb\u5165\u57ce\u533a\u3002");
             NotifyDocumentFlowStateChanged();
         }
@@ -888,9 +891,10 @@ namespace TwelveMoons.UI
 
         private void ShowExitHint()
         {
-            if (exitHintImage != null)
+            if (exitHintImage != null && waitingForDragExit)
             {
                 exitHintImage.SetActive(true);
+                exitHintImage.transform.SetAsLastSibling();
             }
         }
 

@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using TwelveMoons.Core;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
@@ -113,7 +113,7 @@ namespace TwelveMoons.EditorTools
             submitSerializedObject.FindProperty("inventoryService").objectReferenceValue = Object.FindFirstObjectByType<InventoryService>(FindObjectsInactive.Include);
             submitSerializedObject.FindProperty("dropAreaImage").objectReferenceValue = dropAreaImage;
             submitSerializedObject.FindProperty("submittedCardPrefab").objectReferenceValue =
-                AssetDatabase.LoadAssetAtPath<InventoryItemCard>("Assets/Prefabs/UI/InventoryItemCard.prefab");
+                AssetDatabase.LoadAssetAtPath<InventoryItemCard>("Assets/Prefabs/UI/物品卡片.prefab");
             submitSerializedObject.FindProperty("submittedCardSize").vector2Value = new Vector2(96f, 118f);
             submitSerializedObject.FindProperty("statusText").objectReferenceValue = statusText;
             submitSerializedObject.ApplyModifiedPropertiesWithoutUndo();
@@ -231,7 +231,7 @@ namespace TwelveMoons.EditorTools
             submitSerializedObject.FindProperty("inventoryService").objectReferenceValue = Object.FindFirstObjectByType<InventoryService>(FindObjectsInactive.Include);
             submitSerializedObject.FindProperty("dropAreaImage").objectReferenceValue = dropArea;
             submitSerializedObject.FindProperty("submittedCardPrefab").objectReferenceValue =
-                AssetDatabase.LoadAssetAtPath<InventoryItemCard>("Assets/Prefabs/UI/InventoryItemCard.prefab");
+                AssetDatabase.LoadAssetAtPath<InventoryItemCard>("Assets/Prefabs/UI/物品卡片.prefab");
             submitSerializedObject.FindProperty("submittedCardSize").vector2Value = new Vector2(96f, 118f);
             submitSerializedObject.FindProperty("statusText").objectReferenceValue = submitStatus;
             submitSerializedObject.ApplyModifiedPropertiesWithoutUndo();

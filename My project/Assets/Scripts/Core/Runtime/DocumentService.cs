@@ -93,7 +93,6 @@ namespace TwelveMoons.Core.Runtime
             }
 
             LoadConfigs();
-            GenerateCurrentRoundDocumentQueue();
 
             var currentRound = runtimeDataService.Data.CurrentRound;
             foreach (var candidate in runtimeDataService.Data.DocumentQueue)
@@ -650,7 +649,7 @@ namespace TwelveMoons.Core.Runtime
             }
 
             var drawKey = MakeDrawKey(definition, drawSource);
-            if (!definition.IsRepeatable && runtimeDataService.Data.HasProcessedDocumentDraw(drawKey))
+            if (runtimeDataService.Data.HasProcessedDocumentDraw(drawKey))
             {
                 return false;
             }

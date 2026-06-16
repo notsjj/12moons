@@ -223,6 +223,8 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("maxPositionZ").floatValue = 4f;
             serializedObject.FindProperty("minPositionY").floatValue = 3f;
             serializedObject.FindProperty("maxPositionY").floatValue = 9f;
+            serializedObject.FindProperty("entryCinematicEndViewId").stringValue = "city_upper";
+            serializedObject.FindProperty("entryCinematicEndViewPoint").objectReferenceValue = upperCityPoint;
 
             var pointsProperty = serializedObject.FindProperty("viewPoints");
             pointsProperty.arraySize = viewPoints.Count;

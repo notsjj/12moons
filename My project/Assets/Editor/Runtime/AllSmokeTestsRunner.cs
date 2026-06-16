@@ -44,6 +44,11 @@ namespace TwelveMoons.EditorTools.Runtime
                     throw new InvalidDataException("City entry cinematic still uses zoom.");
                 }
 
+                if (!controller.DefaultViewUsesExactTransform)
+                {
+                    throw new InvalidDataException("City camera default view must copy the exact GlobalViewPoint transform.");
+                }
+
                 if (controller.EntryOrbitDuration < 4f)
                 {
                     throw new InvalidDataException($"City entry orbit is too fast: {controller.EntryOrbitDuration} seconds.");
@@ -52,6 +57,11 @@ namespace TwelveMoons.EditorTools.Runtime
                 if (!Mathf.Approximately(controller.EntryOrbitDegrees, 360f))
                 {
                     throw new InvalidDataException($"City entry orbit is not a full circle: {controller.EntryOrbitDegrees} degrees.");
+                }
+
+                if (controller.EntryCinematicEndViewId != "city_upper")
+                {
+                    throw new InvalidDataException($"City entry cinematic must end at upper city view, got {controller.EntryCinematicEndViewId}.");
                 }
             }
             finally

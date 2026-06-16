@@ -1,17 +1,17 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace TwelveMoons.UI
 {
     public sealed class BaseSceneUIBootstrap : MonoBehaviour
     {
-        private static readonly UIType SharedHudPanel = new UIType("Prefabs/UI/SharedHudPanel", UILayer.Persistent);
-        private static readonly UIType DeskPanel = new UIType("Prefabs/UI/DeskPanel", UILayer.Panel);
-        private static readonly UIType StoryPanel = new UIType("Prefabs/UI/StoryPanel", UILayer.Overlay);
-        private static readonly UIType CityHudPanel = new UIType("Prefabs/UI/CityHudPanel", UILayer.Panel);
-        private static readonly UIType DocumentPopupPanel = new UIType("Prefabs/UI/DocumentPopupPanel", UILayer.Popup);
-        private static readonly UIType NewspaperPanel = new UIType("Prefabs/UI/NewspaperPanel", UILayer.Popup);
-        private static readonly UIType LetterReaderPanel = new UIType("Prefabs/UI/LetterReaderPanel", UILayer.Popup);
-        private static readonly UIType LoadingPanel = new UIType("Prefabs/UI/LoadingPanel", UILayer.Overlay);
+        private static readonly UIType SharedHudPanel = new UIType("Prefabs/UI/共享HUD面板", UILayer.Persistent);
+        private static readonly UIType DeskPanel = new UIType("Prefabs/UI/桌面面板", UILayer.Panel);
+        private static readonly UIType StoryPanel = new UIType("Prefabs/UI/剧情面板", UILayer.Overlay);
+        private static readonly UIType CityHudPanel = new UIType("Prefabs/UI/城区HUD面板", UILayer.Panel);
+        private static readonly UIType DocumentPopupPanel = new UIType("Prefabs/UI/公文弹窗面板", UILayer.Popup);
+        private static readonly UIType NewspaperPanel = new UIType("Prefabs/UI/报纸面板", UILayer.Popup);
+        private static readonly UIType LetterReaderPanel = new UIType("Prefabs/UI/信件阅读面板", UILayer.Popup);
+        private static readonly UIType LoadingPanel = new UIType("Prefabs/UI/加载过场面板", UILayer.Overlay);
 
         [Header("UI 上下文")]
         [Tooltip("BaseScene 中的 UI 上下文；为空时自动从当前物体或场景中查找。")]

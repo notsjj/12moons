@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
@@ -13,12 +13,12 @@ namespace TwelveMoons.EditorTools
 
         private static readonly string[] TargetPrefabPaths =
         {
-            "Assets/Resources/Prefabs/UI/DeskPanel.prefab",
-            "Assets/Resources/Prefabs/UI/CityHudPanel.prefab",
-            "Assets/Resources/Prefabs/UI/StoryPanel.prefab",
-            "Assets/Resources/Prefabs/UI/DocumentPopupPanel.prefab",
-            "Assets/Resources/Prefabs/UI/NewspaperPanel.prefab",
-            "Assets/Resources/Prefabs/UI/LetterReaderPanel.prefab"
+            "Assets/Resources/Prefabs/UI/桌面面板.prefab",
+            "Assets/Resources/Prefabs/UI/城区HUD面板.prefab",
+            "Assets/Resources/Prefabs/UI/剧情面板.prefab",
+            "Assets/Resources/Prefabs/UI/公文弹窗面板.prefab",
+            "Assets/Resources/Prefabs/UI/报纸面板.prefab",
+            "Assets/Resources/Prefabs/UI/信件阅读面板.prefab"
         };
 
         [MenuItem("Twelve Moons/UI/应用中文素材并更新UI Prefab")]
@@ -54,37 +54,37 @@ namespace TwelveMoons.EditorTools
 
         private static void ApplyVisualStyle(string prefabPath, GameObject root)
         {
-            if (prefabPath.EndsWith("DeskPanel.prefab", StringComparison.OrdinalIgnoreCase))
+            if (prefabPath.EndsWith("桌面面板.prefab", StringComparison.OrdinalIgnoreCase))
             {
                 StyleDeskPanel(root);
                 return;
             }
 
-            if (prefabPath.EndsWith("CityHudPanel.prefab", StringComparison.OrdinalIgnoreCase))
+            if (prefabPath.EndsWith("城区HUD面板.prefab", StringComparison.OrdinalIgnoreCase))
             {
                 StyleCityHudPanel(root);
                 return;
             }
 
-            if (prefabPath.EndsWith("StoryPanel.prefab", StringComparison.OrdinalIgnoreCase))
+            if (prefabPath.EndsWith("剧情面板.prefab", StringComparison.OrdinalIgnoreCase))
             {
                 StyleStoryPanel(root);
                 return;
             }
 
-            if (prefabPath.EndsWith("DocumentPopupPanel.prefab", StringComparison.OrdinalIgnoreCase))
+            if (prefabPath.EndsWith("公文弹窗面板.prefab", StringComparison.OrdinalIgnoreCase))
             {
                 StyleDocumentPopup(root);
                 return;
             }
 
-            if (prefabPath.EndsWith("NewspaperPanel.prefab", StringComparison.OrdinalIgnoreCase))
+            if (prefabPath.EndsWith("报纸面板.prefab", StringComparison.OrdinalIgnoreCase))
             {
                 StyleNewspaperPanel(root);
                 return;
             }
 
-            if (prefabPath.EndsWith("LetterReaderPanel.prefab", StringComparison.OrdinalIgnoreCase))
+            if (prefabPath.EndsWith("信件阅读面板.prefab", StringComparison.OrdinalIgnoreCase))
             {
                 StyleLetterReaderPanel(root);
             }

@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using TwelveMoons.UI;
 using UnityEditor;
 using UnityEngine;
@@ -10,7 +10,7 @@ namespace TwelveMoons.EditorTools.Runtime
         [MenuItem("Twelve Moons/Tests/Run Loading Panel Smoke Test")]
         public static void Run()
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/UI/LoadingPanel.prefab");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/UI/加载过场面板.prefab");
             if (prefab == null)
             {
                 throw new InvalidDataException("LoadingPanel prefab not found.");

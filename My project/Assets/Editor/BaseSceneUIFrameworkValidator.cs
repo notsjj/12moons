@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using TwelveMoons.UI;
@@ -15,16 +15,16 @@ namespace TwelveMoons.EditorTools
 
         private static readonly string[] RequiredPrefabPaths =
         {
-            "Assets/Resources/Prefabs/UI/DeskPanel.prefab",
-            "Assets/Resources/Prefabs/UI/SharedHudPanel.prefab",
-            "Assets/Resources/Prefabs/UI/StoryPanel.prefab",
-            "Assets/Resources/Prefabs/UI/CityHudPanel.prefab",
-            "Assets/Resources/Prefabs/UI/DocumentPopupPanel.prefab",
-            "Assets/Resources/Prefabs/UI/NewspaperPanel.prefab",
-            "Assets/Resources/Prefabs/UI/LetterReaderPanel.prefab",
-            "Assets/Resources/Prefabs/UI/TaskRow.prefab",
-            "Assets/Resources/Prefabs/UI/InventoryItemCard.prefab",
-            "Assets/Resources/Prefabs/UI/FactionSuspicionRow.prefab"
+            "Assets/Resources/Prefabs/UI/桌面面板.prefab",
+            "Assets/Resources/Prefabs/UI/共享HUD面板.prefab",
+            "Assets/Resources/Prefabs/UI/剧情面板.prefab",
+            "Assets/Resources/Prefabs/UI/城区HUD面板.prefab",
+            "Assets/Resources/Prefabs/UI/公文弹窗面板.prefab",
+            "Assets/Resources/Prefabs/UI/报纸面板.prefab",
+            "Assets/Resources/Prefabs/UI/信件阅读面板.prefab",
+            "Assets/Resources/Prefabs/UI/任务行.prefab",
+            "Assets/Resources/Prefabs/UI/物品卡片.prefab",
+            "Assets/Resources/Prefabs/UI/阵营质疑行.prefab"
         };
 
         private static readonly HashSet<string> AllowedMainCanvasChildren = new HashSet<string>
@@ -69,7 +69,7 @@ namespace TwelveMoons.EditorTools
                     throw new InvalidOperationException($"缺少 UIFramework Prefab：{path}");
                 }
 
-                if (!path.EndsWith("Row.prefab", StringComparison.Ordinal) && !path.EndsWith("Card.prefab", StringComparison.Ordinal))
+                if (!IsStandaloneItemPrefab(path))
                 {
                     var panelRoot = prefab.GetComponent<BaseSceneUIPanelRoot>();
                     if (panelRoot == null)
@@ -80,6 +80,13 @@ namespace TwelveMoons.EditorTools
 
                 ValidateTextHeights(prefab, path);
             }
+        }
+
+        private static bool IsStandaloneItemPrefab(string path)
+        {
+            return path.EndsWith("任务行.prefab", StringComparison.Ordinal) ||
+                   path.EndsWith("物品卡片.prefab", StringComparison.Ordinal) ||
+                   path.EndsWith("阵营质疑行.prefab", StringComparison.Ordinal);
         }
 
         private static void ValidateTextHeights(GameObject root, string ownerPath)

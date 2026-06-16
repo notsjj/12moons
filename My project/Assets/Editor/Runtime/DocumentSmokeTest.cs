@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using System.Reflection;
 using TwelveMoons.Core.Config;
@@ -23,6 +23,7 @@ namespace TwelveMoons.EditorTools.Runtime
             RunOptionAFlow();
             RunOptionBFlow();
             RunCurrentRoundDrawFlow();
+            RunCurrentRoundQueueExhaustionFlow();
             ValidateActorTransitionApi();
             ValidatePopupExitDragPrefab();
             Debug.Log("Document flow smoke test passed. Demo document queues, opens, resolves proposer, settles option A and B, removes the current queue entry, records delayed follow-up documents, activates them on their due round, and keeps drag-exit popup wiring.");
@@ -48,7 +49,7 @@ namespace TwelveMoons.EditorTools.Runtime
 
         private static void ValidatePopupExitDragPrefab()
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/UI/DocumentPopupPanel.prefab");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/UI/公文弹窗面板.prefab");
             if (prefab == null)
             {
                 throw new InvalidDataException("DocumentPopupPanel prefab not found.");
@@ -70,7 +71,7 @@ namespace TwelveMoons.EditorTools.Runtime
                 throw new InvalidDataException("DocumentPopupPanelView must support binding an existing main interface mask.");
             }
 
-            var deskPanelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/UI/DeskPanel.prefab");
+            var deskPanelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/UI/桌面面板.prefab");
             var mainMask = FindChild(deskPanelPrefab != null ? deskPanelPrefab.transform : null, "主界面遮罩");
             if (mainMask == null)
             {
@@ -92,6 +93,13 @@ namespace TwelveMoons.EditorTools.Runtime
                 throw new InvalidDataException("Document exit hint image must be inactive by default.");
             }
 
+            if (!popup.ExitHintStartsImmediatelyAfterAllDocuments)
+            {
+                throw new InvalidDataException("Document exit hint must not depend on the actor exit tween callback.");
+            }
+
+            AssertExitHintOnlyShowsAfterAllDocuments(popup);
+
             if (popup.RightSideOffscreenOffset <= 0f)
             {
                 throw new InvalidDataException("DocumentPopupPanel must slide in from a positive right-side offset.");
@@ -111,6 +119,32 @@ namespace TwelveMoons.EditorTools.Runtime
             }
 
             AssertMaskDoesNotFadeInAgainWhileAlreadyVisible(popup);
+        }
+
+        private static void AssertExitHintOnlyShowsAfterAllDocuments(DocumentPopupPanelView popup)
+        {
+            var showMethod = typeof(DocumentPopupPanelView).GetMethod(
+                "ShowExitHint",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var beginWaitMethod = typeof(DocumentPopupPanelView).GetMethod(
+                "BeginDragExitWait",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            if (showMethod == null || beginWaitMethod == null)
+            {
+                throw new InvalidDataException("Document exit hint flow methods are missing.");
+            }
+
+            showMethod.Invoke(popup, null);
+            if (popup.ExitHintImageObject.activeSelf)
+            {
+                throw new InvalidDataException("Document exit hint must remain hidden before all documents finish.");
+            }
+
+            beginWaitMethod.Invoke(popup, null);
+            if (!popup.ExitHintImageObject.activeSelf)
+            {
+                throw new InvalidDataException("Document exit hint must show after all documents finish.");
+            }
         }
 
         private static void AssertMaskDoesNotFadeInAgainWhileAlreadyVisible(DocumentPopupPanelView popup)
@@ -309,6 +343,31 @@ namespace TwelveMoons.EditorTools.Runtime
                 if (data.FollowUpDocuments.Any(candidate => candidate.DocumentId == "document_relief_followup"))
                 {
                     throw new InvalidDataException("Delayed follow-up document remained in follow-up state after activation.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(context.Root);
+            }
+        }
+
+        private static void RunCurrentRoundQueueExhaustionFlow()
+        {
+            var context = CreateContext("DocumentSmokeTest_QueueExhaustion");
+            try
+            {
+                PrepareFlow(context);
+
+                var data = context.RuntimeDataService.Data;
+                foreach (var entry in data.DocumentQueue.ToArray())
+                {
+                    data.RemoveDocumentQueueEntry(entry);
+                }
+
+                if (context.DocumentService.TryGetNextPendingDocument(out _, out _))
+                {
+                    throw new InvalidDataException(
+                        "Querying the next document refilled additional documents after the current-round queue was exhausted.");
                 }
             }
             finally

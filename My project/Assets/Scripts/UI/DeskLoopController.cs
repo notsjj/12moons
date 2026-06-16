@@ -254,7 +254,7 @@ namespace TwelveMoons.UI
             var loadingPanel = uiBootstrap?.ShowLoadingPanel();
             if (loadingPanel == null)
             {
-                EnterCityImmediately();
+                StartCoroutine(PlayEnterCityCameraOnlyTransition());
                 return;
             }
 
@@ -320,6 +320,32 @@ namespace TwelveMoons.UI
                         isFinished = true;
                     }
                 });
+
+            while (!isFinished)
+            {
+                yield return null;
+            }
+
+            isEnteringCityWithTransition = false;
+            RefreshButtons();
+        }
+
+        private IEnumerator PlayEnterCityCameraOnlyTransition()
+        {
+            isEnteringCityWithTransition = true;
+            SetStatus("正在进入城区过场。");
+            RefreshButtons();
+
+            EnterCityImmediately();
+            var isFinished = false;
+            if (cityCameraController != null)
+            {
+                cityCameraController.PlayEntryCinematic(() => isFinished = true);
+            }
+            else
+            {
+                isFinished = true;
+            }
 
             while (!isFinished)
             {

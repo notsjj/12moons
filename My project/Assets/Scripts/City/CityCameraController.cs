@@ -90,6 +90,10 @@ namespace TwelveMoons.City
         [SerializeField] private float entryFocusDistance = 6f;
         [Tooltip("入场镜头绕焦点旋转的总角度；360 表示完整旋转一圈。")]
         [SerializeField] private float entryOrbitDegrees = 360f;
+        [Tooltip("入场镜头旋转结束后要切换到的观察点 ID；默认 city_upper，对应 UpperCityViewPoint。")]
+        [SerializeField] private string entryCinematicEndViewId = "city_upper";
+        [Tooltip("入场镜头结束后要落到的观察点；留空时会按上方 ID 从观察点列表自动查找。")]
+        [SerializeField] private Transform entryCinematicEndViewPoint;
         [Tooltip("当前是否正在播放城区入场镜头。")]
         [SerializeField] private bool inspectorIsPlayingEntryCinematic;
 
@@ -106,18 +110,23 @@ namespace TwelveMoons.City
 
         public bool EntryUsesZoom => false;
 
+        public bool DefaultViewUsesExactTransform => true;
+
         public float EntryOrbitDuration => entryOrbitDuration;
 
         public float EntryOrbitDegrees => entryOrbitDegrees;
 
+        public string EntryCinematicEndViewId => entryCinematicEndViewId;
+
         private void Awake()
         {
             ResolveCamera();
+            JumpToDefaultView();
         }
 
         private void OnEnable()
         {
-            if (string.IsNullOrEmpty(inspectorCurrentViewId) && defaultViewPoint != null)
+            if (defaultViewPoint != null)
             {
                 JumpToDefaultView();
             }
@@ -215,6 +224,7 @@ namespace TwelveMoons.City
             }
 
             StopButtonMove();
+            JumpToDefaultView();
             if (entryCinematicRoutine != null)
             {
                 StopCoroutine(entryCinematicRoutine);
@@ -334,8 +344,13 @@ namespace TwelveMoons.City
             }
 
             StopButtonMove();
-            ApplyCameraTarget(target);
+            ApplyCameraTargetExact(target);
             SetInspectorSnapshot(viewId, viewName, target, false);
+        }
+
+        private void ApplyCameraTargetExact(Transform target)
+        {
+            cityCamera.transform.SetPositionAndRotation(target.position, target.rotation);
         }
 
         private IEnumerator MoveRoutine(string viewId, string viewName, Transform target)
@@ -419,21 +434,47 @@ namespace TwelveMoons.City
                 var eased = movementCurve != null ? movementCurve.Evaluate(normalizedTime) : normalizedTime;
                 var angle = Mathf.LerpUnclamped(0f, entryOrbitDegrees, eased);
                 var rotatedOffset = Quaternion.AngleAxis(angle, Vector3.up) * orbitStartOffset;
-                cameraTransform.position = ClampPosition(focusPoint + rotatedOffset);
+                cameraTransform.position = focusPoint + rotatedOffset;
                 cameraTransform.rotation = Quaternion.LookRotation((focusPoint - cameraTransform.position).normalized, Vector3.up);
-                ClampCameraRotationPitch();
                 inspectorTargetSummary = BuildCameraSummary();
                 yield return null;
             }
 
-            cameraTransform.position = ClampPosition(startPosition);
-            cameraTransform.rotation = startRotation;
-            ClampCameraRotationPitch();
-            inspectorTargetSummary = BuildCameraSummary();
+            var endTarget = ResolveEntryCinematicEndTarget(out var endViewId, out var endViewName);
+            if (endTarget != null)
+            {
+                ApplyCameraTargetExact(endTarget);
+                SetInspectorSnapshot(endViewId, endViewName, endTarget, false);
+            }
+            else
+            {
+                cameraTransform.position = startPosition;
+                cameraTransform.rotation = startRotation;
+                inspectorTargetSummary = BuildCameraSummary();
+            }
+
             inspectorIsPlayingEntryCinematic = false;
             inspectorIsMoving = false;
             entryCinematicRoutine = null;
             onCompleted?.Invoke();
+        }
+
+        private Transform ResolveEntryCinematicEndTarget(out string viewId, out string viewName)
+        {
+            viewId = string.IsNullOrEmpty(entryCinematicEndViewId) ? "city_upper" : entryCinematicEndViewId;
+            viewName = "上城区";
+            foreach (var point in viewPoints)
+            {
+                if (point == null || point.ViewId != viewId)
+                {
+                    continue;
+                }
+
+                viewName = string.IsNullOrEmpty(point.DisplayName) ? viewName : point.DisplayName;
+                return point.Target != null ? point.Target : entryCinematicEndViewPoint;
+            }
+
+            return entryCinematicEndViewPoint;
         }
 
         private void ClampCameraTransform()

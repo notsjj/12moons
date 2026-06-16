@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using TwelveMoons.Core;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
@@ -16,7 +16,7 @@ namespace TwelveMoons.EditorTools
 {
     public static class TaskUiBuilder
     {
-        private const string TaskRowPrefabPath = "Assets/Prefabs/UI/TaskRow.prefab";
+        private const string TaskRowPrefabPath = "Assets/Prefabs/UI/任务行.prefab";
 
         [MenuItem("Twelve Moons/Setup/Update Task Panel Only")]
         public static void UpdateTaskPanelOnly()
@@ -115,7 +115,7 @@ namespace TwelveMoons.EditorTools
             const float collapsedHeight = 44f;
             const float expandedHeight = 150f;
 
-            var rowObject = new GameObject("TaskRow", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            var rowObject = new GameObject("任务行", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             try
             {
                 var rowRect = rowObject.GetComponent<RectTransform>();

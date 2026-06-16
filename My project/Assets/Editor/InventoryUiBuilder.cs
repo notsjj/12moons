@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using TMPro;
 using TwelveMoons.Core;
 using TwelveMoons.Core.Config;
@@ -17,7 +17,7 @@ namespace TwelveMoons.EditorTools
 {
     public static class InventoryUiBuilder
     {
-        private const string InventoryCardPrefabPath = "Assets/Prefabs/UI/InventoryItemCard.prefab";
+        private const string InventoryCardPrefabPath = "Assets/Prefabs/UI/物品卡片.prefab";
 
         [MenuItem("Twelve Moons/Setup/Create Inventory UI")]
         public static void CreateInventoryUi()

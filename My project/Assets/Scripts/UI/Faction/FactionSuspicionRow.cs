@@ -28,14 +28,14 @@ namespace TwelveMoons.UI
         {
             get
             {
-                if (rowBackgroundImage != null)
-                {
-                    return rowBackgroundImage.rectTransform;
-                }
-
                 if (sliderBackgroundImage != null)
                 {
                     return sliderBackgroundImage.rectTransform;
+                }
+
+                if (rowBackgroundImage != null)
+                {
+                    return rowBackgroundImage.rectTransform;
                 }
 
                 return RectTransform;

@@ -10,14 +10,14 @@ namespace TwelveMoons.EditorTools
     public static class InventoryPrefabBuilder
     {
         private const string PrefabDirectory = "Assets/Prefabs/UI";
-        private const string PrefabPath = PrefabDirectory + "/InventoryItemCard.prefab";
+        private const string PrefabPath = PrefabDirectory + "/物品卡片.prefab";
 
         [MenuItem("Twelve Moons/Setup/Create Inventory Item Card Prefab")]
         public static void CreateInventoryItemCardPrefab()
         {
             Directory.CreateDirectory(PrefabDirectory);
 
-            var cardObject = new GameObject("InventoryItemCard", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            var cardObject = new GameObject("物品卡片", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
             try
             {
                 var cardRect = cardObject.GetComponent<RectTransform>();
