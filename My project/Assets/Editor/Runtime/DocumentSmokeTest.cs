@@ -22,6 +22,7 @@ namespace TwelveMoons.EditorTools.Runtime
         {
             RunOptionAFlow();
             RunOptionBFlow();
+            RunPointerTargetUsesMostAffectedFactionFlow();
             RunCurrentRoundDrawFlow();
             RunCurrentRoundQueueExhaustionFlow();
             ValidateActorTransitionApi();
@@ -233,8 +234,8 @@ namespace TwelveMoons.EditorTools.Runtime
                     !building.IsUnlocked ||
                     nextDocument == null ||
                     nextDocument.ActivateRound != data.CurrentRound + 1 ||
-                    context.FactionService.GetSuspicion("civilian") != 48 ||
-                    context.FactionService.GetSuspicion("noble") != 51 ||
+                    context.FactionService.GetSuspicion("civilian") != 49 ||
+                    context.FactionService.GetSuspicion("noble") != 52 ||
                     string.IsNullOrEmpty(result.Message) ||
                     string.IsNullOrEmpty(result.FactionFeedbackText))
                 {
@@ -281,12 +282,46 @@ namespace TwelveMoons.EditorTools.Runtime
                     task.Score != -1 ||
                     data.Buildings.Any(candidate => candidate.BuildingId == "building_relief_depot" && candidate.IsUnlocked) ||
                     data.DocumentQueue.Any(candidate => candidate.DocumentId == DemoDocumentId) ||
-                    context.FactionService.GetSuspicion("civilian") != 53 ||
-                    context.FactionService.GetSuspicion("academy") != 51 ||
+                    context.FactionService.GetSuspicion("civilian") != 51 ||
+                    context.FactionService.GetSuspicion("academy") != 52 ||
                     result.Message == definition.OptionA.ResultText ||
                     result.FactionFeedbackText == definition.OptionA.FactionFeedbackText)
                 {
                     throw new InvalidDataException("Document option B flow failed after settlement.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(context.Root);
+            }
+        }
+
+        private static void RunPointerTargetUsesMostAffectedFactionFlow()
+        {
+            var context = CreateContext("DocumentSmokeTest_PointerTargetFaction");
+            try
+            {
+                PrepareFlow(context);
+                foreach (var entry in context.RuntimeDataService.Data.DocumentQueue.ToArray())
+                {
+                    context.RuntimeDataService.Data.RemoveDocumentQueueEntry(entry);
+                }
+
+                var queued = context.DocumentService.QueueDocument("document_flood_levee");
+                var result = context.DocumentService.ResolveDocument(queued, DocumentOptionType.A);
+                if (!result.Success)
+                {
+                    throw new InvalidDataException($"Document pointer target option failed: {result.Message}");
+                }
+
+                if (result.FeedbackFactionId != "civilian")
+                {
+                    throw new InvalidDataException($"Document feedback faction should remain civilian, got {result.FeedbackFactionId}.");
+                }
+
+                if (result.MostAffectedFactionId != "academy")
+                {
+                    throw new InvalidDataException($"Document pointer target should use most affected faction academy, got {result.MostAffectedFactionId}.");
                 }
             }
             finally

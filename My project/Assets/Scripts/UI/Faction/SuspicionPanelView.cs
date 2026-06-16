@@ -88,16 +88,24 @@ namespace TwelveMoons.UI
             shouldLockDeskPanelRect = GetComponentInParent<DeskPanelView>(true) != null &&
                 GetComponentInParent<City.CityOverlayPanelView>(true) == null;
             remainingDeskPanelLockFrames = shouldLockDeskPanelRect ? 12 : 0;
+            contentLayoutGroup = contentRoot != null ? contentRoot.GetComponent<LayoutGroup>() : null;
+            ForceResolveContentLayout();
             panelSnapshot = RectTransformSnapshot.Capture(panelRectTransform);
             contentSnapshot = RectTransformSnapshot.Capture(contentRoot);
             rowSnapshots = CaptureRowSnapshots();
-            contentLayoutGroup = contentRoot != null ? contentRoot.GetComponent<LayoutGroup>() : null;
-            if (shouldLockDeskPanelRect && contentLayoutGroup != null)
-            {
-                contentLayoutGroup.enabled = false;
-            }
 
             ApplyDeskPanelRectIfNeeded();
+        }
+
+        private void ForceResolveContentLayout()
+        {
+            if (contentRoot == null)
+            {
+                return;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRoot);
         }
 
         private void OnEnable()
@@ -313,6 +321,11 @@ namespace TwelveMoons.UI
 
             panelSnapshot.Apply(panelRectTransform);
             contentSnapshot.Apply(contentRoot);
+
+            if (contentLayoutGroup != null && contentLayoutGroup.enabled)
+            {
+                return;
+            }
 
             if (factionRows == null)
             {

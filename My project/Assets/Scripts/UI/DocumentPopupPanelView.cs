@@ -510,7 +510,7 @@ namespace TwelveMoons.UI
                 }
 
                 PlayFeedbackTypewriter(result.ProposerFeedbackText);
-                suspicionPanel?.ShowDocumentChoiceImpact(result.FeedbackFactionId, result.FactionFeedbackText);
+                suspicionPanel?.ShowDocumentChoiceImpact(result.MostAffectedFactionId, result.FactionFeedbackText);
                 ShowStamp(optionType);
                 SetButtonsInteractable(false);
                 SetOptionsVisible(false);

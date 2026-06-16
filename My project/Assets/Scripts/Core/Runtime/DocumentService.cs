@@ -177,6 +177,7 @@ namespace TwelveMoons.Core.Runtime
             }
 
             var feedbackFactionId = GetFeedbackFactionId(option);
+            var mostAffectedFactionId = GetMostAffectedFactionId(option);
             ApplyResourceChange(InventoryItemType.Money, option.MoneyChange, requiredItemAlreadySubmitted && option.MoneyChange < 0);
             ApplyResourceChange(InventoryItemType.Material, option.MaterialChange, requiredItemAlreadySubmitted && option.MaterialChange < 0);
             ApplyResourceChange(InventoryItemType.Food, option.FoodChange, requiredItemAlreadySubmitted && option.FoodChange < 0);
@@ -190,7 +191,13 @@ namespace TwelveMoons.Core.Runtime
             runtimeDataService.Data.RemoveDocumentQueueEntry(entry);
             DocumentsChanged?.Invoke();
 
-            return new DocumentResolutionResult(true, option.ResultText, option.ProposerFeedbackText, option.FactionFeedbackText, feedbackFactionId);
+            return new DocumentResolutionResult(
+                true,
+                option.ResultText,
+                option.ProposerFeedbackText,
+                option.FactionFeedbackText,
+                feedbackFactionId,
+                mostAffectedFactionId);
         }
 
         public RuntimeDocumentQueueEntry QueueDocument(string documentId, string taskId = "", string taskStageId = "", string beforeDocumentCharacterId = "", int delayRound = 0)

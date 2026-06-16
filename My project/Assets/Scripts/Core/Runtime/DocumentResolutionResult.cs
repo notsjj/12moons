@@ -13,13 +13,24 @@ namespace TwelveMoons.Core.Runtime
             string proposerFeedbackText,
             string factionFeedbackText,
             string feedbackFactionId)
+            : this(success, message, proposerFeedbackText, factionFeedbackText, feedbackFactionId, feedbackFactionId)
+        {
+        }
+
+        public DocumentResolutionResult(
+            bool success,
+            string message,
+            string proposerFeedbackText,
+            string factionFeedbackText,
+            string feedbackFactionId,
+            string mostAffectedFactionId)
         {
             Success = success;
             Message = message;
             ProposerFeedbackText = proposerFeedbackText;
             FactionFeedbackText = factionFeedbackText;
             FeedbackFactionId = feedbackFactionId;
-            MostAffectedFactionId = feedbackFactionId;
+            MostAffectedFactionId = mostAffectedFactionId;
         }
 
         public bool Success { get; }

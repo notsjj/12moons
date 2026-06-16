@@ -70,6 +70,8 @@ namespace TwelveMoons.EditorTools.Runtime
                     }
                 }
 
+                AssertAwakeKeepsDeskRowTargetsSeparated(panel, rows);
+                AssertContentLayoutGroupStaysEnabled(panel);
                 AssertPointerUsesRightPivot(panel);
                 AssertPointerTargetUsesRowVisualCenter(panel);
 
@@ -78,6 +80,25 @@ namespace TwelveMoons.EditorTools.Runtime
             finally
             {
                 Object.DestroyImmediate(instance);
+            }
+        }
+
+        private static void AssertContentLayoutGroupStaysEnabled(SuspicionPanelView panel)
+        {
+            var contentRootField = typeof(SuspicionPanelView).GetField(
+                "contentRoot",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var contentRoot = contentRootField?.GetValue(panel) as RectTransform;
+            var layoutGroup = contentRoot != null ? contentRoot.GetComponent<UnityEngine.UI.VerticalLayoutGroup>() : null;
+            if (layoutGroup == null)
+            {
+                throw new InvalidDataException("Suspicion content must keep a VerticalLayoutGroup.");
+            }
+
+            if (!layoutGroup.enabled)
+            {
+                throw new InvalidDataException(
+                    "Suspicion content VerticalLayoutGroup must stay enabled so suspicion rows keep separate coordinates.");
             }
         }
 
@@ -125,6 +146,41 @@ namespace TwelveMoons.EditorTools.Runtime
             finally
             {
                 Object.DestroyImmediate(root);
+            }
+        }
+
+        private static void AssertAwakeKeepsDeskRowTargetsSeparated(SuspicionPanelView panel, FactionSuspicionRow[] rows)
+        {
+            var awakeMethod = typeof(SuspicionPanelView).GetMethod(
+                "Awake",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            if (awakeMethod == null)
+            {
+                throw new InvalidDataException("SuspicionPanelView Awake method not found.");
+            }
+
+            awakeMethod.Invoke(panel, null);
+
+            var targetMethod = typeof(SuspicionPanelView).GetMethod(
+                "GetPointerTargetPosition",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            if (targetMethod == null)
+            {
+                throw new InvalidDataException("Suspicion pointer target method not found.");
+            }
+
+            var previousY = float.PositiveInfinity;
+            for (var index = 0; index < rows.Length; index++)
+            {
+                var row = rows[index];
+                var targetPosition = (Vector2)targetMethod.Invoke(panel, new object[] { row.PointerTargetRectTransform });
+                if (index > 0 && targetPosition.y >= previousY - 1f)
+                {
+                    throw new InvalidDataException(
+                        $"Suspicion row targets must remain vertically separated after Awake. Row {row.FactionId} y={targetPosition.y}, previous y={previousY}.");
+                }
+
+                previousY = targetPosition.y;
             }
         }
 
