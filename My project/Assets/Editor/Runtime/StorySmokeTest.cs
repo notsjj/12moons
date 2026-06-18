@@ -3,8 +3,10 @@ using System.Linq;
 using System.Reflection;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
+using TwelveMoons.UI;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace TwelveMoons.EditorTools.Runtime
 {
@@ -125,8 +127,51 @@ namespace TwelveMoons.EditorTools.Runtime
             }
 
             ValidateSubmissionPlayback();
+            ValidatePortraitBrightnessSpeakerState();
 
             Debug.Log("Story smoke test passed. StoryConfig parses Dialogue/Image/Text with multi-image and multi-paragraph fields, DialogueConfig parses choices and item submission, runtime story progress restores submission waits, and story queue removes played entries.");
+        }
+
+        private static void ValidatePortraitBrightnessSpeakerState()
+        {
+            var testRoot = new GameObject("StoryPortraitBrightnessSmokeTest");
+            try
+            {
+                var panel = testRoot.AddComponent<StoryPanelView>();
+                var leftPortrait = CreatePortrait(testRoot.transform, "LeftPortrait");
+                var rightPortrait = CreatePortrait(testRoot.transform, "RightPortrait");
+
+                InvokePrivate(
+                    panel,
+                    "SetPortrait",
+                    new object[] { leftPortrait, "left_character", "right_character" });
+                InvokePrivate(
+                    panel,
+                    "SetPortrait",
+                    new object[] { rightPortrait, "right_character", "right_character" });
+
+                if (leftPortrait.transform.localScale != Vector3.one || rightPortrait.transform.localScale != Vector3.one)
+                {
+                    throw new InvalidDataException("StoryPanel speaker state must not enlarge portraits; both portrait scales should stay at Vector3.one.");
+                }
+
+                if (rightPortrait.color != panel.ActiveSpeakerPortraitColor ||
+                    leftPortrait.color != panel.InactiveSpeakerPortraitColor)
+                {
+                    throw new InvalidDataException("StoryPanel speaker state must use brightness colors: active speaker bright, inactive speaker dim.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(testRoot);
+            }
+        }
+
+        private static Image CreatePortrait(Transform parent, string objectName)
+        {
+            var portraitObject = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+            portraitObject.transform.SetParent(parent, false);
+            return portraitObject.GetComponent<Image>();
         }
 
         private static void ValidateSubmissionPlayback()
@@ -226,6 +271,12 @@ namespace TwelveMoons.EditorTools.Runtime
         {
             var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
             method?.Invoke(target, null);
+        }
+
+        private static void InvokePrivate(object target, string methodName, object[] parameters)
+        {
+            var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+            method?.Invoke(target, parameters);
         }
     }
 }

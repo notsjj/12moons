@@ -55,15 +55,37 @@ namespace TwelveMoons.UI
         [SerializeField] private TMP_Text flowStatusText;
         [SerializeField] private Image optionAStampImage;
         [SerializeField] private Image optionBStampImage;
+        [Tooltip("势力 logo 图片；为空时运行时会自动查找名为“势力logo”的子物体 Image。")]
+        [SerializeField] private Image factionLogoImage;
+        [Tooltip("势力 logo 的 Resources 根路径；会拼接配表中文键，例如 Art/Art/UI/势力logo/贵族。")]
+        [SerializeField] private string factionLogoResourceRoot = "Art/Art/UI/势力logo";
+
+        [Header("势力 Logo 尺寸")]
+        [Tooltip("势力 logo 在公文弹窗中的固定显示尺寸；加载不同素材后都会统一设置为这个宽高。")]
+        [SerializeField] private Vector2 factionLogoSize = new Vector2(150f, 150f);
 
         [Header("\u516c\u6587\u6309\u94ae\uff1a\u4e24\u4e2a\u9009\u9879\u4e0e\u5904\u7406\u5b8c\u540e\u5f00\u653e\u7684\u57ce\u533a\u6309\u94ae")]
         [SerializeField] private Button optionAButton;
         [SerializeField] private Button optionBButton;
         [SerializeField] private Button cityExploreButton;
 
+        [Header("公文按钮状态颜色：可点击浅色，不可点击深色")]
+        [Tooltip("选项按钮可以点击时的颜色；用于修正 Button ColorBlock 或预制体颜色反向的问题。")]
+        [SerializeField] private Color optionButtonInteractableColor = Color.white;
+        [Tooltip("选项按钮不能点击时的颜色；需要比可点击颜色更暗，提示玩家当前选项尚未满足条件。")]
+        [SerializeField] private Color optionButtonDisabledColor = new Color(0.32f, 0.32f, 0.32f, 1f);
+
         [Header("\u63d0\u4ea4\u680f\uff1a\u9700\u8981\u9053\u5177\u65f6\u63a5\u6536\u80cc\u5305\u5361\u724c")]
         [SerializeField] private GameObject submitPanel;
         [SerializeField] private DocumentSubmitSlot submitSlot;
+
+        [Header("物品面板：公文需要提交物品时从桌面下方弹出")]
+        [Tooltip("可选的场景内物品面板实例；为空时会在需要提交物品的公文打开时，从物品面板预制体创建。")]
+        [SerializeField] private InventoryPanelView inventoryPanel;
+        [Tooltip("物品面板预制体；进入需要提交物品的公文时才实例化，并放到公文弹窗同级最上层。")]
+        [SerializeField] private InventoryPanelView inventoryPanelPrefab;
+        [Tooltip("物品面板预制体的 Resources 路径；当 Inspector 未拖预制体时用它加载 Assets/Resources 下的 prefab。")]
+        [SerializeField] private string inventoryPanelResourcePath = "Prefabs/UI/物品面板";
 
         [Header("\u516c\u6587\u9000\u51fa\u63d0\u793a\uff1a\u5168\u90e8\u5904\u7406\u540e\u663e\u793a")]
         [Tooltip("\u5168\u90e8\u516c\u6587\u5904\u7406\u5b8c\u6bd5\u540e\u624d\u663e\u793a\u7684\u63d0\u793a\u56fe\u7247\uff1b\u521d\u59cb\u5fc5\u987b\u5173\u95ed\uff0c\u7528\u4e8e\u63d0\u793a\u73a9\u5bb6\u5411\u53f3\u62d6\u51fa\u516c\u6587\u754c\u9762\u3002")]
@@ -77,7 +99,7 @@ namespace TwelveMoons.UI
         [Tooltip("公文打开时覆盖主界面的黑色遮罩图片；默认关闭，打开公文时从透明淡入。")]
         [SerializeField] private Image mainInterfaceMaskImage;
         [Tooltip("公文打开后主界面遮罩的目标透明度。")]
-        [SerializeField] private float mainInterfaceMaskTargetAlpha = 0.8f;
+        [SerializeField] private float mainInterfaceMaskTargetAlpha = 0.7f;
         [Tooltip("主界面遮罩淡入和淡出的时长。")]
         [SerializeField] private float mainInterfaceMaskFadeDuration = 0.25f;
 
@@ -119,6 +141,7 @@ namespace TwelveMoons.UI
         private Tween dragReturnTween;
         private Tween bodyTypewriterTween;
         private Tween mainInterfaceMaskTween;
+        private CanvasGroup rootCanvasGroup;
         private Vector2 dragStartPointerPosition;
         private Vector2 leftScrollDragStartPosition;
         private Vector2 rightScrollDragStartPosition;
@@ -129,7 +152,7 @@ namespace TwelveMoons.UI
         private bool startBodyTypewriterWhenOpened;
 
         public bool IsDocumentFlowActive =>
-            gameObject.activeInHierarchy && (currentDocument != null || currentEntry != null || waitingForContinue || waitingForDragExit || isActorTransitioningSnapshot);
+            gameObject.activeInHierarchy && (currentDocument != null || currentEntry != null || isFeedbackTypewriterPlaying || waitingForContinue || waitingForDragExit || isActorTransitioningSnapshot);
 
         public bool IsActorTransitioning => isActorTransitioningSnapshot;
 
@@ -142,6 +165,8 @@ namespace TwelveMoons.UI
         public float RightSideOffscreenOffset => rightSideOffscreenOffset;
 
         public GameObject MainInterfaceMaskObject => mainInterfaceMaskImage != null ? mainInterfaceMaskImage.gameObject : null;
+
+        public GameObject InventoryPanelObject => inventoryPanel != null ? inventoryPanel.gameObject : null;
 
         public bool AllowsMainInterfaceMaskAutoBinding => true;
 
@@ -162,7 +187,10 @@ namespace TwelveMoons.UI
         private void Awake()
         {
             ResolveDependencies();
+            rootCanvasGroup = GetComponent<CanvasGroup>();
             AutoBindAnimationReferences();
+            AutoBindExitHintImage();
+            AutoBindFactionLogoImage();
             AutoBindMainInterfaceMask();
             ConfigureClickCatcher();
             CacheOpenLayout();
@@ -280,6 +308,7 @@ namespace TwelveMoons.UI
             HideSubmitPanel();
 
             gameObject.SetActive(true);
+            SetRootCanvasVisible(true);
             CloseInstant();
             startBodyTypewriterWhenOpened = true;
             ScheduleOpenScroll();
@@ -345,6 +374,7 @@ namespace TwelveMoons.UI
 
             KillDragReturnTween();
             KillScrollTweens();
+            HideExitHint();
             isDraggingExit = true;
             isDraggingExitSnapshot = true;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
@@ -441,6 +471,7 @@ namespace TwelveMoons.UI
             SetText(proposerFeedbackText, string.Empty);
             SetText(flowStatusText, "\u8bf7\u9009\u62e9\u5904\u7406\u65b9\u5f0f\u3002");
             ApplyDocumentBackground(document);
+            ApplyFactionLogo(document);
             ClearStamps();
             ConfigureSubmitPanel(document);
             RefreshOptionLocks();
@@ -451,6 +482,7 @@ namespace TwelveMoons.UI
                 ShowProposer(document);
             }
             gameObject.SetActive(true);
+            SetRootCanvasVisible(true);
             if (playOpenAnimation)
             {
                 CloseInstant();
@@ -654,20 +686,31 @@ namespace TwelveMoons.UI
             scrollSequence = DOTween.Sequence();
             if (leftScrollEnd != null)
             {
-                scrollSequence.Join(leftScrollEnd.DOAnchorPos(leftScrollClosedPosition, scrollTweenDuration).SetEase(Ease.InCubic));
+                scrollSequence.Join(leftScrollEnd.DOAnchorPos(
+                    BuildNonReversingCloseTarget(leftScrollEnd.anchoredPosition, leftScrollClosedPosition),
+                    scrollTweenDuration).SetEase(Ease.InCubic));
             }
 
             if (rightScrollEnd != null)
             {
-                scrollSequence.Join(rightScrollEnd.DOAnchorPos(rightScrollClosedPosition, scrollTweenDuration).SetEase(Ease.InCubic));
+                scrollSequence.Join(rightScrollEnd.DOAnchorPos(
+                    BuildNonReversingCloseTarget(rightScrollEnd.anchoredPosition, rightScrollClosedPosition),
+                    scrollTweenDuration).SetEase(Ease.InCubic));
             }
 
             if (contentRoot != null)
             {
-                scrollSequence.Join(contentRoot.DOAnchorPos(contentClosedPosition, scrollTweenDuration).SetEase(Ease.InCubic));
+                scrollSequence.Join(contentRoot.DOAnchorPos(
+                    BuildNonReversingCloseTarget(contentRoot.anchoredPosition, contentClosedPosition),
+                    scrollTweenDuration).SetEase(Ease.InCubic));
             }
 
             scrollSequence.OnComplete(EndDocumentFlow);
+        }
+
+        private static Vector2 BuildNonReversingCloseTarget(Vector2 currentPosition, Vector2 closedPosition)
+        {
+            return new Vector2(Mathf.Max(closedPosition.x, currentPosition.x), closedPosition.y);
         }
 
         private void PrepareBodyTypewriter(string body)
@@ -908,6 +951,7 @@ namespace TwelveMoons.UI
 
         private void EndDocumentFlow()
         {
+            HideClosedDocumentVisuals();
             currentEntry = null;
             currentDocument = null;
             waitingForContinue = false;
@@ -924,6 +968,34 @@ namespace TwelveMoons.UI
 
             gameObject.SetActive(false);
             NotifyDocumentFlowStateChanged();
+        }
+
+        private void HideClosedDocumentVisuals()
+        {
+            SetRootCanvasVisible(false);
+            if (contentGroup != null)
+            {
+                contentGroup.alpha = 0f;
+                contentGroup.blocksRaycasts = false;
+                contentGroup.interactable = false;
+            }
+        }
+
+        private void SetRootCanvasVisible(bool visible)
+        {
+            if (rootCanvasGroup == null)
+            {
+                rootCanvasGroup = GetComponent<CanvasGroup>();
+            }
+
+            if (rootCanvasGroup == null)
+            {
+                return;
+            }
+
+            rootCanvasGroup.alpha = visible ? 1f : 0f;
+            rootCanvasGroup.blocksRaycasts = visible;
+            rootCanvasGroup.interactable = visible;
         }
 
         private void NotifyDocumentFlowStateChanged()
@@ -1081,9 +1153,14 @@ namespace TwelveMoons.UI
                 submitPanel.SetActive(true);
             }
 
+            EnsureInventoryPanelInstance();
+            inventoryPanel?.ShowForDocumentSubmission();
             submitSlot?.Configure(
                 optionARequiresItem ? optionAItemId : optionBItemId,
-                optionARequiresItem ? optionACount : optionBCount);
+                optionARequiresItem ? optionACount : optionBCount,
+                optionARequiresItem && optionBRequiresItem ? optionBItemId : string.Empty,
+                optionARequiresItem && optionBRequiresItem ? optionBCount : 0);
+            submitSlot?.ConfigureAnimationAnchors(leftScrollEnd, contentRoot);
         }
 
         private void HideSubmitPanel()
@@ -1093,6 +1170,7 @@ namespace TwelveMoons.UI
                 submitPanel.SetActive(false);
             }
 
+            inventoryPanel?.HideForDocumentSubmission();
             submitSlot?.Clear();
         }
 
@@ -1149,6 +1227,91 @@ namespace TwelveMoons.UI
             }
         }
 
+        private void ApplyFactionLogo(DocumentDefinition document)
+        {
+            AutoBindFactionLogoImage();
+            if (factionLogoImage == null)
+            {
+                return;
+            }
+
+            var logoName = ResolveFactionLogoName(document);
+            if (string.IsNullOrEmpty(logoName))
+            {
+                factionLogoImage.enabled = false;
+                factionLogoImage.sprite = null;
+                return;
+            }
+
+            var sprite = Resources.Load<Sprite>($"{factionLogoResourceRoot}/{logoName}");
+            if (sprite == null)
+            {
+                Debug.LogWarning($"未找到势力 logo 素材：{factionLogoResourceRoot}/{logoName}", this);
+                factionLogoImage.enabled = false;
+                factionLogoImage.sprite = null;
+                return;
+            }
+
+            factionLogoImage.sprite = sprite;
+            factionLogoImage.preserveAspect = true;
+            ApplyFactionLogoFixedSize();
+            factionLogoImage.enabled = true;
+        }
+
+        private void ApplyFactionLogoFixedSize()
+        {
+            if (factionLogoImage == null)
+            {
+                return;
+            }
+
+            var rectTransform = factionLogoImage.rectTransform;
+            if (rectTransform != null)
+            {
+                rectTransform.sizeDelta = new Vector2(
+                    Mathf.Max(0f, factionLogoSize.x),
+                    Mathf.Max(0f, factionLogoSize.y));
+            }
+        }
+
+        private string ResolveFactionLogoName(DocumentDefinition document)
+        {
+            if (document == null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrEmpty(document.FactionLogoName))
+            {
+                return document.FactionLogoName;
+            }
+
+            if (documentService != null &&
+                documentService.TryGetCharacter(document.ProposerCharacterId, out var character))
+            {
+                return GetDefaultLogoNameForFaction(character.FactionId);
+            }
+
+            return string.Empty;
+        }
+
+        private static string GetDefaultLogoNameForFaction(string factionId)
+        {
+            switch (factionId)
+            {
+                case "noble":
+                    return "贵族";
+                case "academy":
+                    return "学院";
+                case "church":
+                    return "教会";
+                case "civilian":
+                    return "工会";
+                default:
+                    return string.Empty;
+            }
+        }
+
         private void ClearTransientFeedback()
         {
             SetText(proposerFeedbackText, string.Empty);
@@ -1177,6 +1340,42 @@ namespace TwelveMoons.UI
             {
                 suspicionPanel = FindFirstObjectByType<SuspicionPanelView>(FindObjectsInactive.Include);
             }
+
+        }
+
+        private void EnsureInventoryPanelInstance()
+        {
+            if (inventoryPanel != null)
+            {
+                PlaceInventoryPanelAboveDocument();
+                return;
+            }
+
+            if (inventoryPanelPrefab == null && !string.IsNullOrEmpty(inventoryPanelResourcePath))
+            {
+                inventoryPanelPrefab = Resources.Load<InventoryPanelView>(inventoryPanelResourcePath);
+            }
+
+            if (inventoryPanelPrefab == null)
+            {
+                Debug.LogWarning("未找到物品面板预制体，无法在公文提交物品时创建物品面板。", this);
+                return;
+            }
+
+            var parent = transform.parent != null ? transform.parent : transform;
+            inventoryPanel = Instantiate(inventoryPanelPrefab, parent, false);
+            inventoryPanel.name = inventoryPanelPrefab.gameObject.name;
+            PlaceInventoryPanelAboveDocument();
+        }
+
+        private void PlaceInventoryPanelAboveDocument()
+        {
+            if (inventoryPanel == null)
+            {
+                return;
+            }
+
+            inventoryPanel.transform.SetAsLastSibling();
         }
 
         private void AutoBindAnimationReferences()
@@ -1184,6 +1383,50 @@ namespace TwelveMoons.UI
             if (contentRoot != null && contentGroup == null)
             {
                 contentGroup = contentRoot.GetComponent<CanvasGroup>();
+            }
+
+            submitSlot?.ConfigureAnimationAnchors(leftScrollEnd, contentRoot);
+        }
+
+        private void AutoBindExitHintImage()
+        {
+            if (exitHintImage == null)
+            {
+                var hintTransform = transform.Find("提示图片");
+                if (hintTransform != null)
+                {
+                    exitHintImage = hintTransform.gameObject;
+                }
+            }
+
+            if (exitHintImage == null)
+            {
+                return;
+            }
+
+            var hintGraphic = exitHintImage.GetComponent<Graphic>();
+            if (hintGraphic != null)
+            {
+                hintGraphic.raycastTarget = false;
+            }
+        }
+
+        private void AutoBindFactionLogoImage()
+        {
+            if (factionLogoImage != null)
+            {
+                return;
+            }
+
+            var logoTransform = transform.Find("内容根节点/内容视口/势力logo");
+            if (logoTransform == null)
+            {
+                logoTransform = FindChildByName(transform, "势力logo");
+            }
+
+            if (logoTransform != null)
+            {
+                factionLogoImage = logoTransform.GetComponent<Image>();
             }
         }
 
@@ -1323,20 +1566,33 @@ namespace TwelveMoons.UI
         {
             if (optionAButton != null)
             {
-                optionAButton.interactable = interactable;
+                SetButtonInteractable(optionAButton, interactable);
             }
 
             if (optionBButton != null)
             {
-                optionBButton.interactable = interactable;
+                SetButtonInteractable(optionBButton, interactable);
             }
         }
 
-        private static void SetButtonInteractable(Button button, bool interactable)
+        private void SetButtonInteractable(Button button, bool interactable)
         {
-            if (button != null)
+            if (button == null)
             {
-                button.interactable = interactable;
+                return;
+            }
+
+            var colors = button.colors;
+            colors.normalColor = optionButtonInteractableColor;
+            colors.highlightedColor = optionButtonInteractableColor;
+            colors.selectedColor = optionButtonInteractableColor;
+            colors.disabledColor = optionButtonDisabledColor;
+            button.colors = colors;
+
+            button.interactable = interactable;
+            if (button.targetGraphic != null)
+            {
+                button.targetGraphic.color = interactable ? optionButtonInteractableColor : optionButtonDisabledColor;
             }
         }
 
@@ -1502,6 +1758,25 @@ namespace TwelveMoons.UI
             {
                 target.text = value ?? string.Empty;
             }
+        }
+
+        private static Transform FindChildByName(Transform root, string childName)
+        {
+            if (root == null || string.IsNullOrEmpty(childName))
+            {
+                return null;
+            }
+
+            var children = root.GetComponentsInChildren<Transform>(true);
+            foreach (var child in children)
+            {
+                if (child != null && child.name == childName)
+                {
+                    return child;
+                }
+            }
+
+            return null;
         }
     }
 }

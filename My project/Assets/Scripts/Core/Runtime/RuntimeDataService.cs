@@ -8,6 +8,17 @@ namespace TwelveMoons.Core.Runtime
 {
     public sealed class RuntimeDataService : MonoBehaviour
     {
+        [Serializable]
+        private sealed class InitialBackpackItem
+        {
+            [Header("初始背包物品：新开局时自动放入玩家背包")]
+            [Tooltip("物品 ID；必须存在于 ItemConfig.ItemId 中，用于新开局时创建可见卡牌。")]
+            public string itemId;
+
+            [Tooltip("初始数量；小于 0 会按 0 处理，数量大于 0 时物品栏会显示这张卡牌。")]
+            public int count;
+        }
+
         [Header("依赖引用：用于读取配置表")]
         [Tooltip("配置管理器；留空时会在场景中自动查找，用于读取灾难、道具和阵营初始配置。")]
         [SerializeField] private ConfigManager configManager;
@@ -17,6 +28,17 @@ namespace TwelveMoons.Core.Runtime
         [SerializeField] private bool createNewGameOnAwake;
         [Tooltip("创建新游戏时使用的灾难 ID，必须存在于 DisasterConfig。")]
         [SerializeField] private string initialDisasterId = "disaster_flood_01";
+
+        [Header("初始背包：新开局直接给玩家的五张卡片")]
+        [Tooltip("新开局时写入背包的初始物品。只写运行时数量，不创建正式 UI 或按钮；物品定义仍从 ItemConfig 读取。")]
+        [SerializeField] private InitialBackpackItem[] initialBackpackItems =
+        {
+            new InitialBackpackItem { itemId = "item_money", count = 10 },
+            new InitialBackpackItem { itemId = "item_material", count = 10 },
+            new InitialBackpackItem { itemId = "item_food", count = 5 },
+            new InitialBackpackItem { itemId = "item_drainage_map", count = 1 },
+            new InitialBackpackItem { itemId = "item_archivist_badge", count = 1 }
+        };
 
         [Header("运行时调试可视化：只读观察当前回合、公文、任务和剧情")]
         [Tooltip("勾选后每帧末尾刷新下方快照，便于在 Play 模式 Inspector 中观察当前回合数据。")]
@@ -81,6 +103,7 @@ namespace TwelveMoons.Core.Runtime
             var totalRound = GetDisasterTotalRound(disasterId);
             Data.Reset(disasterId, totalRound);
             InitializeConfiguredItems();
+            ApplyInitialBackpackItems();
             InitializeConfiguredFactions();
             InitializeConfiguredBuildings();
 
@@ -188,6 +211,24 @@ namespace TwelveMoons.Core.Runtime
                 {
                     Data.GetOrCreateItem(itemId);
                 }
+            }
+        }
+
+        private void ApplyInitialBackpackItems()
+        {
+            if (initialBackpackItems == null)
+            {
+                return;
+            }
+
+            foreach (var item in initialBackpackItems)
+            {
+                if (item == null || string.IsNullOrEmpty(item.itemId))
+                {
+                    continue;
+                }
+
+                Data.GetOrCreateItem(item.itemId).SetCount(Math.Max(0, item.count));
             }
         }
 

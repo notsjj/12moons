@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System;
 using TwelveMoons.UI;
 using UnityEditor;
 using UnityEngine;
@@ -61,6 +62,40 @@ namespace TwelveMoons.EditorTools.Runtime
                     throw new InvalidDataException($"LoadingPanel covered hold duration is {view.CoveredHoldDuration} instead of 1 second.");
                 }
 
+                var synchronizedTransitionOverload = typeof(LoadingPanelTransitionView).GetMethod(
+                    "PlayEnterCityTransition",
+                    new[] { typeof(Action), typeof(float), typeof(Action) });
+                if (synchronizedTransitionOverload == null)
+                {
+                    throw new InvalidDataException("LoadingPanel must expose an enter-city transition overload whose covered hold duration can be synchronized with the city camera move duration.");
+                }
+
+                var synchronizedFromStartOverload = typeof(LoadingPanelTransitionView).GetMethod(
+                    "PlayEnterCityTransitionSynchronized",
+                    new[] { typeof(Action), typeof(float), typeof(Action) });
+                if (synchronizedFromStartOverload == null)
+                {
+                    throw new InvalidDataException("LoadingPanel must expose a synchronized enter-city transition that starts the camera at panel open and finishes panel close at the same duration.");
+                }
+
+                var deskLoopSource = System.IO.File.ReadAllText("Assets/Scripts/UI/DeskLoopController.cs");
+                if (!deskLoopSource.Contains("PlayEnterCityTransitionSynchronized") ||
+                    deskLoopSource.Contains("GetEntryCameraCoveredHoldDuration"))
+                {
+                    throw new InvalidDataException("DeskLoopController must start the city camera when LoadingPanel opens and must not keep the old covered-hold wait for camera movement.");
+                }
+
+                if (!deskLoopSource.Contains("synchronizedEntryTransitionDuration"))
+                {
+                    throw new InvalidDataException("DeskLoopController must expose the synchronized city entry transition duration in Inspector.");
+                }
+
+                var cameraSource = System.IO.File.ReadAllText("Assets/Scripts/City/CityCameraController.cs");
+                if (!cameraSource.Contains("PlayEntryCinematic(float durationOverride"))
+                {
+                    throw new InvalidDataException("CityCameraController must allow DeskLoopController to drive entry camera duration from the synchronized transition setting.");
+                }
+
                 var bootstrapObject = new GameObject("LoadingPanelDebugHotkeySmokeTest");
                 try
                 {
@@ -72,14 +107,14 @@ namespace TwelveMoons.EditorTools.Runtime
                 }
                 finally
                 {
-                    Object.DestroyImmediate(bootstrapObject);
+                    UnityEngine.Object.DestroyImmediate(bootstrapObject);
                 }
 
                 Debug.Log("Loading panel smoke test passed. Transition layers resolve into hierarchy-ordered groups with reversed exit order.");
             }
             finally
             {
-                Object.DestroyImmediate(instance);
+                UnityEngine.Object.DestroyImmediate(instance);
             }
         }
     }

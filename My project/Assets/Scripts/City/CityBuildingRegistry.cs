@@ -20,6 +20,8 @@ namespace TwelveMoons.City
         [SerializeField] private List<CityBuildingView> buildingViews = new List<CityBuildingView>();
         [Tooltip("启用后刷新时自动收集场景中所有 CityBuildingView，适合正式场景由模型子物体逐个挂脚本。")]
         [SerializeField] private bool autoCollectSceneViews = true;
+        [Tooltip("启用后，如果场景中还没有 CityBuildingView，会在 CityRoot 下选择现有建筑 Renderer 自动补挂 CityBuildingView、Collider 和轮廓组件。")]
+        [SerializeField] private bool autoCreateViewsFromRenderers = true;
 
         [Header("运行时只读快照：建筑匹配状态")]
         [Tooltip("CityBuildingConfig 中成功读取到的建筑配置数量。")]
@@ -133,6 +135,69 @@ namespace TwelveMoons.City
                 .OrderBy(view => view.BuildingId)
                 .ThenBy(view => view.name)
                 .ToList();
+
+            if (buildingViews.Count == 0 && autoCreateViewsFromRenderers)
+            {
+                CreateMissingViewsFromRenderers();
+            }
+        }
+
+        private void CreateMissingViewsFromRenderers()
+        {
+            if (buildingService == null || buildingService.Definitions.Count == 0)
+            {
+                return;
+            }
+
+            var searchRoot = transform.parent != null ? transform.parent : transform;
+            var candidates = searchRoot
+                .GetComponentsInChildren<Renderer>(true)
+                .Where(IsBuildingRendererCandidate)
+                .OrderByDescending(GetRendererBoundsVolume)
+                .ToList();
+            if (candidates.Count == 0)
+            {
+                return;
+            }
+
+            var count = Mathf.Min(buildingService.Definitions.Count, candidates.Count);
+            for (var index = 0; index < count; index++)
+            {
+                var definition = buildingService.Definitions[index];
+                var renderer = candidates[index];
+                var view = renderer.GetComponentInParent<CityBuildingView>();
+                if (view == null)
+                {
+                    view = renderer.gameObject.AddComponent<CityBuildingView>();
+                }
+
+                view.ConfigureRuntimeBinding(definition.BuildingId, definition.PointId, false);
+                buildingViews.Add(view);
+            }
+        }
+
+        private static bool IsBuildingRendererCandidate(Renderer renderer)
+        {
+            if (renderer == null ||
+                renderer.GetComponent<TMPro.TMP_Text>() != null ||
+                renderer.GetComponentInParent<CityPointView>() != null ||
+                renderer.GetComponentInParent<CitySideEventView>() != null ||
+                renderer.GetComponentInParent<CityBuildingView>() != null)
+            {
+                return false;
+            }
+
+            var objectName = renderer.gameObject.name;
+            return !objectName.Contains("人物") &&
+                !objectName.Contains("立绘") &&
+                !objectName.Contains("Point") &&
+                !objectName.Contains("ViewPoint");
+        }
+
+        private static float GetRendererBoundsVolume(Renderer renderer)
+        {
+            var size = renderer != null ? renderer.bounds.size : Vector3.zero;
+            return Mathf.Max(0f, size.x) * Mathf.Max(0f, size.y) * Mathf.Max(0f, size.z);
         }
 
         private void BindViews()

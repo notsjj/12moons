@@ -8,6 +8,14 @@ namespace TwelveMoons.UI
 {
     public sealed class StoryPanelView : MonoBehaviour
     {
+        private const string PortraitOutlineMaterialResourcePath = "Materials/UI/PortraitAlphaOutlineRuntime";
+        private static readonly int OutlineColorId = Shader.PropertyToID("_OutlineColor");
+        private static readonly int GlowColorId = Shader.PropertyToID("_GlowColor");
+        private static readonly int OutlinePixelWidthId = Shader.PropertyToID("_OutlinePixelWidth");
+        private static readonly int GlowPixelWidthId = Shader.PropertyToID("_GlowPixelWidth");
+        private static readonly int GlowIntensityId = Shader.PropertyToID("_GlowIntensity");
+        private static readonly int GlowFalloffPowerId = Shader.PropertyToID("_GlowFalloffPower");
+
         [Header("依赖服务：读取并推进当前剧情播放状态")]
         [SerializeField] private StoryService storyService;
 
@@ -25,6 +33,34 @@ namespace TwelveMoons.UI
         [SerializeField] private Image leftPortrait;
         [SerializeField] private Image rightPortrait;
         [SerializeField] private Image speakerExpressionImage;
+        [Header("\u5bf9\u8bdd\u4eba\u7269\u660e\u5ea6\uff1a\u8bf4\u8bdd\u8005\u53d8\u4eae\uff0c\u975e\u8bf4\u8bdd\u8005\u53d8\u6697")]
+        [Tooltip("\u5f53\u524d\u8bf4\u8bdd\u4eba\u7269\u7684\u7acb\u7ed8\u989c\u8272\uff1b\u4fdd\u6301\u539f\u5c3a\u5bf8\uff0c\u4ec5\u7528\u660e\u5ea6\u8868\u793a\u8bf4\u8bdd\u72b6\u6001\u3002")]
+        [SerializeField] private Color activeSpeakerPortraitColor = Color.white;
+        [Tooltip("\u975e\u5f53\u524d\u8bf4\u8bdd\u4eba\u7269\u7684\u7acb\u7ed8\u989c\u8272\uff1b\u7528\u8f83\u6697\u660e\u5ea6\u8868\u793a\u6b64\u65f6\u6ca1\u6709\u8bf4\u8bdd\u3002")]
+        [SerializeField] private Color inactiveSpeakerPortraitColor = new Color(0.52f, 0.52f, 0.52f, 1f);
+        [Header("剧情人物白色描边晕圈：直接作用在角色 Image 上")]
+        [Tooltip("当前说话人物外侧细描边颜色；透明度越高，人物边缘越清晰。")]
+        [SerializeField] private Color activePortraitOutlineColor = new Color(1f, 1f, 1f, 0f);
+        [Tooltip("非说话人物外侧细描边颜色；保持较淡，避免抢过当前说话人物。")]
+        [SerializeField] private Color inactivePortraitOutlineColor = new Color(1f, 1f, 1f, 0f);
+        [Tooltip("当前说话人物外侧柔和晕圈颜色；用于制造参考图中人物背后的淡白光。")]
+        [SerializeField] private Color activePortraitGlowColor = new Color(1f, 1f, 1f, 0.46f);
+        [Tooltip("非说话人物外侧柔和晕圈颜色；透明度较低，只保留轻微区分。")]
+        [SerializeField] private Color inactivePortraitGlowColor = new Color(1f, 1f, 1f, 0.18f);
+        [Tooltip("白色细描边采样宽度，单位约等于 Sprite 像素；建议 1 到 3。")]
+        [SerializeField] private int portraitOutlinePixelWidth;
+        [Tooltip("白色柔和晕圈采样宽度，单位约等于 Sprite 像素；建议大于描边宽度。")]
+        [SerializeField] private int portraitGlowPixelWidth = 30;
+        [Tooltip("晕圈强度；数值越高，外侧淡白光越明显。")]
+        [Range(0f, 1f)]
+        [SerializeField] private float portraitGlowIntensity = 0.72f;
+        [Tooltip("光晕边缘衰减曲线；数值越高，外缘越柔和地淡出，越不容易形成硬白边。")]
+        [Range(1f, 4f)]
+        [SerializeField] private float portraitGlowFalloffPower = 2.4f;
+        [Tooltip("人物描边晕圈专用 Shader；留空时自动查找 TwelveMoons/UI/PortraitAlphaOutline，直接作用在角色 Image 上。")]
+        [SerializeField] private Shader portraitOutlineShader;
+        [Tooltip("人物描边晕圈材质模板；留空时从 Resources/Materials/UI/PortraitAlphaOutlineRuntime 加载，避免打包后 Shader 被裁剪。")]
+        [SerializeField] private Material portraitOutlineTemplateMaterial;
         [SerializeField] private TMP_Text speakerNameText;
         [SerializeField] private TMP_Text dialogueText;
         [SerializeField] private Button dialogueContinueButton;
@@ -67,6 +103,16 @@ namespace TwelveMoons.UI
         private bool isTypewriting;
         private bool finalContinueVisible;
         private string finalContinueKey;
+        private Material leftPortraitOutlineMaterial;
+        private Material rightPortraitOutlineMaterial;
+        private Material speakerExpressionOutlineMaterial;
+        private Material originalLeftPortraitMaterial;
+        private Material originalRightPortraitMaterial;
+        private Material originalSpeakerExpressionMaterial;
+
+        public Color ActiveSpeakerPortraitColor => activeSpeakerPortraitColor;
+
+        public Color InactiveSpeakerPortraitColor => inactiveSpeakerPortraitColor;
 
         private void Awake()
         {
@@ -94,6 +140,9 @@ namespace TwelveMoons.UI
                     rootBackgroundImage.color = Color.black;
                 }
             }
+
+            CacheOriginalPortraitMaterials();
+            EnsureStoryAreaButtonBinding();
         }
 
         private void Update()
@@ -137,6 +186,39 @@ namespace TwelveMoons.UI
             }
         }
 
+        private void OnDestroy()
+        {
+            DestroyRuntimeMaterial(ref leftPortraitOutlineMaterial);
+            DestroyRuntimeMaterial(ref rightPortraitOutlineMaterial);
+            DestroyRuntimeMaterial(ref speakerExpressionOutlineMaterial);
+        }
+
+        private void CacheOriginalPortraitMaterials()
+        {
+            originalLeftPortraitMaterial = leftPortrait != null ? leftPortrait.material : null;
+            originalRightPortraitMaterial = rightPortrait != null ? rightPortrait.material : null;
+            originalSpeakerExpressionMaterial = speakerExpressionImage != null ? speakerExpressionImage.material : null;
+        }
+
+        private static void DestroyRuntimeMaterial(ref Material runtimeMaterial)
+        {
+            if (runtimeMaterial == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(runtimeMaterial);
+            }
+            else
+            {
+                DestroyImmediate(runtimeMaterial);
+            }
+
+            runtimeMaterial = null;
+        }
+
         public void OnContinueClicked()
         {
             if (!finalContinueVisible)
@@ -164,6 +246,38 @@ namespace TwelveMoons.UI
             }
 
             storyService?.Continue();
+        }
+
+        private void EnsureStoryAreaButtonBinding()
+        {
+            if (storyAreaButton == null || HasPersistentStoryAreaClickBinding())
+            {
+                return;
+            }
+
+            storyAreaButton.onClick.RemoveListener(OnStoryAreaClicked);
+            storyAreaButton.onClick.AddListener(OnStoryAreaClicked);
+        }
+
+        private bool HasPersistentStoryAreaClickBinding()
+        {
+            if (storyAreaButton == null)
+            {
+                return false;
+            }
+
+            var eventCount = storyAreaButton.onClick.GetPersistentEventCount();
+            for (var index = 0; index < eventCount; index++)
+            {
+                var target = storyAreaButton.onClick.GetPersistentTarget(index);
+                var methodName = storyAreaButton.onClick.GetPersistentMethodName(index);
+                if (target == this && methodName == nameof(OnStoryAreaClicked))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public void OnOptionAClicked()
@@ -258,6 +372,8 @@ namespace TwelveMoons.UI
                 SetText(speakerNameText, "");
                 SetText(dialogueText, "");
                 RefreshPortraits(null);
+                RefreshSpeakerExpression(null);
+                ApplyPortraitOutlineEffects(null);
                 return;
             }
 
@@ -265,6 +381,7 @@ namespace TwelveMoons.UI
             var speakerCharacterId = GetCurrentSpeakerCharacterId(line);
             RefreshPortraits(speakerCharacterId);
             RefreshSpeakerExpression(speakerCharacterId);
+            ApplyPortraitOutlineEffects(speakerCharacterId);
             SetText(speakerNameText, GetSpeakerName(speakerCharacterId));
 
             if (playback.IsWaitingForSubmission || line.IsItemSubmissionLine())
@@ -588,7 +705,99 @@ namespace TwelveMoons.UI
 
         private void RefreshSpeakerExpression(string activeSpeakerCharacterId)
         {
-            SetPortraitSprite(speakerExpressionImage, activeSpeakerCharacterId);
+        }
+
+        private void ApplyPortraitOutlineEffects(string activeSpeakerCharacterId)
+        {
+            ApplyPortraitOutlineEffect(
+                leftPortrait,
+                ref leftPortraitOutlineMaterial,
+                originalLeftPortraitMaterial,
+                leftCharacterId,
+                activeSpeakerCharacterId);
+            ApplyPortraitOutlineEffect(
+                rightPortrait,
+                ref rightPortraitOutlineMaterial,
+                originalRightPortraitMaterial,
+                rightCharacterId,
+                activeSpeakerCharacterId);
+        }
+
+        private void ApplyPortraitOutlineEffect(
+            Image portrait,
+            ref Material runtimeMaterial,
+            Material originalMaterial,
+            string characterId,
+            string activeSpeakerCharacterId)
+        {
+            if (portrait == null)
+            {
+                return;
+            }
+
+            if (!portrait.enabled || portrait.sprite == null || string.IsNullOrEmpty(characterId))
+            {
+                portrait.material = originalMaterial;
+                return;
+            }
+
+            var material = EnsurePortraitOutlineMaterial(ref runtimeMaterial, portrait.name);
+            if (material == null)
+            {
+                portrait.material = originalMaterial;
+                return;
+            }
+
+            var isActiveSpeaker = !string.IsNullOrEmpty(characterId) && characterId == activeSpeakerCharacterId;
+            material.SetColor(OutlineColorId, isActiveSpeaker ? activePortraitOutlineColor : inactivePortraitOutlineColor);
+            material.SetColor(GlowColorId, isActiveSpeaker ? activePortraitGlowColor : inactivePortraitGlowColor);
+            material.SetFloat(OutlinePixelWidthId, Mathf.Clamp(portraitOutlinePixelWidth, 0, 12));
+            material.SetFloat(GlowPixelWidthId, Mathf.Clamp(portraitGlowPixelWidth, 1, 32));
+            material.SetFloat(GlowIntensityId, Mathf.Clamp01(portraitGlowIntensity));
+            material.SetFloat(GlowFalloffPowerId, Mathf.Clamp(portraitGlowFalloffPower, 1f, 4f));
+            portrait.material = material;
+        }
+
+        private Material EnsurePortraitOutlineMaterial(ref Material runtimeMaterial, string materialName)
+        {
+            if (runtimeMaterial != null)
+            {
+                return runtimeMaterial;
+            }
+
+            var templateMaterial = portraitOutlineTemplateMaterial;
+            if (templateMaterial == null)
+            {
+                templateMaterial = Resources.Load<Material>(PortraitOutlineMaterialResourcePath);
+            }
+
+            if (templateMaterial != null)
+            {
+                runtimeMaterial = new Material(templateMaterial)
+                {
+                    name = $"{name}_{materialName}_RuntimePortraitOutlineMaterial",
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+                return runtimeMaterial;
+            }
+
+            if (portraitOutlineShader == null)
+            {
+                portraitOutlineShader = Shader.Find("TwelveMoons/UI/PortraitAlphaOutline");
+            }
+
+            if (portraitOutlineShader == null)
+            {
+                Debug.LogWarning("缺少 TwelveMoons/UI/PortraitAlphaOutline Shader，剧情人物白色描边晕圈会隐藏，避免显示成整个人物半透明白图。", this);
+                return null;
+            }
+
+            runtimeMaterial = new Material(portraitOutlineShader)
+            {
+                name = $"{name}_{materialName}_RuntimePortraitOutlineMaterial",
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            return runtimeMaterial;
         }
 
         private void SetPortrait(Image portrait, string characterId, string activeSpeakerCharacterId)
@@ -599,9 +808,10 @@ namespace TwelveMoons.UI
             }
 
             SetPortraitSprite(portrait, characterId);
-            portrait.transform.localScale = !string.IsNullOrEmpty(characterId) && characterId == activeSpeakerCharacterId
-                ? Vector3.one * 1.08f
-                : Vector3.one;
+            portrait.transform.localScale = Vector3.one;
+            portrait.color = !string.IsNullOrEmpty(characterId) && characterId == activeSpeakerCharacterId
+                ? activeSpeakerPortraitColor
+                : inactiveSpeakerPortraitColor;
         }
 
         private void SetPortraitSprite(Image portrait, string characterId)
@@ -623,7 +833,10 @@ namespace TwelveMoons.UI
             }
 
             portrait.enabled = portrait.sprite != null;
-            portrait.color = Color.white;
+            if (portrait.sprite != null)
+            {
+                portrait.SetNativeSize();
+            }
         }
 
         private string GetSpeakerName(string characterId)
@@ -645,6 +858,7 @@ namespace TwelveMoons.UI
             rightCharacterId = string.Empty;
             RefreshPortraits(null);
             RefreshSpeakerExpression(null);
+            ApplyPortraitOutlineEffects(null);
         }
 
         private void ShowOnlyPanel(GameObject activePanel)
@@ -660,11 +874,6 @@ namespace TwelveMoons.UI
 
         private void SetRootVisible(bool visible)
         {
-            if (visible)
-            {
-                transform.SetAsLastSibling();
-            }
-
             if (rootCanvasGroup != null)
             {
                 rootCanvasGroup.alpha = visible ? 1f : 0f;

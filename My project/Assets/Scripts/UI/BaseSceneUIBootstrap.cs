@@ -4,7 +4,8 @@ namespace TwelveMoons.UI
 {
     public sealed class BaseSceneUIBootstrap : MonoBehaviour
     {
-        private static readonly UIType SharedHudPanel = new UIType("Prefabs/UI/共享HUD面板", UILayer.Persistent);
+        private static readonly UIType StartPanel = new UIType("Prefabs/UI/开始面板", UILayer.Overlay);
+        private static readonly UIType SharedHudPanel = new UIType("Prefabs/UI/共享HUD面板", UILayer.Overlay);
         private static readonly UIType DeskPanel = new UIType("Prefabs/UI/桌面面板", UILayer.Panel);
         private static readonly UIType StoryPanel = new UIType("Prefabs/UI/剧情面板", UILayer.Overlay);
         private static readonly UIType CityHudPanel = new UIType("Prefabs/UI/城区HUD面板", UILayer.Panel);
@@ -31,6 +32,8 @@ namespace TwelveMoons.UI
 
         public bool IsLoadingPanelDebugHotkeyEnabled => enableLoadingPanelDebugHotkey;
 
+        private DocumentPopupPanelView observedDocumentPopup;
+
         private void Start()
         {
             ResolveReferences();
@@ -44,9 +47,7 @@ namespace TwelveMoons.UI
             uiContext.ResolveMissingReferences();
             uiManager.EnsureLayerRoots();
 
-            ShowAndPrepare(DeskPanel);
-            ShowAndPrepare(StoryPanel);
-            uiManager?.HideUI(SharedHudPanel);
+            ShowStartPanel();
         }
 
         private void Update()
@@ -63,13 +64,13 @@ namespace TwelveMoons.UI
         public void ShowDesk()
         {
             ShowAndPrepare(DeskPanel);
-            uiManager?.HideUI(SharedHudPanel);
+            ShowSharedHud(true);
             uiManager?.HideUI(CityHudPanel);
         }
 
         public void ShowCity()
         {
-            ShowAndPrepare(SharedHudPanel);
+            ShowSharedHud(true);
             ShowAndPrepare(CityHudPanel);
             uiManager?.HideUI(DeskPanel);
         }
@@ -77,6 +78,42 @@ namespace TwelveMoons.UI
         public void ShowStory()
         {
             ShowAndPrepare(StoryPanel);
+            ShowSharedHud(true);
+        }
+
+        public void ShowStartPanel()
+        {
+            var startObject = ShowAndPrepare(StartPanel);
+            if (startObject == null)
+            {
+                ShowStory();
+                return;
+            }
+
+            uiManager?.HideUI(DeskPanel);
+            uiManager?.HideUI(StoryPanel);
+            uiManager?.HideUI(SharedHudPanel);
+            uiManager?.HideUI(CityHudPanel);
+
+            var startPanel = startObject.GetComponent<StartPanelView>();
+            if (startPanel == null)
+            {
+                startPanel = startObject.AddComponent<StartPanelView>();
+            }
+
+            startPanel.Initialize(EnterStoryFromStartPanel);
+            startObject.transform.SetAsLastSibling();
+        }
+
+        private void EnterStoryFromStartPanel()
+        {
+            uiManager?.HideUI(StartPanel);
+            var deskObject = ShowAndPrepare(DeskPanel);
+            ShowSharedHud(true);
+            uiManager?.HideUI(CityHudPanel);
+            var deskLoopController = deskObject != null ? deskObject.GetComponent<DeskLoopController>() : null;
+            deskLoopController?.BeginCurrentRoundFromEntry();
+            ShowStory();
         }
 
         public void HideStory()
@@ -86,7 +123,10 @@ namespace TwelveMoons.UI
 
         public void ShowDocumentPopup()
         {
-            ShowAndPrepare(DocumentPopupPanel);
+            var popupObject = ShowAndPrepare(DocumentPopupPanel);
+            var popup = popupObject != null ? popupObject.GetComponent<DocumentPopupPanelView>() : null;
+            RegisterDocumentPopupStateListener(popup);
+            HandleDocumentPopupStateChanged();
         }
 
         public void ShowNewspaper()
@@ -106,6 +146,8 @@ namespace TwelveMoons.UI
             {
                 return null;
             }
+
+            BringLoadingPanelToFront(loadingObject);
 
             var loadingView = loadingObject.GetComponent<LoadingPanelTransitionView>();
             if (loadingView == null)
@@ -130,6 +172,11 @@ namespace TwelveMoons.UI
             }
 
             uiManager?.HideUI(type);
+        }
+
+        private void OnDestroy()
+        {
+            UnregisterDocumentPopupStateListener(observedDocumentPopup);
         }
 
         private void ResolveReferences()
@@ -176,7 +223,165 @@ namespace TwelveMoons.UI
                 root.ApplyContext(uiContext);
             }
 
+            if (type == DeskPanel)
+            {
+                EnsureDeskLoopController(handle.GameObject);
+            }
+
             return handle.GameObject;
+        }
+
+        private void ShowSharedHud(bool showTaskPanel)
+        {
+            var sharedHudObject = ShowAndPrepare(SharedHudPanel);
+            if (sharedHudObject == null)
+            {
+                return;
+            }
+
+            SetSharedHudPanelVisibility(sharedHudObject, showTaskPanel, !IsObservedDocumentFlowActive());
+            BringSharedHudToFront(sharedHudObject);
+            BringActiveLoadingPanelToFront();
+        }
+
+        private void BringSharedHudToFront(GameObject sharedHudObject)
+        {
+            sharedHudObject.transform.SetAsLastSibling();
+        }
+
+        private void BringLoadingPanelToFront(GameObject loadingObject)
+        {
+            if (loadingObject == null)
+            {
+                return;
+            }
+
+            var overlayRoot = uiManager != null ? uiManager.GetLayerRoot(UILayer.Overlay) : null;
+            overlayRoot?.SetAsLastSibling();
+            loadingObject.transform.SetAsLastSibling();
+        }
+
+        private void BringActiveLoadingPanelToFront()
+        {
+            if (uiManager == null ||
+                !uiManager.TryGetUI<LoadingPanelTransitionView>(LoadingPanel, out var loadingPanel) ||
+                loadingPanel == null ||
+                !loadingPanel.gameObject.activeInHierarchy)
+            {
+                return;
+            }
+
+            BringLoadingPanelToFront(loadingPanel.gameObject);
+        }
+
+        private static void SetSharedHudPanelVisibility(GameObject sharedHudObject, bool showTaskPanel, bool showRoundPanel = true)
+        {
+            if (sharedHudObject == null)
+            {
+                return;
+            }
+
+            var taskPanel = sharedHudObject.GetComponentInChildren<TaskPanelView>(true);
+            if (taskPanel != null)
+            {
+                taskPanel.gameObject.SetActive(showTaskPanel);
+                if (showTaskPanel)
+                {
+                    taskPanel.Refresh();
+                }
+            }
+
+            var roundPanel = sharedHudObject.GetComponentInChildren<RoundPanelView>(true);
+            if (roundPanel != null)
+            {
+                roundPanel.gameObject.SetActive(showRoundPanel);
+                if (showRoundPanel)
+                {
+                    roundPanel.Refresh();
+                }
+            }
+        }
+
+        private void RegisterDocumentPopupStateListener(DocumentPopupPanelView popup)
+        {
+            if (popup == observedDocumentPopup)
+            {
+                return;
+            }
+
+            UnregisterDocumentPopupStateListener(observedDocumentPopup);
+            observedDocumentPopup = popup;
+
+            if (popup != null)
+            {
+                popup.DocumentFlowStateChanged -= HandleDocumentPopupStateChanged;
+                popup.DocumentFlowStateChanged += HandleDocumentPopupStateChanged;
+            }
+        }
+
+        private void UnregisterDocumentPopupStateListener(DocumentPopupPanelView popup)
+        {
+            if (popup != null)
+            {
+                popup.DocumentFlowStateChanged -= HandleDocumentPopupStateChanged;
+            }
+        }
+
+        private void HandleDocumentPopupStateChanged()
+        {
+            var isDocumentFlowActive = IsObservedDocumentFlowActive();
+            // 公文打开时隐藏共享 HUD 回合面板；公文关闭后恢复，任务面板保持原有显示规则。
+            SetSharedHudRoundPanelVisibility(!isDocumentFlowActive);
+        }
+
+        private bool IsObservedDocumentFlowActive()
+        {
+            return observedDocumentPopup != null && observedDocumentPopup.IsDocumentFlowActive;
+        }
+
+        private void SetSharedHudRoundPanelVisibility(bool showRoundPanel)
+        {
+            if (!TryGetSharedHudObject(out var sharedHudObject))
+            {
+                return;
+            }
+
+            var roundPanel = sharedHudObject.GetComponentInChildren<RoundPanelView>(true);
+            if (roundPanel == null)
+            {
+                return;
+            }
+
+            roundPanel.gameObject.SetActive(showRoundPanel);
+            if (showRoundPanel)
+            {
+                roundPanel.Refresh();
+            }
+        }
+
+        private bool TryGetSharedHudObject(out GameObject sharedHudObject)
+        {
+            sharedHudObject = null;
+            if (uiManager != null &&
+                uiManager.TryGetUI<BaseSceneUIPanelRoot>(SharedHudPanel, out var root) &&
+                root != null)
+            {
+                sharedHudObject = root.gameObject;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void EnsureDeskLoopController(GameObject deskPanelObject)
+        {
+            if (deskPanelObject == null || deskPanelObject.GetComponent<DeskLoopController>() != null)
+            {
+                return;
+            }
+
+            deskPanelObject.AddComponent<DeskLoopController>();
+            Debug.LogWarning("桌面面板缺少 DeskLoopController，已在运行时自动补上；否则剧情面板会显示但不会启动回合剧情。", deskPanelObject);
         }
     }
 }

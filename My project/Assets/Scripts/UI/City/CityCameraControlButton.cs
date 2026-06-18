@@ -23,6 +23,13 @@ namespace TwelveMoons.UI.City
 
         [Tooltip("按钮显示名称；用于 Inspector 中确认该按钮会切到哪个视角。")]
         [SerializeField] private string displayName;
+        [Header("运行时只读快照：摄像机按钮绑定")]
+        [Tooltip("运行时诊断：显示按钮是否已经找到城区摄像机控制器，以及点击时会切到哪个目标点。")]
+        [SerializeField] private string inspectorBindingSnapshot;
+
+        public string TargetViewId => targetViewId;
+
+        public string DisplayName => displayName;
 
         private void Awake()
         {
@@ -41,18 +48,22 @@ namespace TwelveMoons.UI.City
 
         public void MoveCamera()
         {
+            ResolveReferences();
             if (cameraController == null)
             {
+                RefreshBindingSnapshot("点击失败：缺少 CityCameraController");
                 Debug.LogWarning("城区摄像机按钮缺少 CityCameraController 引用。", this);
                 return;
             }
 
             if (string.IsNullOrEmpty(targetViewId))
             {
+                RefreshBindingSnapshot("点击：回到默认全局视角");
                 cameraController.MoveToDefaultView();
                 return;
             }
 
+            RefreshBindingSnapshot($"点击：移动到 {targetViewId}");
             cameraController.MoveToViewId(targetViewId);
         }
 
@@ -68,7 +79,10 @@ namespace TwelveMoons.UI.City
         {
             if (cameraController == null)
             {
-                cameraController = FindFirstObjectByType<CityCameraController>(FindObjectsInactive.Include);
+                var context = FindFirstObjectByType<BaseSceneUIContext>(FindObjectsInactive.Include);
+                cameraController = context != null && context.CityCameraController != null
+                    ? context.CityCameraController
+                    : FindFirstObjectByType<CityCameraController>(FindObjectsInactive.Include);
             }
 
             if (button == null)
@@ -80,6 +94,14 @@ namespace TwelveMoons.UI.City
             {
                 labelText = GetComponentInChildren<TMP_Text>(true);
             }
+
+            RefreshBindingSnapshot("已解析");
+        }
+
+        private void RefreshBindingSnapshot(string action)
+        {
+            inspectorBindingSnapshot =
+                $"{action}；目标={targetViewId}；显示名={displayName}；控制器={(cameraController != null ? cameraController.gameObject.name : "无")}";
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using DG.Tweening;
 using TMPro;
 using TwelveMoons.Core.Runtime;
@@ -27,14 +28,14 @@ namespace TwelveMoons.UI
         [SerializeField] private RectTransform pointerIcon;
         [SerializeField] private float pointerMoveDuration = 0.25f;
         [SerializeField] private Ease pointerMoveEase = Ease.OutCubic;
-        [Tooltip("质疑度变化后，指针移动到对应质疑行，再围绕右侧轴心旋转摆动的持续时间。")]
+        [Tooltip("质疑度变化后，指针移动到对应质疑行的 Y 轴位置，再上下浮动提示的持续时间。")]
         [SerializeField] private float pointerShakeDuration = 2f;
-        [Tooltip("质疑指针围绕右侧轴心旋转摆动的最大角度。")]
+        [Tooltip("质疑指针上下浮动的距离；不再旋转指针，只改变 Y 轴位置。")]
         [FormerlySerializedAs("pointerShakeDistance")]
         [SerializeField] private float pointerSwingAngle = 8f;
-        [Tooltip("质疑指针每次旋转摆动的基础时长；数值越小，摆动频率越快。")]
+        [Tooltip("质疑指针每次上下浮动的基础时长；数值越小，浮动频率越快。")]
         [FormerlySerializedAs("pointerShakeStepDuration")]
-        [SerializeField] private float pointerSwingStepDuration = 0.08f;
+        [SerializeField] private float pointerSwingStepDuration = 0.2f;
 
         [Header("运行时调试：质疑指针对齐快照")]
         [Tooltip("记录最近一次质疑指针移动的目标阵营、目标图片节点、移动前纵坐标和目标中心纵坐标，便于在 Inspector 中检查对齐结果。")]
@@ -77,6 +78,8 @@ namespace TwelveMoons.UI
             {
                 contentRoot = transform as RectTransform;
             }
+
+            ResolveFactionRowsIfNeeded();
 
             if (pointerIcon != null)
             {
@@ -138,6 +141,7 @@ namespace TwelveMoons.UI
                 return;
             }
 
+            ResolveFactionRowsIfNeeded();
             BuildRowLookup();
 
             for (var index = 0; index < factionService.Definitions.Count; index++)
@@ -213,6 +217,26 @@ namespace TwelveMoons.UI
             }
         }
 
+        private void ResolveFactionRowsIfNeeded()
+        {
+            if (factionRows != null && factionRows.Length > 0)
+            {
+                return;
+            }
+
+            factionRows = GetComponentsInChildren<FactionSuspicionRow>(true)
+                .Where(row => row != null)
+                .OrderBy(row => row.RectTransform != null ? row.RectTransform.anchoredPosition.y : 0f)
+                .ToArray();
+
+            if (contentRoot == null && factionRows.Length > 0)
+            {
+                contentRoot = factionRows[0].transform.parent as RectTransform;
+            }
+
+            rowSnapshots = CaptureRowSnapshots();
+        }
+
         private FactionSuspicionRow FindRowForDefinition(FactionDefinition definition, int definitionIndex)
         {
             if (definition != null &&
@@ -268,12 +292,17 @@ namespace TwelveMoons.UI
                 return;
             }
 
-            var startRotation = pointerIcon.localRotation;
+            pointerIcon.localRotation = pointerInitialRotation;
+            var startPosition = pointerIcon.localPosition;
             var vibrato = Mathf.Max(1, Mathf.RoundToInt(pointerShakeDuration / Mathf.Max(0.01f, pointerSwingStepDuration)));
             pointerShakeTween = pointerIcon
-                .DOPunchRotation(new Vector3(0f, 0f, pointerSwingAngle), pointerShakeDuration, vibrato, 0.5f)
+                .DOPunchPosition(new Vector3(0f, pointerSwingAngle, 0f), pointerShakeDuration, vibrato, 0.5f)
                 .SetEase(Ease.OutQuad)
-                .OnComplete(() => pointerIcon.localRotation = startRotation);
+                .OnComplete(() =>
+                {
+                    pointerIcon.localPosition = startPosition;
+                    pointerIcon.localRotation = pointerInitialRotation;
+                });
         }
 
         private Sprite FindFactionIcon(string factionId)

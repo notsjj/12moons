@@ -76,6 +76,8 @@ namespace TwelveMoons.Core.Runtime
         [SerializeField] private string bodyText;
         [SerializeField] private string proposerCharacterId;
         [SerializeField] private string documentType;
+        [Tooltip("公文显示的势力 logo 中文键；应与 Resources/Art/Art/UI/势力logo 下的图片文件名一致，例如“贵族”。")]
+        [SerializeField] private string factionLogoName;
         [SerializeField] private string disasterId;
         [SerializeField] private string disasterStageId;
         [SerializeField] private string taskId;
@@ -92,6 +94,7 @@ namespace TwelveMoons.Core.Runtime
         public string BodyText => bodyText;
         public string ProposerCharacterId => proposerCharacterId;
         public string DocumentType => documentType;
+        public string FactionLogoName => factionLogoName;
         public string DisasterId => disasterId;
         public string DisasterStageId => disasterStageId;
         public string TaskId => taskId;
@@ -113,6 +116,7 @@ namespace TwelveMoons.Core.Runtime
             bodyText = definition.BodyText;
             proposerCharacterId = definition.ProposerCharacterId;
             documentType = definition.DocumentType;
+            factionLogoName = definition.FactionLogoName;
             disasterId = definition.DisasterId;
             disasterStageId = definition.DisasterStageId;
             taskId = definition.TaskId;

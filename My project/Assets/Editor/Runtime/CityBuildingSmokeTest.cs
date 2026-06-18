@@ -1,5 +1,7 @@
 using System;
+using System.Reflection;
 using TwelveMoons.City;
+using TwelveMoons.Core;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
 using UnityEditor;
@@ -78,6 +80,9 @@ namespace TwelveMoons.EditorTools.Runtime
                 var shelterView = shelterViewObject.AddComponent<CityBuildingView>();
                 shelterView.Configure("building_church_shelter", "city_point_church_square");
 
+                ValidateStandaloneHoverAutoBinding();
+                ValidateHoverBlockedUntilDeskHidden();
+
                 var registry = cityRoot.AddComponent<CityBuildingRegistry>();
                 ConfigureRegistry(registry, buildingService, configManager, reliefView, shelterView);
                 registry.RefreshAndBind();
@@ -132,6 +137,91 @@ namespace TwelveMoons.EditorTools.Runtime
             finally
             {
                 UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        private static void ValidateHoverBlockedUntilDeskHidden()
+        {
+            var root = new GameObject("CityHoverGateSmokeTestRoot");
+            var deskRoot = new GameObject("DeskRoot");
+            var cityRoot = new GameObject("CityRoot");
+            var buildingObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                deskRoot.transform.SetParent(root.transform, false);
+                cityRoot.transform.SetParent(root.transform, false);
+                buildingObject.transform.SetParent(cityRoot.transform, false);
+
+                var gameEntry = root.AddComponent<GameEntry>();
+                var entryObject = new SerializedObject(gameEntry);
+                entryObject.FindProperty("deskRoot").objectReferenceValue = deskRoot;
+                entryObject.FindProperty("cityRoot").objectReferenceValue = cityRoot;
+                entryObject.ApplyModifiedPropertiesWithoutUndo();
+
+                var view = buildingObject.AddComponent<CityBuildingView>();
+                var viewObject = new SerializedObject(view);
+                viewObject.FindProperty("gameEntry").objectReferenceValue = gameEntry;
+                viewObject.ApplyModifiedPropertiesWithoutUndo();
+
+                var method = typeof(CityBuildingView).GetMethod(
+                    "IsCityInteractionEnabled",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                if (method == null)
+                {
+                    throw new MissingMethodException(nameof(CityBuildingView), "IsCityInteractionEnabled");
+                }
+
+                deskRoot.SetActive(true);
+                cityRoot.SetActive(true);
+                if ((bool)method.Invoke(view, Array.Empty<object>()))
+                {
+                    throw new InvalidOperationException("City buildings must not show hover outlines while DeskRoot is still visible before entering the city.");
+                }
+
+                deskRoot.SetActive(false);
+                cityRoot.SetActive(true);
+                if (!(bool)method.Invoke(view, Array.Empty<object>()))
+                {
+                    throw new InvalidOperationException("City buildings should allow hover outlines after DeskRoot is hidden and CityRoot is visible.");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        private static void ValidateStandaloneHoverAutoBinding()
+        {
+            var buildingObject = new GameObject("StandaloneHoverBuilding");
+            var childObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                childObject.transform.SetParent(buildingObject.transform, false);
+                childObject.transform.localPosition = new Vector3(2f, 0f, 0f);
+                var childCollider = childObject.GetComponent<Collider>();
+                if (childCollider != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(childCollider);
+                }
+
+                var view = buildingObject.AddComponent<CityBuildingView>();
+                view.InitializeRuntimeHoverDependenciesForTest();
+
+                if (!view.IsHoverOutlineRuntimeReady)
+                {
+                    throw new InvalidOperationException("Standalone CityBuildingView must auto-bind renderers, outline effect, and a same-object collider for hover outlines.");
+                }
+
+                var ownCollider = buildingObject.GetComponent<Collider>();
+                if (ownCollider == null)
+                {
+                    throw new InvalidOperationException("Standalone CityBuildingView must add a collider to the same GameObject so OnMouseEnter reaches the view script.");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(buildingObject);
             }
         }
 

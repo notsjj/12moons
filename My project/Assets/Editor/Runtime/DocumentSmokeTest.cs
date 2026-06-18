@@ -27,7 +27,125 @@ namespace TwelveMoons.EditorTools.Runtime
             RunCurrentRoundQueueExhaustionFlow();
             ValidateActorTransitionApi();
             ValidatePopupExitDragPrefab();
+            ValidatePopupExitDragDoesNotReverseSource();
+            ValidateCloseVisualGuardApi();
+            ValidateItemSubmitPanelApi();
+            ValidateDocumentFactionLogoApi();
             Debug.Log("Document flow smoke test passed. Demo document queues, opens, resolves proposer, settles option A and B, removes the current queue entry, records delayed follow-up documents, activates them on their due round, and keeps drag-exit popup wiring.");
+        }
+
+        private static void ValidateDocumentFactionLogoApi()
+        {
+            var logoProperty = typeof(DocumentDefinition).GetProperty(
+                "FactionLogoName",
+                BindingFlags.Instance | BindingFlags.Public);
+            if (logoProperty == null)
+            {
+                throw new InvalidDataException("DocumentDefinition must expose FactionLogoName from DocumentConfig so the popup can choose one of the eight faction logo sprites.");
+            }
+
+            var logoImageField = typeof(DocumentPopupPanelView).GetField(
+                "factionLogoImage",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var logoPathField = typeof(DocumentPopupPanelView).GetField(
+                "factionLogoResourceRoot",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            if (logoImageField == null || logoPathField == null)
+            {
+                throw new InvalidDataException("DocumentPopupPanelView must bind the faction logo Image and the Resources root used to load Chinese-named logo sprites.");
+            }
+
+            var row = new ConfigRow(new System.Collections.Generic.Dictionary<string, string>
+            {
+                ["DocumentId"] = "document_logo_test",
+                ["Title"] = "Logo Test",
+                ["FactionLogoName"] = "贵族",
+            });
+            var definition = new DocumentDefinition(row);
+            if (definition.FactionLogoName != "贵族")
+            {
+                throw new InvalidDataException("DocumentDefinition must read FactionLogoName exactly as the Chinese sprite key from DocumentConfig.");
+            }
+        }
+
+        private static void ValidateItemSubmitPanelApi()
+        {
+            var showMethod = typeof(InventoryPanelView).GetMethod(
+                "ShowForDocumentSubmission",
+                BindingFlags.Instance | BindingFlags.Public);
+            var hideMethod = typeof(InventoryPanelView).GetMethod(
+                "HideForDocumentSubmission",
+                BindingFlags.Instance | BindingFlags.Public);
+            if (showMethod == null || hideMethod == null)
+            {
+                throw new InvalidDataException("InventoryPanelView must expose document-submission pop-up methods.");
+            }
+
+            var popupInventoryProperty = typeof(DocumentPopupPanelView).GetProperty(
+                "InventoryPanelObject",
+                BindingFlags.Instance | BindingFlags.Public);
+            if (popupInventoryProperty == null)
+            {
+                throw new InvalidDataException("DocumentPopupPanelView must expose its bound inventory panel object for smoke-test inspection.");
+            }
+
+            var submittedPreviewProperty = typeof(DocumentSubmitSlot).GetProperty(
+                "SubmittedCardPreviewObject",
+                BindingFlags.Instance | BindingFlags.Public);
+            if (submittedPreviewProperty == null)
+            {
+                throw new InvalidDataException("DocumentSubmitSlot must expose the submitted-card preview object for smoke-test inspection.");
+            }
+
+            var tryAcceptMethod = typeof(DocumentSubmitSlot).GetMethod(
+                "TryAcceptCard",
+                BindingFlags.Instance | BindingFlags.Public);
+            var releaseOverlapMethod = typeof(DocumentSubmitSlot).GetMethod(
+                "CanReceiveReleasedCard",
+                BindingFlags.Instance | BindingFlags.Public);
+            if (tryAcceptMethod == null || releaseOverlapMethod == null)
+            {
+                throw new InvalidDataException("DocumentSubmitSlot must expose release-overlap acceptance methods so card release can submit even when normal OnDrop is blocked by panel layering.");
+            }
+
+            var prefabField = typeof(DocumentPopupPanelView).GetField(
+                "inventoryPanelPrefab",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var resourcePathField = typeof(DocumentPopupPanelView).GetField(
+                "inventoryPanelResourcePath",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var ensureMethod = typeof(DocumentPopupPanelView).GetMethod(
+                "EnsureInventoryPanelInstance",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            if (prefabField == null || resourcePathField == null || ensureMethod == null)
+            {
+                throw new InvalidDataException("DocumentPopupPanelView must create the inventory panel from prefab when item submission starts.");
+            }
+
+            var inventoryPanelPrefab = AssetDatabase.LoadAssetAtPath<InventoryPanelView>("Assets/Resources/Prefabs/UI/物品面板.prefab");
+            if (inventoryPanelPrefab == null)
+            {
+                throw new InvalidDataException("Inventory panel prefab must exist at Assets/Resources/Prefabs/UI/物品面板.prefab.");
+            }
+        }
+
+        private static void ValidateCloseVisualGuardApi()
+        {
+            var method = typeof(DocumentPopupPanelView).GetMethod(
+                "HideClosedDocumentVisuals",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            if (method == null)
+            {
+                throw new InvalidDataException("DocumentPopupPanelView must hide closed document visuals before ending the flow to prevent a one-frame flash.");
+            }
+
+            var rootVisibilityMethod = typeof(DocumentPopupPanelView).GetMethod(
+                "SetRootCanvasVisible",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            if (rootVisibilityMethod == null)
+            {
+                throw new InvalidDataException("DocumentPopupPanelView must hide its root CanvasGroup before ending the flow to prevent closed-panel flashing.");
+            }
         }
 
         private static void ValidateActorTransitionApi()
@@ -38,6 +156,15 @@ namespace TwelveMoons.EditorTools.Runtime
                 var actor = root.AddComponent<SharedActorSlotView>();
                 actor.ShowActor("Next proposer", "Document proposer", null, null);
                 actor.HideAlongEntryPath(null);
+                if (actor.SlideDuration > 0.35f)
+                {
+                    throw new InvalidDataException($"Document actor movement must be faster after completion, got slide duration {actor.SlideDuration}.");
+                }
+
+                if (actor.HiddenMoveLeftDistance < 560f)
+                {
+                    throw new InvalidDataException($"Document actor hidden-left position must be farther left, got distance {actor.HiddenMoveLeftDistance}.");
+                }
 
                 var popup = root.AddComponent<DocumentPopupPanelView>();
                 _ = popup.IsActorTransitioning;
@@ -84,10 +211,12 @@ namespace TwelveMoons.EditorTools.Runtime
                 throw new InvalidDataException("DeskPanel main interface mask must be inactive by default.");
             }
 
-            if (popup.MainInterfaceMaskTargetAlpha < 0.79f || popup.MainInterfaceMaskTargetAlpha > 0.81f)
+            if (popup.MainInterfaceMaskTargetAlpha < 0.69f || popup.MainInterfaceMaskTargetAlpha > 0.71f)
             {
-                throw new InvalidDataException($"Document main interface mask target alpha must be 0.8, got {popup.MainInterfaceMaskTargetAlpha}.");
+                throw new InvalidDataException($"Document main interface mask target alpha must be 0.7, got {popup.MainInterfaceMaskTargetAlpha}.");
             }
+
+            ValidateSharedHudRoundPanelVisibilitySource();
 
             if (popup.ExitHintImageObject.activeSelf)
             {
@@ -120,6 +249,41 @@ namespace TwelveMoons.EditorTools.Runtime
             }
 
             AssertMaskDoesNotFadeInAgainWhileAlreadyVisible(popup);
+        }
+
+        private static void ValidatePopupExitDragDoesNotReverseSource()
+        {
+            var sourcePath = "Assets/Scripts/UI/DocumentPopupPanelView.cs";
+            if (!File.Exists(sourcePath))
+            {
+                throw new FileNotFoundException("缺少 DocumentPopupPanelView 脚本。");
+            }
+
+            var source = File.ReadAllText(sourcePath);
+            if (!source.Contains("BuildNonReversingCloseTarget") ||
+                !source.Contains("Mathf.Max(closedPosition.x, currentPosition.x)"))
+            {
+                throw new InvalidDataException("DocumentPopupPanelView must avoid tweening the document popup backward when the player drags past the close position.");
+            }
+        }
+
+        private static void ValidateSharedHudRoundPanelVisibilitySource()
+        {
+            var sourcePath = "Assets/Scripts/UI/BaseSceneUIBootstrap.cs";
+            if (!File.Exists(sourcePath))
+            {
+                throw new FileNotFoundException("缺少 BaseSceneUIBootstrap 脚本。");
+            }
+
+            var source = File.ReadAllText(sourcePath);
+            if (!source.Contains("RegisterDocumentPopupStateListener") ||
+                !source.Contains("popup.DocumentFlowStateChanged += HandleDocumentPopupStateChanged") ||
+                !source.Contains("SetSharedHudRoundPanelVisibility(!isDocumentFlowActive)") ||
+                !source.Contains("roundPanel.gameObject.SetActive(showRoundPanel)") ||
+                !source.Contains("公文打开时隐藏共享 HUD 回合面板"))
+            {
+                throw new InvalidDataException("公文打开时必须隐藏共享 HUD 下的回合面板，公文关闭后必须恢复显示。");
+            }
         }
 
         private static void AssertExitHintOnlyShowsAfterAllDocuments(DocumentPopupPanelView popup)
@@ -451,6 +615,11 @@ namespace TwelveMoons.EditorTools.Runtime
             context.RoundService.Refresh();
             context.TaskService.Refresh();
             context.DocumentService.Refresh();
+
+            foreach (var item in context.RuntimeDataService.Data.Items)
+            {
+                item.SetCount(0);
+            }
 
             context.InventoryService.AddMoney(10);
             context.InventoryService.AddMaterial(10);

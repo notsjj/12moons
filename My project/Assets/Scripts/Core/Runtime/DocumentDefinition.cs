@@ -11,6 +11,7 @@ namespace TwelveMoons.Core.Runtime
             BodyText = row.GetString("BodyText");
             ProposerCharacterId = row.GetString("ProposerCharacterId");
             DocumentType = row.GetString("DocumentType");
+            FactionLogoName = row.GetString("FactionLogoName");
             DisasterId = row.GetString("DisasterId");
             DisasterStageId = row.GetString("DisasterStageId");
             TaskId = row.GetString("TaskId");
@@ -30,6 +31,8 @@ namespace TwelveMoons.Core.Runtime
         public string ProposerCharacterId { get; }
 
         public string DocumentType { get; }
+
+        public string FactionLogoName { get; }
 
         public string DisasterId { get; }
 

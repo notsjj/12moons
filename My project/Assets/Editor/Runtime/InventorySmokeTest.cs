@@ -6,6 +6,7 @@ using TwelveMoons.Core.Runtime;
 using TwelveMoons.UI;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace TwelveMoons.EditorTools.Runtime
@@ -27,6 +28,7 @@ namespace TwelveMoons.EditorTools.Runtime
                 var runtimeDataService = testRoot.AddComponent<RuntimeDataService>();
                 SetPrivateField(runtimeDataService, "configManager", configManager);
                 runtimeDataService.CreateNewGame("disaster_flood_01");
+                ValidateInitialBackpackItems(runtimeDataService);
 
                 var inventoryService = testRoot.AddComponent<InventoryService>();
                 SetPrivateField(inventoryService, "configManager", configManager);
@@ -84,6 +86,29 @@ namespace TwelveMoons.EditorTools.Runtime
         {
             var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
             method?.Invoke(target, null);
+        }
+
+        private static void ValidateInitialBackpackItems(RuntimeDataService runtimeDataService)
+        {
+            AssertInitialItem(runtimeDataService, "item_money");
+            AssertInitialItem(runtimeDataService, "item_material");
+            AssertInitialItem(runtimeDataService, "item_food");
+            AssertInitialItem(runtimeDataService, "item_drainage_map");
+            AssertInitialItem(runtimeDataService, "item_archivist_badge");
+
+            foreach (var item in runtimeDataService.Data.Items)
+            {
+                item.SetCount(0);
+            }
+        }
+
+        private static void AssertInitialItem(RuntimeDataService runtimeDataService, string itemId)
+        {
+            var item = runtimeDataService.Data.GetOrCreateItem(itemId);
+            if (item.Count <= 0)
+            {
+                throw new InvalidOperationException($"New game should start with a visible backpack card for {itemId}.");
+            }
         }
 
         private static void ValidateInventoryCard(
@@ -206,6 +231,143 @@ namespace TwelveMoons.EditorTools.Runtime
             if (left < -0.5f || right > contentRect.sizeDelta.x + 0.5f)
             {
                 throw new InvalidOperationException("InventoryPanelView cards should stay inside content area.");
+            }
+
+            ValidateInventoryPanelKeepsCardPrefabSize(inventoryService, runtimeDataService, parent);
+            ValidateInventoryPanelRestoresRaycastOnShow(parent);
+            ValidateInventoryPanelKeepsFrameAboveCards(inventoryService, runtimeDataService, parent);
+            ValidateInventoryCardDragKeepsAlpha(inventoryService, parent);
+        }
+
+        private static void ValidateInventoryPanelKeepsFrameAboveCards(
+            InventoryService inventoryService,
+            RuntimeDataService runtimeDataService,
+            Transform parent)
+        {
+            var panelObject = new GameObject("InventoryPanelFrameLayerTest", typeof(RectTransform));
+            panelObject.transform.SetParent(parent, false);
+            var contentObject = new GameObject("InventoryContentFrameLayerTest", typeof(RectTransform));
+            contentObject.transform.SetParent(panelObject.transform, false);
+            var frameObject = new GameObject("物品栏", typeof(RectTransform), typeof(Image));
+            frameObject.transform.SetParent(panelObject.transform, false);
+            frameObject.GetComponent<Image>().raycastTarget = false;
+
+            var contentRect = contentObject.GetComponent<RectTransform>();
+            contentRect.sizeDelta = new Vector2(600f, 260f);
+
+            var panel = panelObject.AddComponent<InventoryPanelView>();
+            SetPrivateField(panel, "inventoryService", inventoryService);
+            SetPrivateField(panel, "runtimeDataService", runtimeDataService);
+            SetPrivateField(panel, "contentRoot", contentRect);
+            SetPrivateField(panel, "showZeroCountItems", false);
+
+            foreach (var item in runtimeDataService.Data.Items)
+            {
+                item.SetCount(0);
+            }
+
+            runtimeDataService.AddItem("item_money", 1);
+            InvokePrivate(panel, "Awake");
+            panel.Refresh();
+
+            if (frameObject.transform.GetSiblingIndex() != panelObject.transform.childCount - 1)
+            {
+                throw new InvalidOperationException("InventoryPanelView must keep the item bar frame above card content while leaving the frame raycast-disabled.");
+            }
+
+            if (frameObject.GetComponent<Image>().raycastTarget)
+            {
+                throw new InvalidOperationException("InventoryPanelView foreground item bar frame must not block card clicks.");
+            }
+        }
+
+        private static void ValidateInventoryCardDragKeepsAlpha(InventoryService inventoryService, Transform parent)
+        {
+            if (!inventoryService.TryGetDefinition("item_drainage_map", out var draggableDefinition))
+            {
+                throw new InvalidOperationException("InventoryItemCard drag test cannot find a draggable demo item.");
+            }
+
+            var canvasObject = new GameObject("InventoryCardDragCanvasTest", typeof(RectTransform), typeof(Canvas));
+            canvasObject.transform.SetParent(parent, false);
+            var card = CreateTestCard(canvasObject.transform);
+            var canvasGroup = card.GetComponent<CanvasGroup>();
+
+            if (!canvasGroup)
+            {
+                throw new InvalidOperationException("InventoryItemCard drag test requires a CanvasGroup.");
+            }
+
+            card.Bind(draggableDefinition, new RuntimeItemState(draggableDefinition.ItemId, 1));
+            card.OnBeginDrag(new PointerEventData(EventSystem.current));
+
+            if (canvasGroup.alpha < 0.99f)
+            {
+                throw new InvalidOperationException("InventoryItemCard must not lower card transparency while dragging.");
+            }
+
+            card.OnEndDrag(new PointerEventData(EventSystem.current));
+        }
+
+        private static void ValidateInventoryPanelKeepsCardPrefabSize(
+            InventoryService inventoryService,
+            RuntimeDataService runtimeDataService,
+            Transform parent)
+        {
+            var panelObject = new GameObject("InventoryPanelSizeTest", typeof(RectTransform));
+            panelObject.transform.SetParent(parent, false);
+            var contentObject = new GameObject("InventoryContentSizeTest", typeof(RectTransform));
+            contentObject.transform.SetParent(panelObject.transform, false);
+
+            var contentRect = contentObject.GetComponent<RectTransform>();
+            contentRect.sizeDelta = new Vector2(600f, 260f);
+            var prefab = CreateTestCard(parent);
+            var prefabRect = prefab.transform as RectTransform;
+            prefabRect.sizeDelta = new Vector2(132f, 196f);
+
+            var panel = panelObject.AddComponent<InventoryPanelView>();
+            SetPrivateField(panel, "inventoryService", inventoryService);
+            SetPrivateField(panel, "runtimeDataService", runtimeDataService);
+            SetPrivateField(panel, "contentRoot", contentRect);
+            SetPrivateField(panel, "cardPrefab", prefab);
+            SetPrivateField(panel, "showZeroCountItems", false);
+            SetPrivateField(panel, "cardSize", new Vector2(180f, 220f));
+            SetPrivateField(panel, "minimumVisibleStep", 42f);
+
+            foreach (var item in runtimeDataService.Data.Items)
+            {
+                item.SetCount(0);
+            }
+
+            runtimeDataService.AddItem("item_money", 1);
+            InvokePrivate(panel, "Awake");
+            panel.Refresh();
+
+            var cardRect = contentObject.transform.GetChild(0) as RectTransform;
+            if (cardRect == null ||
+                !Mathf.Approximately(cardRect.sizeDelta.x, 132f) ||
+                !Mathf.Approximately(cardRect.sizeDelta.y, 196f))
+            {
+                throw new InvalidOperationException("InventoryPanelView must keep the item card prefab's original size.");
+            }
+        }
+
+        private static void ValidateInventoryPanelRestoresRaycastOnShow(Transform parent)
+        {
+            var panelObject = new GameObject("InventoryPanelRaycastTest", typeof(RectTransform), typeof(CanvasGroup));
+            panelObject.transform.SetParent(parent, false);
+            var canvasGroup = panelObject.GetComponent<CanvasGroup>();
+            canvasGroup.blocksRaycasts = false;
+            canvasGroup.interactable = false;
+            canvasGroup.alpha = 0.25f;
+
+            var panel = panelObject.AddComponent<InventoryPanelView>();
+            InvokePrivate(panel, "Awake");
+            panel.ShowForDocumentSubmission();
+
+            if (!canvasGroup.blocksRaycasts || !canvasGroup.interactable || canvasGroup.alpha < 0.99f)
+            {
+                throw new InvalidOperationException("InventoryPanelView must restore CanvasGroup interaction when shown for document submission.");
             }
         }
     }

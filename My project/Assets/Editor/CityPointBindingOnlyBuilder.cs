@@ -52,7 +52,7 @@ namespace TwelveMoons.EditorTools
 
         private static Transform FindCityWorldParent()
         {
-            var cityMap = FindSceneObjectByName("City_01");
+            var cityMap = FindSceneObjectByName("城区地图_01") ?? FindSceneObjectByName("City_01");
             if (cityMap != null)
             {
                 return cityMap.transform.parent;

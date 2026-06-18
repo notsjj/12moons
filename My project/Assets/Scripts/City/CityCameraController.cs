@@ -15,6 +15,14 @@ namespace TwelveMoons.City
         [Tooltip("\u5168\u5c40\u5730\u56fe\u89c2\u5bdf\u70b9\u7a7a\u7269\u4f53\uff1b\u70b9\u51fb\u56de\u5230\u5168\u5c40\u65f6\u6444\u50cf\u673a\u4f1a\u79fb\u52a8\u5230\u8fd9\u91cc\u3002")]
         [SerializeField] private Transform defaultViewPoint;
 
+        [Header("启动校准：打包后强制对齐默认镜头")]
+        [Tooltip("启用后会在 Awake 和 Start 都把城区摄像机对齐到默认全局观察点，避免打包后场景初始 Transform 或脚本初始化顺序导致镜头停在错误位置。")]
+        [SerializeField] private bool applyDefaultViewOnStart = true;
+
+        [Header("打包保护：禁用误导入摄像机")]
+        [Tooltip("启用后会禁用 FBX 或场景中误导入的全屏 3D 摄像机，只保留本组件控制的城区主摄像机输出到玩家画面。")]
+        [SerializeField] private bool disableCompetingSceneCameras = true;
+
         [Header("\u89c2\u5bdf\u70b9\u5217\u8868\uff1a\u6309\u94ae\u79fb\u52a8\u6444\u50cf\u673a")]
         [Tooltip("\u53ef\u5207\u6362\u7684\u57ce\u533a\u89c2\u5bdf\u70b9\uff1b\u6bcf\u4e00\u9879\u5fc5\u987b\u7ed1\u5b9a\u4e00\u4e2a\u7a7a\u7269\u4f53 Transform\uff0c\u70b9\u51fb\u6309\u94ae\u53ea\u79fb\u52a8\u6444\u50cf\u673a\u3002")]
         [SerializeField] private List<CityCameraViewPoint> viewPoints = new List<CityCameraViewPoint>();
@@ -81,18 +89,18 @@ namespace TwelveMoons.City
         [Tooltip("\u5f53\u524d\u6444\u50cf\u673a\u7684\u4f4d\u7f6e\u3001\u65cb\u8f6c\u548c\u8fb9\u754c\u6458\u8981\uff1b\u7528\u4e8e\u786e\u8ba4\u6444\u50cf\u673a\u53ea\u662f\u5728\u5141\u8bb8\u8303\u56f4\u5185\u79fb\u52a8\u3002")]
         [SerializeField] private string inspectorTargetSummary;
 
-        [Header("入场镜头演出：保持当前距离缓慢旋转一圈")]
-        [Tooltip("是否允许播放城区入场镜头演出；演出只旋转观察位置，不拉近镜头、不刷新城区数据。")]
+        [Header("运行时只读快照：摄像机绑定诊断")]
+        [Tooltip("当前摄像机绑定诊断；用于打包后确认玩家视角使用的 Camera 是否就是本组件控制的 Camera。")]
+        [SerializeField] private string inspectorCameraBindingSnapshot;
+
+        [Header("入场镜头演出：从全局点移动到指定全局点")]
+        [Tooltip("是否允许播放城区入场镜头演出；演出只移动观察位置，不刷新城区数据。")]
         [SerializeField] private bool enableEntryCinematic = true;
-        [Tooltip("入场镜头保持当前距离绕焦点旋转一圈的时长；值越大，旋转越慢。")]
-        [SerializeField] private float entryOrbitDuration = 4.5f;
-        [Tooltip("从摄像机当前位置沿正前方计算旋转焦点的距离；旋转期间摄像机与该焦点保持当前距离。")]
-        [SerializeField] private float entryFocusDistance = 6f;
-        [Tooltip("入场镜头绕焦点旋转的总角度；360 表示完整旋转一圈。")]
-        [SerializeField] private float entryOrbitDegrees = 360f;
-        [Tooltip("入场镜头旋转结束后要切换到的观察点 ID；默认 city_upper，对应 UpperCityViewPoint。")]
-        [SerializeField] private string entryCinematicEndViewId = "city_upper";
-        [Tooltip("入场镜头结束后要落到的观察点；留空时会按上方 ID 从观察点列表自动查找。")]
+        [Tooltip("入场镜头从 GlobalViewPoint 移动到目标点所需时长；值越小，移动越快。")]
+        [SerializeField] private float entryOrbitDuration = 0.8f;
+        [Tooltip("入场镜头目标点物体名称；打开城区面板后摄像机会从 GlobalViewPoint 移动到这个点。")]
+        [SerializeField] private string entryCinematicEndObjectName = "GlobalViewPoint (1)";
+        [Tooltip("入场镜头结束后要落到的观察点；留空时会按上方物体名称从场景中自动查找。")]
         [SerializeField] private Transform entryCinematicEndViewPoint;
         [Tooltip("当前是否正在播放城区入场镜头。")]
         [SerializeField] private bool inspectorIsPlayingEntryCinematic;
@@ -112,24 +120,46 @@ namespace TwelveMoons.City
 
         public bool DefaultViewUsesExactTransform => true;
 
+        public bool ApplyDefaultViewOnStart => applyDefaultViewOnStart;
+
         public float EntryOrbitDuration => entryOrbitDuration;
 
-        public float EntryOrbitDegrees => entryOrbitDegrees;
+        public float EntryOrbitDegrees => 0f;
 
-        public string EntryCinematicEndViewId => entryCinematicEndViewId;
+        public string EntryCinematicEndViewId => entryCinematicEndObjectName;
+
+        public string EntryCinematicEndObjectName => entryCinematicEndObjectName;
 
         private void Awake()
         {
             ResolveCamera();
-            JumpToDefaultView();
+            DisableCompetingCameras();
+            ResolveViewPointReferences();
+            ApplyStartupDefaultView();
+        }
+
+        private void Start()
+        {
+            DisableCompetingCameras();
+            ApplyStartupDefaultView();
         }
 
         private void OnEnable()
         {
-            if (defaultViewPoint != null)
+            ResolveViewPointReferences();
+            RefreshCameraBindingSnapshot();
+        }
+
+        private void ApplyStartupDefaultView()
+        {
+            if (!applyDefaultViewOnStart)
             {
-                JumpToDefaultView();
+                return;
             }
+
+            ResolveCamera();
+            ResolveViewPointReferences();
+            JumpToDefaultView();
         }
 
         private void Update()
@@ -139,6 +169,8 @@ namespace TwelveMoons.City
             {
                 return;
             }
+
+            DisableCompetingCameras();
 
             if (inspectorIsPlayingEntryCinematic)
             {
@@ -177,11 +209,19 @@ namespace TwelveMoons.City
 
             foreach (var point in viewPoints)
             {
-                if (point != null && point.ViewId == viewId)
+                var target = ResolveViewPointTarget(point, viewId);
+                if (target != null)
                 {
-                    MoveToTarget(point.ViewId, point.DisplayName, point.Target);
+                    MoveToTarget(point.ViewId, point.DisplayName, target);
                     return;
                 }
+            }
+
+            var sceneTarget = FindSceneTransformIncludingInactive(viewId);
+            if (sceneTarget != null)
+            {
+                MoveToTarget(viewId, viewId, sceneTarget);
+                return;
             }
 
             Debug.LogWarning($"\u627e\u4e0d\u5230\u57ce\u533a\u6444\u50cf\u673a\u89c2\u5bdf\u70b9\uff1a{viewId}", this);
@@ -196,7 +236,7 @@ namespace TwelveMoons.City
             }
 
             var point = viewPoints[index];
-            MoveToTarget(point.ViewId, point.DisplayName, point.Target);
+            MoveToTarget(point.ViewId, point.DisplayName, ResolveViewPointTarget(point, point.ViewId));
         }
 
         public void MoveToView1()
@@ -216,6 +256,11 @@ namespace TwelveMoons.City
 
         public void PlayEntryCinematic(Action onCompleted = null)
         {
+            PlayEntryCinematic(entryOrbitDuration, onCompleted);
+        }
+
+        public void PlayEntryCinematic(float durationOverride, Action onCompleted = null)
+        {
             ResolveCamera();
             if (cityCamera == null || !enableEntryCinematic)
             {
@@ -230,7 +275,7 @@ namespace TwelveMoons.City
                 StopCoroutine(entryCinematicRoutine);
             }
 
-            entryCinematicRoutine = StartCoroutine(PlayEntryCinematicRoutine(onCompleted));
+            entryCinematicRoutine = StartCoroutine(PlayEntryCinematicRoutine(durationOverride, onCompleted));
         }
 
         private bool TryHandleKeyboardMove()
@@ -359,7 +404,7 @@ namespace TwelveMoons.City
             var cameraTransform = cityCamera.transform;
             var startPosition = cameraTransform.position;
             var startRotation = cameraTransform.rotation;
-            var targetPosition = ClampPosition(target.position);
+            var targetPosition = target.position;
             var targetRotation = target.rotation;
             var duration = Mathf.Max(0f, moveDuration);
             var elapsed = 0f;
@@ -381,7 +426,6 @@ namespace TwelveMoons.City
                 if (copyTargetRotation)
                 {
                     cameraTransform.rotation = Quaternion.SlerpUnclamped(startRotation, targetRotation, t);
-                    ClampCameraRotationPitch();
                 }
 
                 SetInspectorSnapshot(viewId, viewName, target, true);
@@ -395,11 +439,10 @@ namespace TwelveMoons.City
 
         private void ApplyCameraTarget(Transform target)
         {
-            cityCamera.transform.position = ClampPosition(target.position);
+            cityCamera.transform.position = target.position;
             if (copyTargetRotation)
             {
                 cityCamera.transform.rotation = target.rotation;
-                ClampCameraRotationPitch();
             }
         }
 
@@ -415,7 +458,7 @@ namespace TwelveMoons.City
             inspectorIsMoving = false;
         }
 
-        private IEnumerator PlayEntryCinematicRoutine(Action onCompleted)
+        private IEnumerator PlayEntryCinematicRoutine(float durationOverride, Action onCompleted)
         {
             inspectorIsPlayingEntryCinematic = true;
             inspectorIsMoving = true;
@@ -423,35 +466,38 @@ namespace TwelveMoons.City
             var cameraTransform = cityCamera.transform;
             var startPosition = cameraTransform.position;
             var startRotation = cameraTransform.rotation;
-            var focusPoint = startPosition + (cameraTransform.forward.normalized * Mathf.Max(0.1f, entryFocusDistance));
-            var orbitStartOffset = startPosition - focusPoint;
-            var orbitElapsed = 0f;
-            var orbitDuration = Mathf.Max(0.01f, entryOrbitDuration);
-            while (orbitElapsed < orbitDuration)
+            var endTarget = ResolveEntryCinematicEndTarget(out var endViewId, out var endViewName);
+            if (endTarget == null)
             {
-                orbitElapsed += Time.deltaTime;
-                var normalizedTime = Mathf.Clamp01(orbitElapsed / orbitDuration);
+                inspectorTargetSummary = $"找不到入场镜头目标点：{entryCinematicEndObjectName}";
+                inspectorIsPlayingEntryCinematic = false;
+                inspectorIsMoving = false;
+                entryCinematicRoutine = null;
+                onCompleted?.Invoke();
+                yield break;
+            }
+
+            var targetPosition = endTarget.position;
+            var targetRotation = endTarget.rotation;
+            var elapsed = 0f;
+            var duration = Mathf.Max(0.01f, durationOverride);
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var normalizedTime = Mathf.Clamp01(elapsed / duration);
                 var eased = movementCurve != null ? movementCurve.Evaluate(normalizedTime) : normalizedTime;
-                var angle = Mathf.LerpUnclamped(0f, entryOrbitDegrees, eased);
-                var rotatedOffset = Quaternion.AngleAxis(angle, Vector3.up) * orbitStartOffset;
-                cameraTransform.position = focusPoint + rotatedOffset;
-                cameraTransform.rotation = Quaternion.LookRotation((focusPoint - cameraTransform.position).normalized, Vector3.up);
+                cameraTransform.position = Vector3.LerpUnclamped(startPosition, targetPosition, eased);
+                if (copyTargetRotation)
+                {
+                    cameraTransform.rotation = Quaternion.SlerpUnclamped(startRotation, targetRotation, eased);
+                }
+
                 inspectorTargetSummary = BuildCameraSummary();
                 yield return null;
             }
 
-            var endTarget = ResolveEntryCinematicEndTarget(out var endViewId, out var endViewName);
-            if (endTarget != null)
-            {
-                ApplyCameraTargetExact(endTarget);
-                SetInspectorSnapshot(endViewId, endViewName, endTarget, false);
-            }
-            else
-            {
-                cameraTransform.position = startPosition;
-                cameraTransform.rotation = startRotation;
-                inspectorTargetSummary = BuildCameraSummary();
-            }
+            ApplyCameraTargetExact(endTarget);
+            SetInspectorSnapshot(endViewId, endViewName, endTarget, false);
 
             inspectorIsPlayingEntryCinematic = false;
             inspectorIsMoving = false;
@@ -461,20 +507,15 @@ namespace TwelveMoons.City
 
         private Transform ResolveEntryCinematicEndTarget(out string viewId, out string viewName)
         {
-            viewId = string.IsNullOrEmpty(entryCinematicEndViewId) ? "city_upper" : entryCinematicEndViewId;
-            viewName = "上城区";
-            foreach (var point in viewPoints)
+            viewId = string.IsNullOrEmpty(entryCinematicEndObjectName) ? "GlobalViewPoint (1)" : entryCinematicEndObjectName;
+            viewName = viewId;
+            if (entryCinematicEndViewPoint != null)
             {
-                if (point == null || point.ViewId != viewId)
-                {
-                    continue;
-                }
-
-                viewName = string.IsNullOrEmpty(point.DisplayName) ? viewName : point.DisplayName;
-                return point.Target != null ? point.Target : entryCinematicEndViewPoint;
+                return entryCinematicEndViewPoint;
             }
 
-            return entryCinematicEndViewPoint;
+            var configuredTarget = FindConfiguredViewPointTarget(viewId);
+            return configuredTarget != null ? configuredTarget : FindSceneTransformIncludingInactive(viewId);
         }
 
         private void ClampCameraTransform()
@@ -546,6 +587,18 @@ namespace TwelveMoons.City
             return $"浣嶇疆={cameraTransform.position}, 鏃嬭浆={cameraTransform.eulerAngles}, X鑼冨洿=[{Mathf.Min(minPositionX, maxPositionX)}, {Mathf.Max(minPositionX, maxPositionX)}], Z鑼冨洿=[{Mathf.Min(minPositionZ, maxPositionZ)}, {Mathf.Max(minPositionZ, maxPositionZ)}], 楂樺害鑼冨洿=[{Mathf.Min(minPositionY, maxPositionY)}, {Mathf.Max(minPositionY, maxPositionY)}]";
         }
 
+        private void RefreshCameraBindingSnapshot()
+        {
+            var mainCamera = Camera.main;
+            inspectorCameraBindingSnapshot =
+                $"控制摄像机={(cityCamera != null ? cityCamera.gameObject.name : "无")}, " +
+                $"MainCamera={(mainCamera != null ? mainCamera.gameObject.name : "无")}, " +
+                $"同一台={(cityCamera != null && mainCamera != null && cityCamera == mainCamera)}, " +
+                $"启用={(cityCamera != null && cityCamera.enabled)}, " +
+                $"Depth={(cityCamera != null ? cityCamera.depth : 0f)}, " +
+                $"TargetDisplay={(cityCamera != null ? cityCamera.targetDisplay : -1)}";
+        }
+
         private void ResolveCamera()
         {
             if (cityCamera == null)
@@ -557,6 +610,120 @@ namespace TwelveMoons.City
             {
                 cityCamera = Camera.main;
             }
+
+            RefreshCameraBindingSnapshot();
+        }
+
+        private void DisableCompetingCameras()
+        {
+            if (!disableCompetingSceneCameras)
+            {
+                return;
+            }
+
+            ResolveCamera();
+            if (cityCamera == null)
+            {
+                return;
+            }
+
+            var cameras = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var camera in cameras)
+            {
+                if (camera == null || camera == cityCamera || !camera.enabled)
+                {
+                    continue;
+                }
+
+                if (camera.targetTexture != null || camera.targetDisplay != cityCamera.targetDisplay)
+                {
+                    continue;
+                }
+
+                camera.enabled = false;
+            }
+        }
+
+        private void ResolveViewPointReferences()
+        {
+            if (defaultViewPoint == null)
+            {
+                defaultViewPoint =
+                    FindSceneTransformIncludingInactive("GlobalViewPoint") ??
+                    FindSceneTransformIncludingInactive("GlobalViewPoint (1)");
+            }
+
+            if (entryCinematicEndViewPoint == null && !string.IsNullOrEmpty(entryCinematicEndObjectName))
+            {
+                entryCinematicEndViewPoint =
+                    FindConfiguredViewPointTarget(entryCinematicEndObjectName) ??
+                    FindSceneTransformIncludingInactive(entryCinematicEndObjectName);
+            }
+        }
+
+        private Transform ResolveViewPointTarget(CityCameraViewPoint point, string requestedId)
+        {
+            if (point == null)
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrEmpty(requestedId) &&
+                point.Target != null &&
+                (point.ViewId == requestedId || point.Target.name == requestedId))
+            {
+                return point.Target;
+            }
+
+            if (point.Target != null && string.IsNullOrEmpty(requestedId))
+            {
+                return point.Target;
+            }
+
+            return FindSceneTransformIncludingInactive(point.ViewId) ??
+                FindSceneTransformIncludingInactive(point.DisplayName);
+        }
+
+        private Transform FindConfiguredViewPointTarget(string viewIdOrObjectName)
+        {
+            if (string.IsNullOrEmpty(viewIdOrObjectName))
+            {
+                return null;
+            }
+
+            foreach (var point in viewPoints)
+            {
+                if (point?.Target == null)
+                {
+                    continue;
+                }
+
+                if (point.ViewId == viewIdOrObjectName || point.Target.name == viewIdOrObjectName)
+                {
+                    return point.Target;
+                }
+            }
+
+            return null;
+        }
+
+        private static Transform FindSceneTransformIncludingInactive(string objectName)
+        {
+            if (string.IsNullOrEmpty(objectName))
+            {
+                return null;
+            }
+
+            var transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var candidate in transforms)
+            {
+                if (candidate != null && candidate.name == objectName)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
         }
     }
 }

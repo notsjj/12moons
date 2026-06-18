@@ -142,6 +142,11 @@ namespace TwelveMoons.UI
 
         public void PlayEnterCityTransition(Action onCovered, Action onCompleted)
         {
+            PlayEnterCityTransition(onCovered, coveredHoldDuration, onCompleted);
+        }
+
+        public void PlayEnterCityTransition(Action onCovered, float coveredHoldDurationOverride, Action onCompleted)
+        {
             KillPlayingSequence();
             if (isInitialized)
             {
@@ -157,8 +162,8 @@ namespace TwelveMoons.UI
 
             playingSequence = DOTween.Sequence().SetUpdate(true);
             playingSequence.Append(BuildEnterSequence());
-            playingSequence.AppendInterval(Mathf.Max(0f, coveredHoldDuration));
             playingSequence.AppendCallback(() => onCovered?.Invoke());
+            playingSequence.AppendInterval(Mathf.Max(0f, coveredHoldDurationOverride));
             playingSequence.Append(BuildExitSequence());
             playingSequence.OnComplete(() =>
             {
@@ -170,38 +175,73 @@ namespace TwelveMoons.UI
             });
         }
 
-        private Sequence BuildEnterSequence()
+        public void PlayEnterCityTransitionSynchronized(Action onStarted, float totalTransitionDuration, Action onCompleted)
+        {
+            KillPlayingSequence();
+            if (isInitialized)
+            {
+                ApplyCoveredState();
+            }
+
+            isInitialized = false;
+            EnsureInitialized();
+
+            isPlayingSnapshot = true;
+            SetVisible(true);
+            ApplyOffscreenState();
+
+            var synchronizedDuration = Mathf.Max(0.01f, totalTransitionDuration);
+            var phaseDuration = synchronizedDuration * 0.5f;
+            playingSequence = DOTween.Sequence().SetUpdate(true);
+            playingSequence.AppendCallback(() => onStarted?.Invoke());
+            playingSequence.Append(BuildEnterSequence(phaseDuration));
+            playingSequence.Append(BuildExitSequence(phaseDuration));
+            playingSequence.OnComplete(() =>
+            {
+                playingSequence = null;
+                isPlayingSnapshot = false;
+                ApplyCoveredState();
+                SetVisible(false);
+                onCompleted?.Invoke();
+            });
+        }
+
+        private Sequence BuildEnterSequence(float targetPhaseDuration = -1f)
         {
             var sequence = DOTween.Sequence();
+            var durationScale = GetPhaseDurationScale(targetPhaseDuration);
             for (var groupIndex = 0; groupIndex < layerGroups.Count; groupIndex++)
             {
                 InsertGroupTweens(
                     sequence,
                     layerGroups[groupIndex],
-                    groupIndex * Mathf.Max(0f, groupInterval),
-                    true);
+                    groupIndex * Mathf.Max(0f, groupInterval) * durationScale,
+                    true,
+                    durationScale);
             }
 
             return sequence;
         }
 
-        private Sequence BuildExitSequence()
+        private Sequence BuildExitSequence(float targetPhaseDuration = -1f)
         {
             var sequence = DOTween.Sequence();
+            var durationScale = GetPhaseDurationScale(targetPhaseDuration);
             for (var orderIndex = 0; orderIndex < layerGroups.Count; orderIndex++)
             {
                 var groupIndex = layerGroups.Count - 1 - orderIndex;
                 InsertGroupTweens(
                     sequence,
                     layerGroups[groupIndex],
-                    orderIndex * Mathf.Max(0f, groupInterval),
-                    false);
+                    orderIndex * Mathf.Max(0f, groupInterval) * durationScale,
+                    false,
+                    durationScale);
             }
 
             return sequence;
         }
 
-        private void InsertGroupTweens(Sequence sequence, LayerGroupState group, float startTime, bool isEntering)
+        private void InsertGroupTweens(Sequence sequence, LayerGroupState group, float startTime, bool isEntering, float durationScale = 1f)
         {
             foreach (var layer in group.Layers)
             {
@@ -215,7 +255,7 @@ namespace TwelveMoons.UI
                 sequence.Insert(
                     startTime,
                     layer.RectTransform
-                        .DOAnchorPos(target, Mathf.Max(0.01f, groupSlideDuration))
+                        .DOAnchorPos(target, Mathf.Max(0.01f, groupSlideDuration * Mathf.Max(0.01f, durationScale)))
                         .SetEase(ease));
             }
         }
@@ -389,6 +429,16 @@ namespace TwelveMoons.UI
         {
             return Mathf.Max(0.01f, groupSlideDuration) +
                 Mathf.Max(0, layerGroups.Count - 1) * Mathf.Max(0f, groupInterval);
+        }
+
+        private float GetPhaseDurationScale(float targetPhaseDuration)
+        {
+            if (targetPhaseDuration <= 0f)
+            {
+                return 1f;
+            }
+
+            return Mathf.Max(0.01f, targetPhaseDuration / GetPhaseDuration());
         }
 
         private string BuildOrderSnapshot(bool reverse)

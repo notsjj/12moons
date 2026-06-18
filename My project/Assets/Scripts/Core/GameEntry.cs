@@ -1,3 +1,4 @@
+using TwelveMoons.City;
 using UnityEngine;
 
 namespace TwelveMoons.Core
@@ -33,6 +34,7 @@ namespace TwelveMoons.Core
 
         public void ShowDesk()
         {
+            CityPointView.SetAllPortraitsVisible(false);
             SetRootActive(deskRoot, true);
             SetRootActive(cityRoot, false);
         }
@@ -41,6 +43,8 @@ namespace TwelveMoons.Core
         {
             SetRootActive(deskRoot, false);
             SetRootActive(cityRoot, true);
+            EnsureCityBuildingBinding();
+            CityPointView.SetAllPortraitsVisible(true);
         }
 
         public void ValidateReferences()
@@ -89,6 +93,29 @@ namespace TwelveMoons.Core
             {
                 root.SetActive(isActive);
             }
+        }
+
+        private void EnsureCityBuildingBinding()
+        {
+            if (cityRoot == null)
+            {
+                return;
+            }
+
+            var service = cityRoot.GetComponentInChildren<CityBuildingService>(true);
+            if (service == null)
+            {
+                service = cityRoot.AddComponent<CityBuildingService>();
+            }
+
+            var registry = cityRoot.GetComponentInChildren<CityBuildingRegistry>(true);
+            if (registry == null)
+            {
+                registry = cityRoot.AddComponent<CityBuildingRegistry>();
+            }
+
+            service.Refresh();
+            registry.RefreshAndBind();
         }
     }
 }

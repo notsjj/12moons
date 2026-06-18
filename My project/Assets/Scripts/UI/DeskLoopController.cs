@@ -1,8 +1,10 @@
+using DG.Tweening;
 using TMPro;
 using TwelveMoons.City;
 using TwelveMoons.Core;
 using TwelveMoons.Core.Runtime;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -45,7 +47,34 @@ namespace TwelveMoons.UI
         [SerializeField] private TMP_Text statusText;
         [Tooltip("公文前剧情人物立绘框；只允许点击该人物进入公文前剧情。")]
         [SerializeField] private SharedActorSlotView sharedActorSlot;
+        [Header("进入城区：关闭物品栏")]
+        [Tooltip("物品面板；进入城区时会主动隐藏，避免桌面物品栏残留在城区界面上。为空时运行时自动查找。")]
+        [SerializeField] private InventoryPanelView inventoryPanel;
+        [Header("进入城区同步过场：LoadingPanel 与摄像机共用时长")]
+        [Tooltip("从 LoadingPanel 打开到关闭的总时长，同时也是城区摄像机入场移动时长；数值越大，整个过场越慢。")]
+        [SerializeField, Min(0.01f)] private float synchronizedEntryTransitionDuration = 2.5f;
         [SerializeField] private BaseSceneUIBootstrap uiBootstrap;
+
+        [Header("按钮自动关联：保护桌面布局，仅补后端绑定")]
+        [Tooltip("启用后，运行时按子物体名称自动寻找“公文按钮”“报纸按钮”“城区按钮”，并绑定到现有桌面流程方法；不会修改按钮布局。")]
+        [SerializeField] private bool autoBindWorkflowButtons = true;
+
+        [Header("只读快照：桌面按钮后端关联")]
+        [Tooltip("运行时只读快照；显示公文按钮、报纸按钮、城区按钮是否已经关联到 DeskLoopController。")]
+        [SerializeField] private string buttonBindingSnapshot;
+
+        [Header("\u57ce\u533a\u6309\u94ae\u906e\u7f69\u52a8\u753b\uff1a\u70b9\u51fb\u540e\u5148\u5de6\u53f3\u62c9\u5f00")]
+        [Tooltip("\u542f\u7528\u540e\uff0c\u70b9\u51fb\u57ce\u533a\u6309\u94ae\u4f1a\u5148\u5c06\u6309\u94ae\u4e0b\u540d\u79f0\u5305\u542b\u201c\u906e\u7f69\u201d\u6216 Mask \u7684\u4e24\u4e2a\u5b50\u7269\u4f53\u5206\u522b\u5411\u5de6\u53f3\u62c9\u5f00\uff0c\u518d\u8fdb\u5165 LoadingPanel \u8fc7\u573a\u3002")]
+        [SerializeField] private bool playCityButtonMaskReveal = true;
+        [Tooltip("\u57ce\u533a\u6309\u94ae\u4e24\u4e2a\u906e\u7f69\u5404\u81ea\u5411\u5916\u62c9\u5f00\u7684\u8ddd\u79bb\uff1b\u53ea\u6539\u906e\u7f69\u5b50\u7269\u4f53\u7684 anchoredPosition\uff0c\u4e0d\u6539\u6309\u94ae\u5e03\u5c40\u3002")]
+        [SerializeField, Min(0f)] private float cityButtonMaskRevealDistance = 360f;
+        [Tooltip("\u57ce\u533a\u6309\u94ae\u906e\u7f69\u62c9\u5f00\u52a8\u753b\u65f6\u957f\uff1b\u52a8\u753b\u7ed3\u675f\u540e\u624d\u663e\u793a LoadingPanel\u3002")]
+        [SerializeField, Min(0f)] private float cityButtonMaskRevealDuration = 0.5f;
+        [Tooltip("\u57ce\u533a\u6309\u94ae\u906e\u7f69\u62c9\u5f00\u52a8\u753b\u7684\u7f13\u52a8\u66f2\u7ebf\u3002")]
+        [SerializeField] private Ease cityButtonMaskRevealEase = Ease.OutCubic;
+        [Header("\u53ea\u8bfb\u5feb\u7167\uff1a\u57ce\u533a\u6309\u94ae\u906e\u7f69")]
+        [Tooltip("\u8fd0\u884c\u65f6\u53ea\u8bfb\u5feb\u7167\uff1b\u663e\u793a\u662f\u5426\u627e\u5230\u57ce\u533a\u6309\u94ae\u4e0b\u7684\u4e24\u4e2a\u906e\u7f69\u5b50\u7269\u4f53\u3002")]
+        [SerializeField] private string cityButtonMaskSnapshot;
 
         private int roundWaitingForAdvance;
         private bool waitingToAdvanceAfterEndStories;
@@ -54,6 +83,11 @@ namespace TwelveMoons.UI
         private bool waitingForBeforeDocumentActorClick;
         private bool isEnteringCityWithTransition;
         private CityCameraController cityCameraController;
+        private Sequence cityButtonMaskRevealSequence;
+        private readonly Dictionary<RectTransform, Vector2> cityButtonMaskClosedPositions = new Dictionary<RectTransform, Vector2>();
+        private bool wasDocumentFlowActive;
+        private bool cityButtonMasksAreOpenAfterDocuments;
+        private bool hasStartedInitialRoundFlow;
 
         private void Awake()
         {
@@ -62,7 +96,8 @@ namespace TwelveMoons.UI
 
         private void Start()
         {
-            BeginCurrentRound();
+            BeginCurrentRoundFromEntry();
+            SetCityButtonMasksClosedInstantly();
             RefreshButtons();
         }
 
@@ -104,6 +139,8 @@ namespace TwelveMoons.UI
             {
                 sharedActorSlot.Clicked -= HandleSharedActorSlotClicked;
             }
+
+            KillCityButtonMaskRevealSequence();
         }
 
         public void StartOrContinueStoryQueue()
@@ -147,6 +184,7 @@ namespace TwelveMoons.UI
             }
 
             newspaperPanel?.Hide();
+            SetCityButtonMasksClosedInstantly();
             documentService?.GenerateCurrentRoundDocumentQueue();
             EnsureDocumentPopupVisible();
             if (documentPopupPanel == null)
@@ -251,11 +289,21 @@ namespace TwelveMoons.UI
             }
 
             newspaperPanel?.Hide();
+            HideInventoryPanelForCity();
+            StartCoroutine(PlayCityButtonMaskRevealThenEnterCityTransition());
+        }
+
+        private IEnumerator PlayCityButtonMaskRevealThenEnterCityTransition()
+        {
+            isEnteringCityWithTransition = true;
+            RefreshButtons();
+            yield return PlayCityButtonMaskReveal();
+
             var loadingPanel = uiBootstrap?.ShowLoadingPanel();
             if (loadingPanel == null)
             {
                 StartCoroutine(PlayEnterCityCameraOnlyTransition());
-                return;
+                yield break;
             }
 
             StartCoroutine(PlayEnterCityTransition(loadingPanel));
@@ -264,6 +312,17 @@ namespace TwelveMoons.UI
         public void HideNewspaper()
         {
             newspaperPanel?.Hide();
+        }
+
+        public void BeginCurrentRoundFromEntry()
+        {
+            if (hasStartedInitialRoundFlow)
+            {
+                return;
+            }
+
+            hasStartedInitialRoundFlow = true;
+            BeginCurrentRound();
         }
 
         private void BeginCurrentRound()
@@ -293,10 +352,175 @@ namespace TwelveMoons.UI
             var canContinueStory = !isEnteringCityWithTransition && !isDocumentFlowActive &&
                 (hasActiveStory || (!hasPendingBeforeDocumentStory && hasQueuedGameplayStories));
             SetButtonInteractable(storyButton, canContinueStory);
-            SetButtonInteractable(documentButton, !isEnteringCityWithTransition && !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && hasPendingDocuments);
+            SetWorkflowButtonState(documentButton, !isDocumentFlowActive, !isEnteringCityWithTransition && !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && hasPendingDocuments);
             SetButtonInteractable(endRoundButton, !isEnteringCityWithTransition && !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && !hasPendingDocuments);
-            SetButtonInteractable(newspaperButton, !isEnteringCityWithTransition && !isDocumentFlowActive && HasPreviousNewspaper());
-            SetButtonInteractable(cityButton, !isEnteringCityWithTransition && !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && !hasPendingDocuments);
+            SetWorkflowButtonState(newspaperButton, true, !isEnteringCityWithTransition && !isDocumentFlowActive && HasPreviousNewspaper());
+            SetWorkflowButtonState(cityButton, true, !isEnteringCityWithTransition && !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && !hasPendingDocuments);
+        }
+
+        private IEnumerator PlayCityButtonMaskReveal()
+        {
+            if (!playCityButtonMaskReveal ||
+                !TryResolveCityButtonRevealMasks(out var leftMask, out var rightMask))
+            {
+                yield break;
+            }
+
+            if (cityButtonMasksAreOpenAfterDocuments)
+            {
+                cityButtonMaskSnapshot = "\u516c\u6587\u9000\u51fa\u540e\u906e\u7f69\u5df2\u6253\u5f00\uff0c\u8fdb\u5165\u57ce\u533a\u65f6\u4e0d\u91cd\u590d\u62c9\u5f00";
+                yield break;
+            }
+
+            KillCityButtonMaskRevealSequence();
+            var leftClosedPosition = GetCityButtonMaskClosedPosition(leftMask);
+            var rightClosedPosition = GetCityButtonMaskClosedPosition(rightMask);
+            leftMask.anchoredPosition = leftClosedPosition;
+            rightMask.anchoredPosition = rightClosedPosition;
+
+            var distance = Mathf.Max(360f, cityButtonMaskRevealDistance);
+            var duration = Mathf.Max(0.5f, cityButtonMaskRevealDuration);
+            var leftOpenPosition = leftClosedPosition + (Vector2.left * distance);
+            var rightOpenPosition = rightClosedPosition + (Vector2.right * distance);
+            if (duration <= 0f)
+            {
+                leftMask.anchoredPosition = leftOpenPosition;
+                rightMask.anchoredPosition = rightOpenPosition;
+                cityButtonMasksAreOpenAfterDocuments = true;
+                yield break;
+            }
+
+            var isFinished = false;
+            cityButtonMaskRevealSequence = DOTween.Sequence().SetUpdate(true);
+            cityButtonMaskRevealSequence.Join(leftMask.DOAnchorPos(leftOpenPosition, duration).SetEase(cityButtonMaskRevealEase));
+            cityButtonMaskRevealSequence.Join(rightMask.DOAnchorPos(rightOpenPosition, duration).SetEase(cityButtonMaskRevealEase));
+            cityButtonMaskRevealSequence.OnComplete(() =>
+            {
+                cityButtonMaskRevealSequence = null;
+                cityButtonMasksAreOpenAfterDocuments = true;
+                isFinished = true;
+            });
+
+            while (!isFinished && cityButtonMaskRevealSequence != null && cityButtonMaskRevealSequence.IsActive())
+            {
+                yield return null;
+            }
+        }
+
+        private bool TryResolveCityButtonRevealMasks(out RectTransform leftMask, out RectTransform rightMask)
+        {
+            leftMask = null;
+            rightMask = null;
+            if (cityButton == null)
+            {
+                cityButtonMaskSnapshot = "\u672a\u627e\u5230\u57ce\u533a\u6309\u94ae\uff0c\u65e0\u6cd5\u8bc6\u522b\u906e\u7f69";
+                return false;
+            }
+
+            var buttonRoot = cityButton.transform as RectTransform;
+            var masks = cityButton
+                .GetComponentsInChildren<RectTransform>(true)
+                .Where(rect => rect != null && rect != buttonRoot && IsCityButtonMaskCandidate(rect))
+                .OrderBy(rect => rect.anchoredPosition.x)
+                .Take(2)
+                .ToArray();
+
+            if (masks.Length < 2)
+            {
+                cityButtonMaskSnapshot = "\u672a\u627e\u5230\u4e24\u4e2a\u540d\u79f0\u5305\u542b\u201c\u906e\u7f69\u201d\u6216 Mask\uff0c\u6216\u6302\u6709 Mask/RectMask2D \u7684\u57ce\u533a\u6309\u94ae\u5b50\u7269\u4f53";
+                return false;
+            }
+
+            leftMask = masks[0];
+            rightMask = masks[1];
+            cityButtonMaskSnapshot = $"\u5df2\u627e\u5230\u906e\u7f69\uff1a{leftMask.gameObject.name} / {rightMask.gameObject.name}";
+            return true;
+        }
+
+        private static bool IsCityButtonMaskCandidate(RectTransform rectTransform)
+        {
+            return rectTransform != null &&
+                (IsCityButtonMaskName(rectTransform.gameObject.name) ||
+                rectTransform.GetComponent<Mask>() != null ||
+                rectTransform.GetComponent<RectMask2D>() != null);
+        }
+
+        private static bool IsCityButtonMaskName(string objectName)
+        {
+            if (string.IsNullOrEmpty(objectName))
+            {
+                return false;
+            }
+
+            var lowerName = objectName.ToLowerInvariant();
+            return objectName.Contains("\u906e\u7f69") || lowerName.Contains("mask");
+        }
+
+        private Vector2 GetCityButtonMaskClosedPosition(RectTransform mask)
+        {
+            if (!cityButtonMaskClosedPositions.TryGetValue(mask, out var closedPosition))
+            {
+                closedPosition = mask.anchoredPosition;
+                cityButtonMaskClosedPositions[mask] = closedPosition;
+            }
+
+            return closedPosition;
+        }
+
+        private void SetCityButtonMasksClosedInstantly()
+        {
+            cityButtonMasksAreOpenAfterDocuments = false;
+            if (!TryResolveCityButtonRevealMasks(out var leftMask, out var rightMask))
+            {
+                return;
+            }
+
+            KillCityButtonMaskRevealSequence();
+            leftMask.anchoredPosition = GetCityButtonMaskClosedPosition(leftMask);
+            rightMask.anchoredPosition = GetCityButtonMaskClosedPosition(rightMask);
+            cityButtonMaskSnapshot = "\u516c\u6587\u6d41\u7a0b\u5f00\u59cb\uff0c\u57ce\u533a\u6309\u94ae\u906e\u7f69\u5df2\u590d\u4f4d\u4e3a\u95ed\u5408";
+        }
+
+        private void OpenCityButtonMasksAfterDocumentExit()
+        {
+            if (!playCityButtonMaskReveal ||
+                !TryResolveCityButtonRevealMasks(out var leftMask, out var rightMask))
+            {
+                return;
+            }
+
+            KillCityButtonMaskRevealSequence();
+            var distance = Mathf.Max(360f, cityButtonMaskRevealDistance);
+            var duration = Mathf.Max(0.5f, cityButtonMaskRevealDuration);
+            var leftClosedPosition = GetCityButtonMaskClosedPosition(leftMask);
+            var rightClosedPosition = GetCityButtonMaskClosedPosition(rightMask);
+            var leftOpenPosition = leftClosedPosition + (Vector2.left * distance);
+            var rightOpenPosition = rightClosedPosition + (Vector2.right * distance);
+
+            leftMask.anchoredPosition = leftClosedPosition;
+            rightMask.anchoredPosition = rightClosedPosition;
+            cityButtonMaskSnapshot = "\u516c\u6587\u9000\u51fa\u540e\uff0c\u57ce\u533a\u6309\u94ae\u906e\u7f69\u6b63\u5728\u5de6\u53f3\u62c9\u5f00";
+
+            cityButtonMaskRevealSequence = DOTween.Sequence().SetUpdate(true);
+            cityButtonMaskRevealSequence.Join(leftMask.DOAnchorPos(leftOpenPosition, duration).SetEase(cityButtonMaskRevealEase));
+            cityButtonMaskRevealSequence.Join(rightMask.DOAnchorPos(rightOpenPosition, duration).SetEase(cityButtonMaskRevealEase));
+            cityButtonMaskRevealSequence.OnComplete(() =>
+            {
+                cityButtonMaskRevealSequence = null;
+                cityButtonMasksAreOpenAfterDocuments = true;
+                cityButtonMaskSnapshot = "\u516c\u6587\u9000\u51fa\u540e\uff0c\u57ce\u533a\u6309\u94ae\u4e24\u4e2a\u906e\u7f69\u5df2\u5b8c\u6210\u62c9\u5f00";
+            });
+        }
+
+        private void KillCityButtonMaskRevealSequence()
+        {
+            if (cityButtonMaskRevealSequence == null)
+            {
+                return;
+            }
+
+            cityButtonMaskRevealSequence.Kill();
+            cityButtonMaskRevealSequence = null;
         }
 
         private IEnumerator PlayEnterCityTransition(LoadingPanelTransitionView loadingPanel)
@@ -306,28 +530,40 @@ namespace TwelveMoons.UI
             RefreshButtons();
 
             var isFinished = false;
-            loadingPanel.PlayEnterCityTransition(
-                EnterCityImmediately,
+            var isCameraFinished = cityCameraController == null;
+            loadingPanel.PlayEnterCityTransitionSynchronized(
+                () =>
+                {
+                    EnterCityImmediately();
+                    if (cityCameraController != null)
+                    {
+                        cityCameraController.PlayEntryCinematic(GetSynchronizedEntryTransitionDuration(loadingPanel), () => isCameraFinished = true);
+                    }
+                },
+                GetSynchronizedEntryTransitionDuration(loadingPanel),
                 () =>
                 {
                     uiBootstrap?.HideLoadingPanel();
-                    if (cityCameraController != null)
-                    {
-                        cityCameraController.PlayEntryCinematic(() => isFinished = true);
-                    }
-                    else
-                    {
-                        isFinished = true;
-                    }
+                    isFinished = true;
                 });
 
-            while (!isFinished)
+            while (!isFinished || !isCameraFinished)
             {
                 yield return null;
             }
 
             isEnteringCityWithTransition = false;
             RefreshButtons();
+        }
+
+        private float GetSynchronizedEntryTransitionDuration(LoadingPanelTransitionView loadingPanel)
+        {
+            if (synchronizedEntryTransitionDuration > 0f)
+            {
+                return synchronizedEntryTransitionDuration;
+            }
+
+            return loadingPanel != null ? loadingPanel.CloseDuration + loadingPanel.OpenDuration : 0f;
         }
 
         private IEnumerator PlayEnterCityCameraOnlyTransition()
@@ -340,7 +576,7 @@ namespace TwelveMoons.UI
             var isFinished = false;
             if (cityCameraController != null)
             {
-                cityCameraController.PlayEntryCinematic(() => isFinished = true);
+                cityCameraController.PlayEntryCinematic(GetSynchronizedEntryTransitionDuration(null), () => isFinished = true);
             }
             else
             {
@@ -358,10 +594,21 @@ namespace TwelveMoons.UI
 
         private void EnterCityImmediately()
         {
+            HideInventoryPanelForCity();
             uiBootstrap?.ShowCity();
             gameEntry?.ShowCity();
             SetStatus("已进入城区。");
             RefreshButtons();
+        }
+
+        private void HideInventoryPanelForCity()
+        {
+            if (inventoryPanel == null)
+            {
+                inventoryPanel = FindFirstObjectByType<InventoryPanelView>(FindObjectsInactive.Include);
+            }
+
+            inventoryPanel?.HideForDocumentSubmission(true);
         }
 
         private bool HasActiveStory()
@@ -657,10 +904,137 @@ namespace TwelveMoons.UI
                 sharedActorSlot = FindFirstObjectByType<SharedActorSlotView>(FindObjectsInactive.Include);
             }
 
+            if (inventoryPanel == null)
+            {
+                inventoryPanel = FindFirstObjectByType<InventoryPanelView>(FindObjectsInactive.Include);
+            }
+
             if (cityCameraController == null)
             {
                 cityCameraController = FindFirstObjectByType<CityCameraController>(FindObjectsInactive.Include);
             }
+
+            BindWorkflowButtons();
+        }
+
+        private void BindWorkflowButtons()
+        {
+            if (!autoBindWorkflowButtons)
+            {
+                RefreshButtonBindingSnapshot();
+                return;
+            }
+
+            if (documentButton == null)
+            {
+                documentButton = FindWorkflowButton("公文按钮", "公文", "DocumentButton", "OpenDocumentButton");
+            }
+
+            if (documentButton == null)
+            {
+                documentButton = FindWorkflowButton("\u516c\u6587\u6309\u94ae", "\u516c\u6587", "DocumentButton", "OpenDocumentButton");
+            }
+
+            if (newspaperButton == null)
+            {
+                newspaperButton = FindWorkflowButton("报纸按钮", "报纸", "NewspaperButton", "OpenNewspaperButton");
+            }
+
+            if (newspaperButton == null)
+            {
+                newspaperButton = FindWorkflowButton("\u62a5\u7eb8\u6309\u94ae", "\u62a5\u7eb8", "NewspaperButton", "OpenNewspaperButton");
+            }
+
+            if (cityButton == null)
+            {
+                cityButton = FindWorkflowButton("城区按钮", "城区", "CityButton", "OpenCityButton");
+            }
+
+            if (cityButton == null)
+            {
+                cityButton = FindWorkflowButton("\u57ce\u533a\u6309\u94ae", "\u57ce\u533a", "CityButton", "OpenCityButton");
+            }
+
+            BindButtonClick(documentButton, BeginDocumentFlow);
+            BindButtonClick(newspaperButton, ShowPreviousRoundNewspaper);
+            BindButtonClick(cityButton, EnterCity);
+            EnsureWorkflowButtonHoverScaleEffect(documentButton);
+            EnsureWorkflowButtonHoverScaleEffect(newspaperButton);
+            RefreshButtonBindingSnapshot();
+        }
+
+        private static void EnsureWorkflowButtonHoverScaleEffect(Button button)
+        {
+            if (button == null || button.GetComponent<ButtonAnim>() != null)
+            {
+                return;
+            }
+
+            button.gameObject.AddComponent<ButtonAnim>();
+        }
+
+        private Button FindWorkflowButton(string exactChineseName, string chineseKeyword, params string[] fallbackNames)
+        {
+            var buttons = GetComponentsInChildren<Button>(true);
+            foreach (var button in buttons)
+            {
+                if (button != null && button.gameObject.name == exactChineseName)
+                {
+                    return button;
+                }
+            }
+
+            foreach (var button in buttons)
+            {
+                if (button == null)
+                {
+                    continue;
+                }
+
+                var objectName = button.gameObject.name;
+                if (objectName.Contains(chineseKeyword) && objectName.Contains("\u6309\u94ae"))
+                {
+                    return button;
+                }
+                if (objectName.Contains(chineseKeyword) && objectName.Contains("按钮"))
+                {
+                    return button;
+                }
+
+                foreach (var fallbackName in fallbackNames)
+                {
+                    if (objectName == fallbackName)
+                    {
+                        return button;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static void BindButtonClick(Button button, UnityEngine.Events.UnityAction action)
+        {
+            if (button == null || action == null)
+            {
+                return;
+            }
+
+            button.onClick.RemoveListener(action);
+            button.onClick.AddListener(action);
+        }
+
+        private void RefreshButtonBindingSnapshot()
+        {
+            buttonBindingSnapshot =
+                $"\u516c\u6587\u6309\u94ae\uff1a{DescribeWorkflowButtonBinding(documentButton)}\uff1b" +
+                $"\u62a5\u7eb8\u6309\u94ae\uff1a{DescribeWorkflowButtonBinding(newspaperButton)}\uff1b" +
+                $"\u57ce\u533a\u6309\u94ae\uff1a{DescribeWorkflowButtonBinding(cityButton)}";
+        }
+
+        private static string DescribeWorkflowButtonBinding(Button button)
+        {
+            return button != null ? $"\u5df2\u5173\u8054 {button.gameObject.name}" : "\u672a\u5173\u8054";
         }
 
         private void SetStatus(string value)
@@ -677,6 +1051,21 @@ namespace TwelveMoons.UI
             {
                 button.interactable = interactable;
             }
+        }
+
+        private static void SetWorkflowButtonState(Button button, bool visible, bool interactable)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            if (button.gameObject.activeSelf != visible)
+            {
+                button.gameObject.SetActive(visible);
+            }
+
+            button.interactable = interactable;
         }
 
         private void EnsureDocumentPopupVisible()
@@ -726,8 +1115,9 @@ namespace TwelveMoons.UI
         {
             if (popup != null)
             {
-                popup.DocumentFlowStateChanged -= RefreshButtons;
-                popup.DocumentFlowStateChanged += RefreshButtons;
+                popup.DocumentFlowStateChanged -= HandleDocumentPopupStateChanged;
+                popup.DocumentFlowStateChanged += HandleDocumentPopupStateChanged;
+                wasDocumentFlowActive = popup.IsDocumentFlowActive;
             }
         }
 
@@ -735,8 +1125,24 @@ namespace TwelveMoons.UI
         {
             if (popup != null)
             {
-                popup.DocumentFlowStateChanged -= RefreshButtons;
+                popup.DocumentFlowStateChanged -= HandleDocumentPopupStateChanged;
             }
+        }
+
+        private void HandleDocumentPopupStateChanged()
+        {
+            var isDocumentFlowActive = IsDocumentFlowActive();
+            if (!wasDocumentFlowActive && isDocumentFlowActive)
+            {
+                SetCityButtonMasksClosedInstantly();
+            }
+            else if (wasDocumentFlowActive && !isDocumentFlowActive && !HasPendingDocuments())
+            {
+                OpenCityButtonMasksAfterDocumentExit();
+            }
+
+            wasDocumentFlowActive = isDocumentFlowActive;
+            RefreshButtons();
         }
     }
 }

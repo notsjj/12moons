@@ -39,6 +39,9 @@ namespace TwelveMoons.UI
         [SerializeField] private float hiddenMoveRightDistance = 260f;
         [Tooltip("角色滑入或滑出的动画时长。")]
         [SerializeField] private float slideDuration = 0.8f;
+        [Header("角色移动曲线：滑入滑出先快后慢")]
+        [Tooltip("角色滑入和滑出时使用的缓动曲线。默认 OutCubic，表现为先快后慢。")]
+        [SerializeField] private Ease slideEase = Ease.OutCubic;
 
         private Vector2 visiblePosition;
         private Tween feedbackTypewriterTween;
@@ -50,8 +53,14 @@ namespace TwelveMoons.UI
 
         public bool IsFeedbackTypewriterPlaying => isFeedbackTypewriterPlaying;
 
+        public float HiddenMoveLeftDistance => hiddenMoveLeftDistance;
+
+        public float SlideDuration => slideDuration;
+
         private void Awake()
         {
+            ApplyRuntimeMotionDefaults();
+
             if (canvasGroup == null)
             {
                 canvasGroup = GetComponent<CanvasGroup>();
@@ -94,6 +103,12 @@ namespace TwelveMoons.UI
             ConfigureClickRaycast();
             ClearFeedback();
             SetVisible(false, true);
+        }
+
+        private void ApplyRuntimeMotionDefaults()
+        {
+            hiddenMoveLeftDistance = Mathf.Max(hiddenMoveLeftDistance, 560f);
+            slideDuration = Mathf.Min(slideDuration, 0.35f);
         }
 
         public void ShowActor(string actorName, string role, Sprite portrait)
@@ -253,7 +268,7 @@ namespace TwelveMoons.UI
                 }
                 else
                 {
-                    var tween = actorRoot.DOAnchorPos(targetPosition, slideDuration);
+                    var tween = actorRoot.DOAnchorPos(targetPosition, slideDuration).SetEase(slideEase);
                     tween.OnComplete(() =>
                     {
                         if (!isVisible && canvasGroup != null)

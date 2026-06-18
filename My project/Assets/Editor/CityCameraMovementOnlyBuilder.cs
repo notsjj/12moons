@@ -37,6 +37,7 @@ namespace TwelveMoons.EditorTools
             RemoveObsoleteChildren(pointsRoot.transform, "EastViewPoint", "WestViewPoint", "SouthViewPoint");
 
             var globalPoint = FindOrCreateViewPoint(pointsRoot.transform, "GlobalViewPoint", new Vector3(0f, 8f, -10f), new Vector3(45f, 0f, 0f));
+            var entryEndPoint = FindOrCreateViewPoint(pointsRoot.transform, "GlobalViewPoint (1)", new Vector3(-6.9f, 1.16f, -4.06f), new Vector3(7.78f, 63.1f, 0f));
             var royalPoint = FindOrCreateViewPoint(pointsRoot.transform, "RoyalViewPoint", new Vector3(0f, 5.5f, -6.5f), new Vector3(36f, 0f, 0f));
             var churchPoint = FindOrCreateViewPoint(pointsRoot.transform, "ChurchViewPoint", new Vector3(-5.5f, 5f, -6.5f), new Vector3(36f, 32f, 0f));
             var upperCityPoint = FindOrCreateViewPoint(pointsRoot.transform, "UpperCityViewPoint", new Vector3(5.5f, 5f, -6.5f), new Vector3(36f, -32f, 0f));
@@ -44,7 +45,7 @@ namespace TwelveMoons.EditorTools
             var lowerCityPoint = FindOrCreateViewPoint(pointsRoot.transform, "LowerCityViewPoint", new Vector3(0f, 4.2f, -8.5f), new Vector3(34f, 0f, 0f));
 
             var controller = camera.GetComponent<CityCameraController>() ?? camera.gameObject.AddComponent<CityCameraController>();
-            ConfigureController(controller, camera, globalPoint, royalPoint, churchPoint, upperCityPoint, academyPoint, lowerCityPoint);
+            ConfigureController(controller, camera, globalPoint, entryEndPoint, royalPoint, churchPoint, upperCityPoint, academyPoint, lowerCityPoint);
 
             var controls = BuildControls(cityRoot.transform, controller);
             controls.SetActive(true);
@@ -67,7 +68,7 @@ namespace TwelveMoons.EditorTools
 
         private static Transform FindCityWorldParent()
         {
-            var cityMap = FindSceneObjectByName("City_01");
+            var cityMap = FindSceneObjectByName("城区地图_01") ?? FindSceneObjectByName("City_01");
             if (cityMap != null)
             {
                 return cityMap.transform.parent;
@@ -191,6 +192,7 @@ namespace TwelveMoons.EditorTools
             CityCameraController controller,
             Camera camera,
             Transform globalPoint,
+            Transform entryEndPoint,
             Transform royalPoint,
             Transform churchPoint,
             Transform upperCityPoint,
@@ -223,8 +225,8 @@ namespace TwelveMoons.EditorTools
             serializedObject.FindProperty("maxPositionZ").floatValue = 4f;
             serializedObject.FindProperty("minPositionY").floatValue = 3f;
             serializedObject.FindProperty("maxPositionY").floatValue = 9f;
-            serializedObject.FindProperty("entryCinematicEndViewId").stringValue = "city_upper";
-            serializedObject.FindProperty("entryCinematicEndViewPoint").objectReferenceValue = upperCityPoint;
+            serializedObject.FindProperty("entryCinematicEndObjectName").stringValue = "GlobalViewPoint (1)";
+            serializedObject.FindProperty("entryCinematicEndViewPoint").objectReferenceValue = entryEndPoint;
 
             var pointsProperty = serializedObject.FindProperty("viewPoints");
             pointsProperty.arraySize = viewPoints.Count;

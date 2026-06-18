@@ -21,6 +21,8 @@ namespace TwelveMoons.City
         [SerializeField] private Collider clickableCollider;
         [Tooltip("启用后，建筑在可领取时可通过鼠标点击领取产出；领取后仍可悬停高亮，但不会重复领取。")]
         [SerializeField] private bool allowMouseClick = true;
+        [Tooltip("启用后，建筑未解锁时会隐藏 Renderer；自动绑定既有地图模型时应关闭，避免误隐藏城市场景。")]
+        [SerializeField] private bool controlVisualVisibilityByUnlock = true;
         [Tooltip("启用后，只有 GameEntry 已切换到城区界面时，建筑才响应点击和悬停。")]
         [SerializeField] private bool requireCityRootActive = true;
         [Tooltip("游戏入口对象；用于确认是否已经通过进入城区按钮切换到 CityRoot。留空时运行时自动查找。")]
@@ -53,6 +55,13 @@ namespace TwelveMoons.City
         [SerializeField] private Color hoverOutlineColor = new Color(1f, 0.78f, 0.18f, 1f);
         [Tooltip("轮廓高亮像素宽度；数值越大，鼠标移上去后屏幕空间外圈越粗。")]
         [SerializeField] private int hoverOutlinePixelWidth = 3;
+        [Header("悬停描边自动绑定：运行时补齐缺失组件")]
+        [Tooltip("启用后，运行时会自动查找建筑 Renderer、添加同物体 Collider、添加 CityBuildingOutlineEffect，避免手动漏拖引用。")]
+        [SerializeField] private bool autoBindHoverOutlineDependencies = true;
+        [Tooltip("启用后，未填写 BuildingId 或未绑定 CityBuildingConfig 的建筑也可以显示鼠标悬停描边；不会影响正式领取逻辑。")]
+        [SerializeField] private bool allowHoverOutlineWhenUnbound = true;
+        [Tooltip("启用后，自动添加的 BoxCollider 会按建筑 Renderer 的整体包围盒适配，保证鼠标能点到整栋建筑。")]
+        [SerializeField] private bool autoFitHoverColliderToRenderers = true;
 
         [Header("运行时只读快照：建筑显示与领取状态")]
         [Tooltip("当前建筑是否已经匹配到 CityBuildingConfig 中的配置行。")]
@@ -71,6 +80,8 @@ namespace TwelveMoons.City
         [SerializeField] private bool inspectorCanCollect;
         [Tooltip("建筑配置和运行状态摘要；用于在 Inspector 中快速确认绑定是否正确。")]
         [SerializeField] private string inspectorSummary;
+        [Tooltip("悬停描边自动绑定诊断：显示 Renderer、Collider、OutlineEffect 是否已经由运行时代码补齐。")]
+        [SerializeField] private string inspectorHoverOutlineBindingSnapshot;
 
         private CityBuildingDefinition definition;
         private CityBuildingService service;
@@ -85,11 +96,38 @@ namespace TwelveMoons.City
 
         public bool IsMatched => definition != null;
 
+        public bool IsHoverOutlineRuntimeReady =>
+            outlineEffect != null &&
+            clickableCollider != null &&
+            highlightRenderers != null &&
+            highlightRenderers.Any(renderer => renderer != null);
+
+        private void Awake()
+        {
+            InitializeRuntimeHoverDependencies();
+        }
+
+        private void OnEnable()
+        {
+            InitializeRuntimeHoverDependencies();
+        }
+
+        public void InitializeRuntimeHoverDependenciesForTest()
+        {
+            InitializeRuntimeHoverDependencies();
+        }
+
         public void Configure(string newBuildingId, string newPointId)
         {
             buildingId = newBuildingId ?? string.Empty;
             pointId = newPointId ?? string.Empty;
             ClearBinding();
+        }
+
+        public void ConfigureRuntimeBinding(string newBuildingId, string newPointId, bool controlVisualVisibility)
+        {
+            controlVisualVisibilityByUnlock = controlVisualVisibility;
+            Configure(newBuildingId, newPointId);
         }
 
         public void Bind(CityBuildingDefinition buildingDefinition, CityBuildingService buildingService)
@@ -124,7 +162,7 @@ namespace TwelveMoons.City
             inspectorCityAreaId = definition != null ? definition.CityAreaId : string.Empty;
             inspectorConfigPointId = definition != null ? definition.PointId : string.Empty;
             inspectorEffectType = definition != null ? definition.BuildingEffectType : string.Empty;
-            inspectorIsUnlocked = service != null && service.IsUnlocked(buildingId);
+            inspectorIsUnlocked = service != null && (service.IsUnlocked(buildingId) || !controlVisualVisibilityByUnlock);
             inspectorCanCollect = service != null && service.CanCollect(buildingId);
 
             var pointStatus = definition == null || string.IsNullOrEmpty(pointId) || pointId == definition.PointId
@@ -158,7 +196,7 @@ namespace TwelveMoons.City
 
         private void OnMouseEnter()
         {
-            if (IsCityInteractionEnabled() && inspectorIsUnlocked)
+            if (IsCityInteractionEnabled() && CanShowHoverOutline())
             {
                 ApplyHoverHighlight(true);
             }
@@ -206,14 +244,8 @@ namespace TwelveMoons.City
             EnsureOutlineEffect();
             ResolveGameEntry();
 
-            if (clickableCollider == null)
-            {
-                clickableCollider = GetComponent<Collider>();
-                if (clickableCollider == null && cachedColliders.Length > 0)
-                {
-                    clickableCollider = cachedColliders[0];
-                }
-            }
+            EnsureSameObjectHoverCollider();
+            RefreshHoverOutlineBindingSnapshot();
         }
 
         private void ApplyVisibility(bool visible)
@@ -228,7 +260,7 @@ namespace TwelveMoons.City
 
             foreach (var renderer in cachedRenderers)
             {
-                if (renderer != null)
+                if (renderer != null && controlVisualVisibilityByUnlock)
                 {
                     renderer.enabled = visible;
                 }
@@ -367,7 +399,7 @@ namespace TwelveMoons.City
 
         private void ApplyHoverHighlight(bool enabled)
         {
-            if (!enabled || !inspectorIsUnlocked)
+            if (!enabled || !CanShowHoverOutline() || !IsCityInteractionEnabled())
             {
                 outlineEffect?.SetVisible(false);
                 return;
@@ -379,6 +411,16 @@ namespace TwelveMoons.City
             outlineEffect.SetVisible(true);
         }
 
+        private void InitializeRuntimeHoverDependencies()
+        {
+            if (!autoBindHoverOutlineDependencies)
+            {
+                return;
+            }
+
+            CacheSceneComponents();
+        }
+
         private void EnsureOutlineEffect()
         {
             if (outlineEffect == null)
@@ -386,6 +428,73 @@ namespace TwelveMoons.City
                 outlineEffect = GetComponent<CityBuildingOutlineEffect>() ??
                     gameObject.AddComponent<CityBuildingOutlineEffect>();
             }
+        }
+
+        private void EnsureSameObjectHoverCollider()
+        {
+            var ownCollider = GetComponent<Collider>();
+            if (ownCollider == null)
+            {
+                ownCollider = gameObject.AddComponent<BoxCollider>();
+            }
+
+            clickableCollider = ownCollider;
+            clickableCollider.enabled = true;
+
+            if (autoFitHoverColliderToRenderers && clickableCollider is BoxCollider boxCollider)
+            {
+                FitBoxColliderToRenderers(boxCollider);
+            }
+        }
+
+        private void FitBoxColliderToRenderers(BoxCollider boxCollider)
+        {
+            if (boxCollider == null || cachedRenderers == null || cachedRenderers.Length == 0)
+            {
+                return;
+            }
+
+            var hasBounds = false;
+            var worldBounds = new Bounds(transform.position, Vector3.zero);
+            foreach (var renderer in cachedRenderers)
+            {
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    worldBounds = renderer.bounds;
+                    hasBounds = true;
+                    continue;
+                }
+
+                worldBounds.Encapsulate(renderer.bounds);
+            }
+
+            if (!hasBounds)
+            {
+                return;
+            }
+
+            boxCollider.center = transform.InverseTransformPoint(worldBounds.center);
+            boxCollider.size = new Vector3(
+                Mathf.Max(0.01f, worldBounds.size.x / Mathf.Max(0.0001f, Mathf.Abs(transform.lossyScale.x))),
+                Mathf.Max(0.01f, worldBounds.size.y / Mathf.Max(0.0001f, Mathf.Abs(transform.lossyScale.y))),
+                Mathf.Max(0.01f, worldBounds.size.z / Mathf.Max(0.0001f, Mathf.Abs(transform.lossyScale.z))));
+        }
+
+        private bool CanShowHoverOutline()
+        {
+            return inspectorIsUnlocked || (allowHoverOutlineWhenUnbound && definition == null);
+        }
+
+        private void RefreshHoverOutlineBindingSnapshot()
+        {
+            var rendererCount = highlightRenderers != null ? highlightRenderers.Count(renderer => renderer != null) : 0;
+            inspectorHoverOutlineBindingSnapshot =
+                $"Renderer={rendererCount}, Collider={(clickableCollider != null ? clickableCollider.GetType().Name : "无")}, OutlineEffect={(outlineEffect != null ? "已绑定" : "缺失")}, 未绑定可悬停={allowHoverOutlineWhenUnbound}";
         }
 
         private bool IsCityInteractionEnabled()
@@ -396,7 +505,14 @@ namespace TwelveMoons.City
             }
 
             ResolveGameEntry();
-            return gameEntry == null || gameEntry.CityRoot == null || gameEntry.CityRoot.activeInHierarchy;
+            if (gameEntry == null || gameEntry.CityRoot == null)
+            {
+                return false;
+            }
+
+            var isCityVisible = gameEntry.CityRoot.activeInHierarchy;
+            var isDeskHidden = gameEntry.DeskRoot == null || !gameEntry.DeskRoot.activeInHierarchy;
+            return isCityVisible && isDeskHidden;
         }
 
         private void ResolveGameEntry()
