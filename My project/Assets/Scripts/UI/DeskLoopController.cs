@@ -1,3 +1,4 @@
+using System;
 using DG.Tweening;
 using TMPro;
 using TwelveMoons.City;
@@ -55,7 +56,15 @@ namespace TwelveMoons.UI
         [SerializeField, Min(0.01f)] private float synchronizedEntryTransitionDuration = 2.5f;
         [SerializeField] private BaseSceneUIBootstrap uiBootstrap;
 
-        [Header("按钮自动关联：保护桌面布局，仅补后端绑定")]
+        [Header("剧情进出场：黑场面板淡入淡出")]
+        [Tooltip("启用后，普通剧情开始和结束时会复用黑场面板进行淡入淡出过渡。")]
+        [SerializeField] private bool storyBlackFadeEnabled = true;
+        [Tooltip("普通剧情进入和退出时，黑场淡入或淡出的单段时长。数值越大，过渡越慢。")]
+        [SerializeField, Min(0f)] private float storyBlackFadeDuration = 0.35f;
+        
+        [Header("只读快照：桌面流程状态")]
+        [Tooltip("运行时只读快照；显示当前桌面流程进度。")]
+        [SerializeField] private string deskFlowSnapshot;
         [Tooltip("启用后，运行时按子物体名称自动寻找“公文按钮”“报纸按钮”“城区按钮”，并绑定到现有桌面流程方法；不会修改按钮布局。")]
         [SerializeField] private bool autoBindWorkflowButtons = true;
 
@@ -87,7 +96,27 @@ namespace TwelveMoons.UI
         private readonly Dictionary<RectTransform, Vector2> cityButtonMaskClosedPositions = new Dictionary<RectTransform, Vector2>();
         private bool wasDocumentFlowActive;
         private bool cityButtonMasksAreOpenAfterDocuments;
+        private bool hasDocumentFlowBeenStarted;
         private bool hasStartedInitialRoundFlow;
+        private bool observedStoryActiveForBlackFade;
+        private bool storyBlackFadeRunning;
+        private static bool holdStoryPanelVisibleDuringTransition;
+
+        public static bool HoldStoryPanelVisibleDuringTransition => holdStoryPanelVisibleDuringTransition;
+
+        public static void BeginStoryPanelVisibleHold()
+        {
+            holdStoryPanelVisibleDuringTransition = true;
+        }
+
+        public static void EndStoryPanelVisibleHold()
+        {
+            holdStoryPanelVisibleDuringTransition = false;
+        }
+
+        public bool OpeningTutorialEnabled => true;
+
+        public string OpeningTutorialSnapshot => deskFlowSnapshot;
 
         private void Awake()
         {
@@ -141,6 +170,7 @@ namespace TwelveMoons.UI
             }
 
             KillCityButtonMaskRevealSequence();
+            EndStoryPanelVisibleHold();
         }
 
         public void StartOrContinueStoryQueue()
@@ -258,6 +288,98 @@ namespace TwelveMoons.UI
             RefreshButtons();
         }
 
+        /// <summary>
+        /// 城区 HUD 专用入口：带黑场过渡的回合推进。
+        /// 播放黑场淡入 → 切换回桌面 → 推进回合 → 初始化新回合 → 黑场淡出。
+        /// </summary>
+        public void EndRoundFromCityView()
+        {
+            ResolveDependencies();
+            if (runtimeDataService == null || roundService == null)
+            {
+                SetStatus("缺少回合服务，无法推进回合。");
+                return;
+            }
+
+            var runner = GetActiveCoroutineRunner();
+            if (runner == null)
+            {
+                SetStatus("\u7f3a\u5c11\u6fc0\u6d3b\u7684\u534f\u7a0b\u627f\u8f7d\u5bf9\u8c61\uff0c\u65e0\u6cd5\u4ece\u57ce\u533a\u63a8\u8fdb\u4e0b\u4e00\u56de\u5408\u3002");
+                return;
+            }
+
+            runner.StartCoroutine(PlayEndRoundTransition());
+        }
+
+        private MonoBehaviour GetActiveCoroutineRunner()
+        {
+            if (isActiveAndEnabled)
+            {
+                return this;
+            }
+
+            if (uiBootstrap != null && uiBootstrap.isActiveAndEnabled)
+            {
+                return uiBootstrap;
+            }
+
+            if (gameEntry != null && gameEntry.isActiveAndEnabled)
+            {
+                return gameEntry;
+            }
+
+            var context = FindFirstObjectByType<BaseSceneUIContext>(FindObjectsInactive.Include);
+            return context != null && context.isActiveAndEnabled ? context : null;
+        }
+
+        private IEnumerator PlayEndRoundTransition()
+        {
+            var blackPanel = uiBootstrap != null ? uiBootstrap.ShowBlackScreenPanel() : null;
+            if (blackPanel != null)
+            {
+                yield return blackPanel.FadeIn(0.3f);
+            }
+
+            ResetCityCameraToGlobalView();
+            uiBootstrap?.ShowDesk();
+            gameEntry?.ShowDesk();
+
+            var endingRound = runtimeDataService.Data.CurrentRound;
+            runtimeDataService.Data.EnsureNewspaperEntry(endingRound, "本回合事务已结算。");
+
+            var advanced = roundService.NextRound();
+            if (advanced)
+            {
+                BeginCurrentRound();
+                SetStatus($"进入第 {runtimeDataService.Data.CurrentRound} 回合。");
+            }
+            else
+            {
+                SetStatus("已到灾难最后一回合，无法继续推进。");
+            }
+
+            RefreshButtons();
+
+            if (blackPanel != null)
+            {
+                yield return blackPanel.FadeOut(0.3f);
+                uiBootstrap?.HideBlackScreenPanel();
+            }
+        }
+
+
+        private void ResetCityCameraToGlobalView()
+        {
+            if (cityCameraController == null)
+            {
+                var context = FindFirstObjectByType<BaseSceneUIContext>(FindObjectsInactive.Include);
+                cityCameraController = context != null && context.CityCameraController != null
+                    ? context.CityCameraController
+                    : FindFirstObjectByType<CityCameraController>(FindObjectsInactive.Include);
+            }
+
+            cityCameraController?.JumpToDefaultView();
+        }
         public void ShowPreviousRoundNewspaper()
         {
             if (IsDocumentFlowActive())
@@ -328,6 +450,7 @@ namespace TwelveMoons.UI
         private void BeginCurrentRound()
         {
             ResolveDependencies();
+            isEnteringCityWithTransition = false;
             taskService?.ProcessCurrentRoundStart();
             documentService?.GenerateCurrentRoundDocumentQueue();
             if (HasQueuedStories(RuntimeStoryQueueTiming.StageStart))
@@ -351,11 +474,26 @@ namespace TwelveMoons.UI
             var hasPendingDocuments = HasPendingDocuments();
             var canContinueStory = !isEnteringCityWithTransition && !isDocumentFlowActive &&
                 (hasActiveStory || (!hasPendingBeforeDocumentStory && hasQueuedGameplayStories));
+            var canOpenDocuments = !isEnteringCityWithTransition &&
+                !isDocumentFlowActive &&
+                !hasActiveStory &&
+                !hasQueuedGameplayStories &&
+                !hasPendingBeforeDocumentStory &&
+                hasPendingDocuments;
+            var canEndRound = !isEnteringCityWithTransition &&
+                !isDocumentFlowActive &&
+                !hasActiveStory &&
+                !hasQueuedGameplayStories &&
+                !hasPendingBeforeDocumentStory &&
+                !hasPendingDocuments;
+            var canEnterCity = canEndRound;
+
             SetButtonInteractable(storyButton, canContinueStory);
-            SetWorkflowButtonState(documentButton, !isDocumentFlowActive, !isEnteringCityWithTransition && !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && hasPendingDocuments);
-            SetButtonInteractable(endRoundButton, !isEnteringCityWithTransition && !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && !hasPendingDocuments);
+            SetWorkflowButtonState(documentButton, !isDocumentFlowActive, canOpenDocuments);
+            SetButtonInteractable(endRoundButton, canEndRound);
             SetWorkflowButtonState(newspaperButton, true, !isEnteringCityWithTransition && !isDocumentFlowActive && HasPreviousNewspaper());
-            SetWorkflowButtonState(cityButton, true, !isEnteringCityWithTransition && !isDocumentFlowActive && !hasActiveStory && !hasQueuedGameplayStories && !hasPendingBeforeDocumentStory && !hasPendingDocuments);
+            SetWorkflowButtonState(cityButton, true, canEnterCity);
+            deskFlowSnapshot = $"\u56de\u5408={GetCurrentRoundForSnapshot()}\uff0c\u8fdb\u57ce\u8fc7\u573a={isEnteringCityWithTransition}\uff0c\u516c\u6587\u6d41={isDocumentFlowActive}\uff0c\u5267\u60c5={hasActiveStory}\uff0c\u961f\u5217\u5267\u60c5={hasQueuedGameplayStories}\uff0c\u516c\u6587\u524d={hasPendingBeforeDocumentStory}\uff0c\u5f85\u516c\u6587={hasPendingDocuments}\uff0c\u516c\u6587\u6309\u94ae={canOpenDocuments}\uff0c\u57ce\u533a\u6309\u94ae={canEnterCity}";
         }
 
         private IEnumerator PlayCityButtonMaskReveal()
@@ -373,6 +511,7 @@ namespace TwelveMoons.UI
             }
 
             KillCityButtonMaskRevealSequence();
+            EndStoryPanelVisibleHold();
             var leftClosedPosition = GetCityButtonMaskClosedPosition(leftMask);
             var rightClosedPosition = GetCityButtonMaskClosedPosition(rightMask);
             leftMask.anchoredPosition = leftClosedPosition;
@@ -476,6 +615,7 @@ namespace TwelveMoons.UI
             }
 
             KillCityButtonMaskRevealSequence();
+            EndStoryPanelVisibleHold();
             leftMask.anchoredPosition = GetCityButtonMaskClosedPosition(leftMask);
             rightMask.anchoredPosition = GetCityButtonMaskClosedPosition(rightMask);
             cityButtonMaskSnapshot = "\u516c\u6587\u6d41\u7a0b\u5f00\u59cb\uff0c\u57ce\u533a\u6309\u94ae\u906e\u7f69\u5df2\u590d\u4f4d\u4e3a\u95ed\u5408";
@@ -490,6 +630,7 @@ namespace TwelveMoons.UI
             }
 
             KillCityButtonMaskRevealSequence();
+            EndStoryPanelVisibleHold();
             var distance = Mathf.Max(360f, cityButtonMaskRevealDistance);
             var duration = Mathf.Max(0.5f, cityButtonMaskRevealDuration);
             var leftClosedPosition = GetCityButtonMaskClosedPosition(leftMask);
@@ -499,6 +640,7 @@ namespace TwelveMoons.UI
 
             leftMask.anchoredPosition = leftClosedPosition;
             rightMask.anchoredPosition = rightClosedPosition;
+            hasDocumentFlowBeenStarted = false;
             cityButtonMaskSnapshot = "\u516c\u6587\u9000\u51fa\u540e\uff0c\u57ce\u533a\u6309\u94ae\u906e\u7f69\u6b63\u5728\u5de6\u53f3\u62c9\u5f00";
 
             cityButtonMaskRevealSequence = DOTween.Sequence().SetUpdate(true);
@@ -597,10 +739,37 @@ namespace TwelveMoons.UI
             HideInventoryPanelForCity();
             uiBootstrap?.ShowCity();
             gameEntry?.ShowCity();
+            EnsureCitySideEventBinding();
             SetStatus("已进入城区。");
             RefreshButtons();
         }
 
+
+        private void EnsureCitySideEventBinding()
+        {
+            var host = gameEntry != null ? gameEntry.gameObject : gameObject;
+            var pointRegistry = FindFirstObjectByType<CityPointRegistry>(FindObjectsInactive.Include) ?? host.GetComponent<CityPointRegistry>();
+            if (pointRegistry == null)
+            {
+                pointRegistry = host.AddComponent<CityPointRegistry>();
+            }
+
+            var sideEventService = FindFirstObjectByType<CitySideEventService>(FindObjectsInactive.Include) ?? host.GetComponent<CitySideEventService>();
+            if (sideEventService == null)
+            {
+                sideEventService = host.AddComponent<CitySideEventService>();
+            }
+
+            var sideEventRegistry = FindFirstObjectByType<CitySideEventRegistry>(FindObjectsInactive.Include) ?? host.GetComponent<CitySideEventRegistry>();
+            if (sideEventRegistry == null)
+            {
+                sideEventRegistry = host.AddComponent<CitySideEventRegistry>();
+            }
+
+            pointRegistry.RefreshAndBind();
+            sideEventService.Refresh();
+            sideEventRegistry.RefreshAndBind();
+        }
         private void HideInventoryPanelForCity()
         {
             if (inventoryPanel == null)
@@ -654,10 +823,14 @@ namespace TwelveMoons.UI
             return false;
         }
 
+        private int GetCurrentRoundForSnapshot()
+        {
+            return runtimeDataService != null ? runtimeDataService.Data.CurrentRound : 0;
+        }
+
         private bool HasQueuedGameplayStories()
         {
-            return HasQueuedStories(RuntimeStoryQueueTiming.StageEnd) ||
-                HasQueuedStories(RuntimeStoryQueueTiming.StageStart);
+            return HasQueuedStories(RuntimeStoryQueueTiming.StageStart);
         }
 
         private bool HasPendingBeforeDocumentStory()
@@ -668,6 +841,8 @@ namespace TwelveMoons.UI
 
         private bool HasPendingDocuments()
         {
+            documentService?.EnsureCurrentRoundDocumentQueue();
+
             if (runtimeDataService == null)
             {
                 return false;
@@ -685,6 +860,7 @@ namespace TwelveMoons.UI
             return false;
         }
 
+
         private bool HasPreviousNewspaper()
         {
             return runtimeDataService != null &&
@@ -698,6 +874,8 @@ namespace TwelveMoons.UI
 
         private void HandleStoryChanged()
         {
+            TryPlayStoryBlackFadeTransition();
+
             if (TryStartNextRequiredStory())
             {
                 RefreshButtons();
@@ -707,6 +885,64 @@ namespace TwelveMoons.UI
             TryAdvanceAfterEndStories();
             TryShowBeforeDocumentActor();
             RefreshButtons();
+        }
+
+        private void TryPlayStoryBlackFadeTransition()
+        {
+            if (!storyBlackFadeEnabled || uiBootstrap == null)
+            {
+                observedStoryActiveForBlackFade = HasActiveStory();
+                return;
+            }
+
+            var hasActiveStory = HasActiveStory();
+            if (hasActiveStory == observedStoryActiveForBlackFade)
+            {
+                return;
+            }
+
+            observedStoryActiveForBlackFade = hasActiveStory;
+            if (!storyBlackFadeRunning)
+            {
+                StartCoroutine(PlayStoryBlackFadeTransition(hasActiveStory));
+            }
+        }
+
+        private IEnumerator PlayStoryBlackFadeTransition(bool enteringStory)
+        {
+            storyBlackFadeRunning = true;
+            var blackPanel = uiBootstrap != null ? uiBootstrap.ShowBlackScreenPanel() : null;
+            if (blackPanel != null)
+            {
+                yield return blackPanel.FadeIn(storyBlackFadeDuration);
+                if (enteringStory)
+                {
+                    uiBootstrap?.ShowStory();
+                }
+                else
+                {
+                    EndStoryPanelVisibleHold();
+                    uiBootstrap?.HideStory();
+                }
+                yield return blackPanel.FadeOut(storyBlackFadeDuration);
+                uiBootstrap?.HideBlackScreenPanel();
+            }
+            else
+            {
+                if (enteringStory)
+                {
+                    uiBootstrap?.ShowStory();
+                }
+                else
+                {
+                    EndStoryPanelVisibleHold();
+                    uiBootstrap?.HideStory();
+                }
+            }
+            deskFlowSnapshot = enteringStory
+                ? "剧情进场：黑场淡入后切到剧情面板，再淡出返回"
+                : "剧情退场：黑场淡入后切回桌面，再淡出返回";
+            storyBlackFadeRunning = false;
         }
 
         private bool TryStartNextRequiredStory()
@@ -767,7 +1003,6 @@ namespace TwelveMoons.UI
         private void TryShowBeforeDocumentActor()
         {
             if (HasActiveStory() ||
-                HasQueuedGameplayStories() ||
                 waitingForBeforeDocumentActorClick ||
                 !TryGetNextBeforeDocumentStory(out var entry))
             {
@@ -808,7 +1043,9 @@ namespace TwelveMoons.UI
 
             waitingForBeforeDocumentActorClick = false;
             pendingBeforeDocumentStory = null;
-            sharedActorSlot?.HideToRight();
+            // 公文前角色不是公文人物，点击后直接消失，不播放离场滑出动画。
+            // 只有公文中的人物（由 DocumentPopupPanelView 控制）才播放离场动画。
+            sharedActorSlot?.Hide();
             storyService?.StartNextQueuedStory(RuntimeStoryQueueTiming.BeforeDocument);
             RefreshButtons();
         }
@@ -1070,8 +1307,8 @@ namespace TwelveMoons.UI
 
         private void EnsureDocumentPopupVisible()
         {
-            uiBootstrap?.ShowDocumentPopup();
-            var popup = FindPreferredDocumentPopup();
+            var popup = uiBootstrap != null ? uiBootstrap.ShowDocumentPopup() : null;
+            popup ??= FindPreferredDocumentPopup();
             if (popup == documentPopupPanel)
             {
                 return;
@@ -1134,9 +1371,17 @@ namespace TwelveMoons.UI
             var isDocumentFlowActive = IsDocumentFlowActive();
             if (!wasDocumentFlowActive && isDocumentFlowActive)
             {
+                hasDocumentFlowBeenStarted = true;
                 SetCityButtonMasksClosedInstantly();
             }
             else if (wasDocumentFlowActive && !isDocumentFlowActive && !HasPendingDocuments())
+            {
+                OpenCityButtonMasksAfterDocumentExit();
+            }
+
+            // 安全检查：只在正式公文流程（BeginDocumentFlow）曾经启动过的情况下，
+            // 当公文面板变为非激活但遮罩尚未打开时，强制打开遮罩。
+            if (hasDocumentFlowBeenStarted && !isDocumentFlowActive && !cityButtonMasksAreOpenAfterDocuments && !HasPendingDocuments())
             {
                 OpenCityButtonMasksAfterDocumentExit();
             }

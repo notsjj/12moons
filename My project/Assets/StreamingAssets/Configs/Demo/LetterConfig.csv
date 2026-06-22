@@ -1,9 +1,0 @@
-LetterId,Title,SenderName,BodyText,Remark
-letter_relief_start,赈济仓开启,库房书记,第一份赈济账册已经备好，可以开始查验。,任务阶段开始信件测试
-letter_relief_prepare_end,赈济仓清点完毕,库房书记,仓储已经清点并封车，随时可以出发。,任务阶段结束信件测试
-letter_relief_deliver_start,车队调度,信使队长,赈济车队已经在城门口等待出发。,任务阶段开始信件测试
-letter_relief_deliver_end,车队回报,信使队长,赈济车队已经带着最后一份回执返回。,任务阶段结束信件测试
-letter_noble_low_01,贵族静函,贵族议会,议会谨慎记录了你的克制处理。,低质疑度奖励信件测试
-letter_academy_low_01,学院谢函,学院档案室,学院注意到近期决策降低了疑虑。,低质疑度奖励信件测试
-letter_church_low_01,教会烛函,教会使者,礼拜堂感谢你缓解了教会的担忧。,低质疑度奖励信件测试
-letter_civilian_low_01,低城区谢函,低城区居民,低城区已经注意到议厅听见了他们的请求。,低质疑度奖励信件测试

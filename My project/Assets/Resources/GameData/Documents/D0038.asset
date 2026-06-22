@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a5790691942fb347b77bcda58688fd4, type: 3}
+  m_Name: D0038
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.DocumentDefinitionAsset
+  documentId: D0038
+  title: "\u519B\u706B\u8D70\u79C1"
+  bodyText: "\u54E6\uFF0C\u9601\u4E0B\uFF0C\u4E0B\u57CE\u533A\u7684\u5E2E\u6D3E\u5F00\u59CB\u4E3A\u5176\u4ED6\u57CE\u5E02\u63D0\u4F9B\u519B\u706B\u8D70\u79C1\u4E1A\u52A1\u4E86\uFF0C\u65E2\u7136\u6709\u8FD9\u4E2A\u5E02\u573A\u9700\u6C42\uFF0C\u4E3A\u4F55\u4E0D\u5E72\u8106\u628A\u4ED3\u5E93\u91CC\u90A3\u4E9B\u5FEB\u62A5\u5E9F\u7684\u7834\u70C2\u62FF\u53BB\u503E\u9500\uFF0C\u6210\u4E3A\u6700\u5927\u7684\u4F9B\u5E94\u5546\u5462\uFF1F"
+  proposerCharacterId: C0005
+  documentType: Task
+  factionLogoName: "\u5DE5\u4F1A"
+  disasterId: DI0001
+  disasterStageId: 
+  taskId: 
+  taskStageId: 
+  isRepeatable: 0
+  remark: "\u8865\u8D44\u6E90\u63D0\u4EA4\u9700\u6C42\uFF1A\u7528\u4E8E\u516C\u6587\u7269\u54C1\u9762\u677F\u5F39\u51FA\u6D4B\u8BD5\u3002"
+  optionA:
+    text: "\u540C\u610F"
+    moneyChange: -1
+    materialChange: 0
+    foodChange: 0
+    nobleSuspicionChange: 0
+    academySuspicionChange: 0
+    churchSuspicionChange: 0
+    civilianSuspicionChange: 0
+    taskScoreChange: 0
+    requiredItemId: 
+    requiredItemCount: 0
+    consumeItem: 0
+    addItemId: 
+    addItemCount: 0
+    nextDocumentId: 
+    nextDocumentDelayRound: 0
+    unlockBuildingId: 
+    resultText: 
+    proposerFeedbackText: "\u554A\u54C8\uFF01\u6211\u5C31\u77E5\u9053\u60A8\u7684\u5546\u4E1A\u55C5\u89C9\u8DB3\u591F\u7075\u654F\u3002"
+    feedbackFactionId: F0001
+    factionFeedbackText: "\u4E3A\u4EC0\u4E48\u8FD9\u6279\u8D27\u662F\u4E0A\u4E00\u4EE3\u5236\u5F0F\u6B66\u5668\uFF1F"
+  optionB:
+    text: "\u62D2\u7EDD"
+    moneyChange: 0
+    materialChange: 0
+    foodChange: 0
+    nobleSuspicionChange: 0
+    academySuspicionChange: 0
+    churchSuspicionChange: 0
+    civilianSuspicionChange: 0
+    taskScoreChange: 0
+    requiredItemId: 
+    requiredItemCount: 0
+    consumeItem: 0
+    addItemId: 
+    addItemCount: 0
+    nextDocumentId: 
+    nextDocumentDelayRound: 0
+    unlockBuildingId: 
+    resultText: 
+    proposerFeedbackText: "\u8FD9\u53EA\u662F\u4E00\u4E2A\u63D0\u6848\u2026\u2026"
+    feedbackFactionId: F0001
+    factionFeedbackText: "\u518D\u8BA9\u5916\u9762\u90A3\u5E2E\u4EBA\u62FF\u67AA\u5230\u5904\u800D\uFF0C\u5C31\u6CA1\u4EBA\u80FD\u7761\u4E2A\u597D\u89C9\u4E86\u3002"

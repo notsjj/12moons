@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TwelveMoons.Core.Config;
 
@@ -20,6 +20,7 @@ namespace TwelveMoons.Core.Runtime
             ConsumeItems = SplitBools(row.GetString("ConsumeItems"));
             AddItemIds = Split(row.GetString("AddItemIds"));
             AddItemCounts = SplitInts(row.GetString("AddItemCounts"));
+            PresentationCue = row.GetString("演出", row.GetString("PresentationCue"));
         }
 
         public string LineId { get; }
@@ -45,6 +46,8 @@ namespace TwelveMoons.Core.Runtime
         public IReadOnlyList<string> AddItemIds { get; }
 
         public IReadOnlyList<int> AddItemCounts { get; }
+
+        public string PresentationCue { get; }
 
         public string Content => Contents.Count > 0 ? Contents[0] : string.Empty;
 
@@ -152,3 +155,4 @@ namespace TwelveMoons.Core.Runtime
         }
     }
 }
+

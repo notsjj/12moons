@@ -100,7 +100,9 @@ Shader "TwelveMoons/UI/PortraitAlphaOutline"
                             float2 offset = offsetPixels * _MainTex_TexelSize.xy;
                             fixed sampleAlpha = SampleAlpha(input.texcoord + offset);
                             fixed radialFade = saturate(1.0 - distanceToCenter / max(1.0, glowWidth));
-                            fixed glowWeight = pow(radialFade, glowFalloffPower);
+                            fixed softGlowWeight = pow(radialFade, glowFalloffPower);
+                            fixed coreGlowWeight = smoothstep(0.72, 1.0, radialFade);
+                            fixed glowWeight = saturate(max(softGlowWeight, coreGlowWeight));
                             glowNearbyAlpha = max(glowNearbyAlpha, sampleAlpha * glowWeight);
                             if (outlineWidth > 0.0 && distanceToCenter <= outlineWidth)
                             {

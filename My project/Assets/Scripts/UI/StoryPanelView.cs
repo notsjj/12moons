@@ -1,4 +1,7 @@
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Text;
+using DG.Tweening;
 using TMPro;
 using TwelveMoons.Core.Runtime;
 using UnityEngine;
@@ -9,6 +12,19 @@ namespace TwelveMoons.UI
     public sealed class StoryPanelView : MonoBehaviour
     {
         private const string PortraitOutlineMaterialResourcePath = "Materials/UI/PortraitAlphaOutlineRuntime";
+        private const string SkeletonCharacterNamePrefix = "\u9ab7\u9ac5";
+        private const string OpeningSkeletonStoryId = "S0001";
+        private const string OpeningWorkStoryId = "S0002";
+        private const string OpeningWorkNarrationStartLineId = "S0002_001";
+        private const string OpeningWorkNarrationSecondLineId = "S0002_002";
+        private const string OpeningSkeletonDefaultExpressionId = "\u9ab7\u9ac5\u601d\u8003";
+        private const string SkeletonStartAtPresentationPointCue = "演出点位起始";
+        private const string SkeletonActivateRiseCue = "上升300回初始位";
+        private const string SkeletonFloatCue = "持续漂浮";
+        private static readonly string[] SkeletonExpressionRoots =
+        {
+            "Art/Art/Character/\u9ab7\u9ac5"
+        };
         private static readonly int OutlineColorId = Shader.PropertyToID("_OutlineColor");
         private static readonly int GlowColorId = Shader.PropertyToID("_GlowColor");
         private static readonly int OutlinePixelWidthId = Shader.PropertyToID("_OutlinePixelWidth");
@@ -27,6 +43,10 @@ namespace TwelveMoons.UI
         [SerializeField] private TMP_Text feedbackText;
         [SerializeField] private Button storyAreaButton;
         [SerializeField] private float typewriterCharactersPerSecond = 42f;
+
+        [Header("S0002\u9ed1\u573a\u65c1\u767d\uff1a\u5267\u60c5\u9762\u677f\u505c\u987f\u540e\u64ad\u653e")]
+        [Tooltip("S0002_001\u89e6\u53d1\u65f6\uff0c\u5148\u4fdd\u6301\u5267\u60c5\u9762\u677f\u6253\u5f00\u7684\u7b49\u5f85\u65f6\u95f4\uff1b\u7b49\u5f85\u7ed3\u675f\u540e\u518d\u6253\u5f00\u9ed1\u573a\u9762\u677f\u5e76\u64ad\u653e\u65c1\u767d\u3002")]
+        [SerializeField, Min(0f)] private float openingWorkNarrationDelayBeforeBlackScreen = 1f;
 
         [Header("对话面板：显示角色、对白、继续按钮和选项")]
         [SerializeField] private GameObject dialoguePanel;
@@ -93,6 +113,30 @@ namespace TwelveMoons.UI
         [SerializeField] private Button textContinueButton;
         [SerializeField] private TMP_Text textContinueButtonText;
 
+                                [Header("开场骷髅演出：启用与演出点位")]
+        [Tooltip("开启后，S0001 会按演出栏驱动骷髅的开场动效。")]
+        [SerializeField] private bool enableOpeningSkeletonPresentation = true;
+        [Header("骷髅演出点位：S0001 开场初始位置")]
+        [Tooltip("优先使用 Prefab 内名为“骷髅演出点位”的 RectTransform；未手动拖引用时会自动按名字查找。")]
+        [SerializeField] private RectTransform skeletonPresentationPoint;
+
+        [Header("骷髅激活动效：S0001_005 上升与回位")]
+        [Tooltip("S0001_005 播放时骷髅向上缓慢上升的距离。")]
+        [SerializeField, Min(0f)] private float openingSkeletonActivateRiseDistance = 300f;
+        [Tooltip("S0001_005 从黑色剪影缓慢上升到顶点的时长；播放期间对话框不可点击。")]
+        [SerializeField, Min(0f)] private float openingSkeletonActivateDuration = 3f;
+        [Tooltip("S0001_005 上升结束后平滑回到初始点位的时长。")]
+        [SerializeField, Min(0f)] private float openingSkeletonReturnDuration = 0.9f;
+        [Tooltip("S0001_005 ????????????")]
+        [SerializeField, Min(0f)] private float openingSkeletonPeakHoldDuration = 1f;
+        [Tooltip("S0001_005 上升期间骷髅左右抖动的幅度。")]
+        [SerializeField, Min(0f)] private float openingSkeletonActivateShakeAmplitude = 6f;
+        [Tooltip("S0001_005 上升期间骷髅每秒抖动次数。")]
+        [SerializeField, Min(0f)] private float openingSkeletonActivateShakeFrequency = 22f;
+
+        [Header("开场骷髅演出：只读调试快照")]
+        [Tooltip("运行时只读；显示 S0001 骷髅当前所处的演出阶段，便于在 Inspector 中观察。")]
+        [SerializeField] private string openingSkeletonSnapshot = "开场骷髅：等待 S0001";
         private string currentStoryId;
         private string leftCharacterId;
         private string rightCharacterId;
@@ -109,6 +153,17 @@ namespace TwelveMoons.UI
         private Material originalLeftPortraitMaterial;
         private Material originalRightPortraitMaterial;
         private Material originalSpeakerExpressionMaterial;
+        private Sprite originalSpeakerExpressionSprite;
+        private RectTransform speakerExpressionRectTransform;
+        private Vector2 speakerExpressionOriginalAnchoredPosition;
+        private bool hasSpeakerExpressionOriginalPosition;
+        private int currentDialogueLineNumber;
+        private bool openingSkeletonMotionActive;
+        private string activePresentationCueKey;
+        private bool presentationCueInputLocked;
+        private Tween presentationCueTween;
+        private Coroutine openingWorkNarrationRoutine;
+        private bool openingWorkNarrationActive;
 
         public Color ActiveSpeakerPortraitColor => activeSpeakerPortraitColor;
 
@@ -147,6 +202,8 @@ namespace TwelveMoons.UI
 
         private void Update()
         {
+            UpdateOpeningSkeletonMotion();
+
             if (!isTypewriting || string.IsNullOrEmpty(targetTypewriterText))
             {
                 return;
@@ -188,6 +245,7 @@ namespace TwelveMoons.UI
 
         private void OnDestroy()
         {
+            KillPresentationCueTween(false);
             DestroyRuntimeMaterial(ref leftPortraitOutlineMaterial);
             DestroyRuntimeMaterial(ref rightPortraitOutlineMaterial);
             DestroyRuntimeMaterial(ref speakerExpressionOutlineMaterial);
@@ -198,6 +256,7 @@ namespace TwelveMoons.UI
             originalLeftPortraitMaterial = leftPortrait != null ? leftPortrait.material : null;
             originalRightPortraitMaterial = rightPortrait != null ? rightPortrait.material : null;
             originalSpeakerExpressionMaterial = speakerExpressionImage != null ? speakerExpressionImage.material : null;
+            originalSpeakerExpressionSprite = speakerExpressionImage != null ? speakerExpressionImage.sprite : null;
         }
 
         private static void DestroyRuntimeMaterial(ref Material runtimeMaterial)
@@ -221,9 +280,20 @@ namespace TwelveMoons.UI
 
         public void OnContinueClicked()
         {
+            if (presentationCueInputLocked || openingWorkNarrationActive)
+            {
+                return;
+            }
+
             if (!finalContinueVisible)
             {
                 return;
+            }
+
+            var playback = storyService != null ? storyService.CurrentPlayback : null;
+            if (playback != null && string.Equals(playback.Story.StoryId, OpeningSkeletonStoryId, System.StringComparison.Ordinal) && IsCurrentStoryStepLast(playback))
+            {
+                DeskLoopController.BeginStoryPanelVisibleHold();
             }
 
             finalContinueVisible = false;
@@ -233,6 +303,11 @@ namespace TwelveMoons.UI
 
         public void OnStoryAreaClicked()
         {
+            if (presentationCueInputLocked || openingWorkNarrationActive)
+            {
+                return;
+            }
+
             if (RevealTypewriterIfNeeded())
             {
                 return;
@@ -282,21 +357,41 @@ namespace TwelveMoons.UI
 
         public void OnOptionAClicked()
         {
+            if (presentationCueInputLocked || openingWorkNarrationActive)
+            {
+                return;
+            }
+
             storyService?.ChooseOption(0);
         }
 
         public void OnOptionBClicked()
         {
+            if (presentationCueInputLocked || openingWorkNarrationActive)
+            {
+                return;
+            }
+
             storyService?.ChooseOption(1);
         }
 
         public void OnSubmitClicked()
         {
+            if (presentationCueInputLocked || openingWorkNarrationActive)
+            {
+                return;
+            }
+
             storyService?.SubmitCurrentItems();
         }
 
         public void OnExitSubmitClicked()
         {
+            if (presentationCueInputLocked)
+            {
+                return;
+            }
+
             storyService?.ExitItemSubmission();
         }
 
@@ -304,12 +399,21 @@ namespace TwelveMoons.UI
         {
             if (storyService == null || storyService.CurrentPlayback == null)
             {
+                if (DeskLoopController.HoldStoryPanelVisibleDuringTransition)
+                {
+                    KeepVisibleForTransition();
+                    return;
+                }
+
                 currentStoryId = string.Empty;
                 ResetDialogueCharacters();
+                ClearStoryVisualState();
                 ResetTypewriter();
                 ResetFinalContinue();
+                KillPresentationCueTween(false);
                 SetText(titleText, "Story");
                 SetText(feedbackText, "");
+                ApplyStoryBackground(null);
                 ShowOnlyPanel(null);
                 SetRootVisible(false);
                 return;
@@ -318,12 +422,14 @@ namespace TwelveMoons.UI
             SetRootVisible(true);
             var playback = storyService.CurrentPlayback;
             var story = playback.Story;
+            ApplyStoryBackground(story);
             if (story.StoryId != currentStoryId)
             {
                 currentStoryId = story.StoryId;
                 ResetDialogueCharacters();
                 ResetTypewriter();
                 ResetFinalContinue();
+                KillPresentationCueTween(false);
             }
 
             RefreshFinalContinueKey(playback);
@@ -351,6 +457,69 @@ namespace TwelveMoons.UI
             }
         }
 
+        private void KeepVisibleForTransition()
+        {
+            if (rootCanvasGroup != null)
+            {
+                rootCanvasGroup.alpha = 1f;
+                rootCanvasGroup.blocksRaycasts = false;
+                rootCanvasGroup.interactable = false;
+            }
+
+            if (rootBackgroundImage != null)
+            {
+                rootBackgroundImage.raycastTarget = false;
+            }
+
+            SetButtonInteractable(dialogueContinueButton, false);
+            SetButtonInteractable(choiceButtonA, false);
+            SetButtonInteractable(choiceButtonB, false);
+            SetButtonInteractable(submitButton, false);
+            SetButtonInteractable(exitSubmitButton, false);
+            SetButtonInteractable(textContinueButton, false);
+            SetButtonInteractable(imageContinueButton, false);
+            SetButtonInteractable(storyAreaButton, false);
+        }
+
+        private void ApplyStoryBackground(StoryDefinition story)
+        {
+            if (rootBackgroundImage == null)
+            {
+                return;
+            }
+
+            var backgroundId = story == null ? string.Empty : story.BackgroundImageId;
+            var sprite = string.IsNullOrEmpty(backgroundId) ? null : StoryImageResourceProvider.LoadSprite(backgroundId);
+            rootBackgroundImage.sprite = sprite;
+            rootBackgroundImage.enabled = true;
+            rootBackgroundImage.color = sprite == null ? Color.black : Color.white;
+        }
+
+        private bool TryResolveSkeletonPresentationPoint(out Vector2 anchoredPosition)
+        {
+            anchoredPosition = Vector2.zero;
+            if (skeletonPresentationPoint == null && speakerExpressionImage != null)
+            {
+                var points = speakerExpressionImage.transform.root.GetComponentsInChildren<RectTransform>(true);
+                foreach (var point in points)
+                {
+                    if (point != null && string.Equals(point.name, "骷髅演出点位", System.StringComparison.Ordinal))
+                    {
+                        skeletonPresentationPoint = point;
+                        break;
+                    }
+                }
+            }
+
+            if (skeletonPresentationPoint == null)
+            {
+                return false;
+            }
+
+            anchoredPosition = skeletonPresentationPoint.anchoredPosition;
+            return true;
+        }
+
         private void RefreshCompletedStory(string feedback)
         {
             ShowOnlyPanel(textStoryPanel);
@@ -369,6 +538,7 @@ namespace TwelveMoons.UI
             var line = playback.CurrentLine;
             if (line == null)
             {
+                currentDialogueLineNumber = 0;
                 SetText(speakerNameText, "");
                 SetText(dialogueText, "");
                 RefreshPortraits(null);
@@ -377,6 +547,7 @@ namespace TwelveMoons.UI
                 return;
             }
 
+            currentDialogueLineNumber = GetDialogueLineNumber(line.LineId);
             UpdateDialogueCharacter(line);
             var speakerCharacterId = GetCurrentSpeakerCharacterId(line);
             RefreshPortraits(speakerCharacterId);
@@ -387,6 +558,11 @@ namespace TwelveMoons.UI
             if (playback.IsWaitingForSubmission || line.IsItemSubmissionLine())
             {
                 RefreshSubmission(line);
+                return;
+            }
+
+            if (TryPlayOpeningWorkNarration(playback, line))
+            {
                 return;
             }
 
@@ -401,7 +577,81 @@ namespace TwelveMoons.UI
             }
 
             SetTypewriterText($"{playback.Story.StoryId}:{line.LineId}", line.Content, dialogueText);
+            ApplyDialoguePresentationCue(playback, line);
             SetButtonVisible(dialogueContinueButton, dialogueContinueButtonText, finalContinueVisible, "继续");
+            ApplyPresentationInputLockToButtons();
+        }
+
+        private bool TryPlayOpeningWorkNarration(StoryPlaybackState playback, DialogueLineDefinition line)
+        {
+            if (playback == null || line == null || storyService == null)
+            {
+                return false;
+            }
+
+            if (!string.Equals(playback.Story.StoryId, OpeningWorkStoryId, System.StringComparison.Ordinal) ||
+                !string.Equals(line.LineId, OpeningWorkNarrationStartLineId, System.StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            ShowOnlyPanel(dialoguePanel);
+            SetRootVisible(true);
+            SetText(speakerNameText, string.Empty);
+            SetText(dialogueText, string.Empty);
+            SetButtonVisible(dialogueContinueButton, dialogueContinueButtonText, false, string.Empty);
+            SetButtonVisible(choiceButtonA, choiceButtonAText, false, string.Empty);
+            SetButtonVisible(choiceButtonB, choiceButtonBText, false, string.Empty);
+            if (openingWorkNarrationRoutine == null)
+            {
+                openingWorkNarrationRoutine = StartCoroutine(PlayOpeningWorkNarrationRoutine(line));
+            }
+
+            return true;
+        }
+
+        private IEnumerator PlayOpeningWorkNarrationRoutine(DialogueLineDefinition firstLine)
+        {
+            openingWorkNarrationActive = true;
+            var narrationLines = new List<string> { firstLine.Content };
+            var secondLine = storyService != null &&
+                storyService.TryGetDialogueLine(OpeningWorkNarrationSecondLineId, out var resolvedSecondLine)
+                    ? resolvedSecondLine
+                    : null;
+            if (secondLine != null)
+            {
+                narrationLines.Add(secondLine.Content);
+            }
+
+            if (openingWorkNarrationDelayBeforeBlackScreen > 0f)
+            {
+                yield return new WaitForSecondsRealtime(openingWorkNarrationDelayBeforeBlackScreen);
+            }
+
+            var uiBootstrap = FindFirstObjectByType<BaseSceneUIBootstrap>(FindObjectsInactive.Include);
+            var blackPanel = uiBootstrap != null ? uiBootstrap.ShowBlackScreenPanel() : null;
+            if (blackPanel != null)
+            {
+                yield return blackPanel.FadeIn(0.25f);
+                yield return blackPanel.PlayNarrationLines(narrationLines, typewriterCharactersPerSecond);
+                yield return blackPanel.FadeOut(0.25f);
+                blackPanel.ClearNarration();
+                uiBootstrap.HideBlackScreenPanel();
+            }
+
+            if (storyService != null && storyService.CurrentPlayback != null)
+            {
+                storyService.Continue();
+                if (storyService.CurrentPlayback != null &&
+                    storyService.CurrentPlayback.CurrentLine != null &&
+                    string.Equals(storyService.CurrentPlayback.CurrentLine.LineId, OpeningWorkNarrationSecondLineId, System.StringComparison.Ordinal))
+                {
+                    storyService.Continue();
+                }
+            }
+
+            openingWorkNarrationActive = false;
+            openingWorkNarrationRoutine = null;
         }
 
         private void RefreshSubmission(DialogueLineDefinition line)
@@ -450,6 +700,157 @@ namespace TwelveMoons.UI
             return builder.Length > 0 ? builder.ToString() : "No required item configured.";
         }
 
+        private void ApplyDialoguePresentationCue(StoryPlaybackState playback, DialogueLineDefinition line)
+        {
+            if (playback == null || line == null)
+            {
+                return;
+            }
+
+            var cue = line.PresentationCue;
+            var key = $"{playback.Story.StoryId}:{line.LineId}:{cue}";
+            if (activePresentationCueKey == key)
+            {
+                ApplyPresentationInputLockToButtons();
+                return;
+            }
+
+            activePresentationCueKey = key;
+            KillPresentationCueTween(false);
+            if (string.IsNullOrWhiteSpace(cue))
+            {
+                ApplyPresentationInputLockToButtons();
+                return;
+            }
+
+            if (cue.Contains(SkeletonStartAtPresentationPointCue))
+            {
+                MoveOpeningSkeletonToCenterLower();
+            }
+
+            if (cue.Contains(SkeletonActivateRiseCue))
+            {
+                PlayOpeningSkeletonActivatePresentation();
+            }
+
+            ApplyPresentationInputLockToButtons();
+        }
+
+        private void MoveOpeningSkeletonToCenterLower()
+        {
+            CacheSpeakerExpressionOriginalPosition();
+            if (speakerExpressionRectTransform == null)
+            {
+                return;
+            }
+
+            openingSkeletonMotionActive = false;
+            if (TryResolveSkeletonPresentationPoint(out var anchoredPosition))
+            {
+                speakerExpressionRectTransform.anchoredPosition = anchoredPosition;
+                openingSkeletonSnapshot = "???????????????";
+            }
+            else
+            {
+                openingSkeletonSnapshot = "?????????????????????";
+            }
+
+            if (speakerExpressionImage != null)
+            {
+                speakerExpressionImage.color = Color.black;
+            }
+        }
+
+        private void PlayOpeningSkeletonActivatePresentation()
+        {
+            CacheSpeakerExpressionOriginalPosition();
+            if (speakerExpressionRectTransform == null || !hasSpeakerExpressionOriginalPosition)
+            {
+                return;
+            }
+
+            var restorePosition = speakerExpressionOriginalAnchoredPosition;
+            var startPosition = speakerExpressionRectTransform.anchoredPosition;
+            var endPosition = startPosition + Vector2.up * Mathf.Max(0f, openingSkeletonActivateRiseDistance);
+            var riseDuration = Mathf.Max(0f, openingSkeletonActivateDuration);
+            var returnDuration = Mathf.Max(0f, openingSkeletonReturnDuration);
+            var peakHoldDuration = Mathf.Max(0f, openingSkeletonPeakHoldDuration);
+            var shakeAmplitude = Mathf.Max(0f, openingSkeletonActivateShakeAmplitude);
+            var shakeFrequency = Mathf.Max(0f, openingSkeletonActivateShakeFrequency);
+            presentationCueInputLocked = true;
+            openingSkeletonMotionActive = false;
+            openingSkeletonSnapshot = "??????? S0001_005 ?????";
+
+            var riseProgress = 0f;
+            var sequence = DOTween.Sequence().SetUpdate(true);
+            sequence.Append(DOTween.To(() => riseProgress, value =>
+                {
+                    riseProgress = value;
+                    var risePosition = Vector2.Lerp(startPosition, endPosition, riseProgress);
+                    var damping = 1f - Mathf.Clamp01(riseProgress * 0.35f);
+                    var shakeOffset = Mathf.Sin(riseProgress * riseDuration * shakeFrequency * Mathf.PI * 2f) * shakeAmplitude * damping;
+                    speakerExpressionRectTransform.anchoredPosition = risePosition + new Vector2(shakeOffset, 0f);
+                    if (speakerExpressionImage != null)
+                    {
+                        speakerExpressionImage.color = Color.Lerp(Color.black, Color.white, riseProgress);
+                    }
+                }, 1f, riseDuration).SetEase(Ease.Linear));
+            sequence.AppendInterval(peakHoldDuration);
+            sequence.Append(speakerExpressionRectTransform.DOAnchorPos(restorePosition, returnDuration).SetEase(Ease.InOutSine));
+            sequence.OnComplete(() =>
+                {
+                    speakerExpressionRectTransform.anchoredPosition = restorePosition;
+                    if (speakerExpressionImage != null)
+                    {
+                        speakerExpressionImage.color = Color.white;
+                    }
+
+                    presentationCueInputLocked = false;
+                    presentationCueTween = null;
+                    ApplyPresentationInputLockToButtons();
+                    openingSkeletonSnapshot = "???????? Prefab ??????????";
+                    storyService?.Continue();
+                })
+                .OnKill(() =>
+                {
+                    presentationCueInputLocked = false;
+                    presentationCueTween = null;
+                    ApplyPresentationInputLockToButtons();
+                });
+            presentationCueTween = sequence;
+        }
+
+        private void KillPresentationCueTween(bool complete)
+        {
+            if (presentationCueTween != null && presentationCueTween.IsActive())
+            {
+                presentationCueTween.Kill(complete);
+            }
+
+            presentationCueTween = null;
+            presentationCueInputLocked = false;
+            ApplyPresentationInputLockToButtons();
+        }
+
+        private void ApplyPresentationInputLockToButtons()
+        {
+            SetButtonInteractable(dialogueContinueButton, !presentationCueInputLocked);
+            SetButtonInteractable(choiceButtonA, !presentationCueInputLocked);
+            SetButtonInteractable(choiceButtonB, !presentationCueInputLocked);
+            SetButtonInteractable(submitButton, !presentationCueInputLocked);
+            SetButtonInteractable(exitSubmitButton, !presentationCueInputLocked);
+            SetButtonInteractable(textContinueButton, !presentationCueInputLocked);
+            SetButtonInteractable(imageContinueButton, !presentationCueInputLocked);
+            SetButtonInteractable(storyAreaButton, !presentationCueInputLocked);
+        }
+
+        private static void SetButtonInteractable(Button button, bool interactable)
+        {
+            if (button != null)
+            {
+                button.interactable = interactable;
+            }
+        }
         private void RefreshTextStory(StoryPlaybackState playback)
         {
             ShowOnlyPanel(textStoryPanel);
@@ -679,12 +1080,35 @@ namespace TwelveMoons.UI
 
             if (line.Position == 1)
             {
-                rightCharacterId = line.SpeakerCharacterId;
+                if (IsSameDialogueCharacter(rightCharacterId, line.SpeakerCharacterId))
+                {
+                    rightCharacterId = string.Empty;
+                }
+
+                leftCharacterId = line.SpeakerCharacterId;
             }
             else
             {
-                leftCharacterId = line.SpeakerCharacterId;
+                if (IsSameDialogueCharacter(leftCharacterId, line.SpeakerCharacterId))
+                {
+                    leftCharacterId = string.Empty;
+                }
+
+                rightCharacterId = line.SpeakerCharacterId;
             }
+        }
+
+        private static bool IsSameDialogueCharacter(string firstCharacterId, string secondCharacterId)
+        {
+            if (string.IsNullOrEmpty(firstCharacterId) || string.IsNullOrEmpty(secondCharacterId))
+            {
+                return false;
+            }
+
+            var firstDisplayName = CharacterDisplayNameUtility.GetDisplayName(firstCharacterId);
+            var secondDisplayName = CharacterDisplayNameUtility.GetDisplayName(secondCharacterId);
+            return !string.IsNullOrEmpty(firstDisplayName) &&
+                   string.Equals(firstDisplayName, secondDisplayName, System.StringComparison.Ordinal);
         }
 
         private string GetCurrentSpeakerCharacterId(DialogueLineDefinition line)
@@ -694,7 +1118,7 @@ namespace TwelveMoons.UI
                 return line.SpeakerCharacterId;
             }
 
-            return line.Position == 1 ? rightCharacterId : leftCharacterId;
+            return line.Position == 1 ? leftCharacterId : rightCharacterId;
         }
 
         private void RefreshPortraits(string activeSpeakerCharacterId)
@@ -705,6 +1129,125 @@ namespace TwelveMoons.UI
 
         private void RefreshSpeakerExpression(string activeSpeakerCharacterId)
         {
+            if (speakerExpressionImage == null)
+            {
+                return;
+            }
+
+            if (TryRefreshOpeningSkeletonExpression())
+            {
+                return;
+            }
+
+            ResetOpeningSkeletonMotion();
+            speakerExpressionImage.color = Color.white;
+
+            if (!IsSkeletonExpressionId(activeSpeakerCharacterId) ||
+                !StoryImageResourceProvider.TryLoadSprite(activeSpeakerCharacterId, SkeletonExpressionRoots, out var expressionSprite))
+            {
+                speakerExpressionImage.sprite = originalSpeakerExpressionSprite;
+                speakerExpressionImage.enabled = originalSpeakerExpressionSprite != null;
+                return;
+            }
+
+            speakerExpressionImage.sprite = expressionSprite;
+            speakerExpressionImage.enabled = true;
+        }
+
+        private bool TryRefreshOpeningSkeletonExpression()
+        {
+            if (!enableOpeningSkeletonPresentation ||
+                !string.Equals(currentStoryId, OpeningSkeletonStoryId, System.StringComparison.Ordinal) ||
+                currentDialogueLineNumber <= 0)
+            {
+                return false;
+            }
+
+            CacheSpeakerExpressionOriginalPosition();
+            if (!StoryImageResourceProvider.TryLoadSprite(OpeningSkeletonDefaultExpressionId, SkeletonExpressionRoots, out var expressionSprite))
+            {
+                openingSkeletonSnapshot = "\u5f00\u573a\u9ab7\u9ac5\uff1a\u672a\u627e\u5230\u9ab7\u9ac5\u601d\u8003\u8d44\u6e90";
+                return false;
+            }
+
+            speakerExpressionImage.sprite = expressionSprite;
+            speakerExpressionImage.enabled = true;
+            speakerExpressionImage.color = currentDialogueLineNumber <= 5 ? Color.black : Color.white;
+            if (!openingSkeletonMotionActive && presentationCueTween == null)
+            {
+                openingSkeletonSnapshot = currentDialogueLineNumber <= 5
+                    ? $"开场骷髅：第 {currentDialogueLineNumber} 行，黑色剪影"
+                    : $"开场骷髅：第 {currentDialogueLineNumber} 行，等待演出栏动效";
+            }
+
+            return true;
+        }
+
+        private void UpdateOpeningSkeletonMotion()
+        {
+            if (!openingSkeletonMotionActive || speakerExpressionRectTransform == null || !hasSpeakerExpressionOriginalPosition)
+            {
+                return;
+            }
+
+            speakerExpressionRectTransform.anchoredPosition = speakerExpressionOriginalAnchoredPosition;
+        }
+
+        private void ResetOpeningSkeletonMotion()
+        {
+            openingSkeletonMotionActive = false;
+            RestoreSpeakerExpressionOriginalPosition();
+            if (!string.Equals(currentStoryId, OpeningSkeletonStoryId, System.StringComparison.Ordinal))
+            {
+                openingSkeletonSnapshot = "\u5f00\u573a\u9ab7\u9ac5\uff1a\u7b49\u5f85 S0001";
+            }
+        }
+
+        private void CacheSpeakerExpressionOriginalPosition()
+        {
+            if (speakerExpressionImage == null)
+            {
+                return;
+            }
+
+            if (speakerExpressionRectTransform == null)
+            {
+                speakerExpressionRectTransform = speakerExpressionImage.rectTransform;
+            }
+
+            if (speakerExpressionRectTransform != null && !hasSpeakerExpressionOriginalPosition)
+            {
+                speakerExpressionOriginalAnchoredPosition = speakerExpressionRectTransform.anchoredPosition;
+                hasSpeakerExpressionOriginalPosition = true;
+            }
+        }
+
+        private void RestoreSpeakerExpressionOriginalPosition()
+        {
+            if (speakerExpressionRectTransform != null && hasSpeakerExpressionOriginalPosition)
+            {
+                speakerExpressionRectTransform.anchoredPosition = speakerExpressionOriginalAnchoredPosition;
+            }
+        }
+
+        private static int GetDialogueLineNumber(string lineId)
+        {
+            if (string.IsNullOrEmpty(lineId))
+            {
+                return 0;
+            }
+
+            var separatorIndex = lineId.LastIndexOf('_');
+            var numberText = separatorIndex >= 0 && separatorIndex < lineId.Length - 1
+                ? lineId.Substring(separatorIndex + 1)
+                : lineId;
+            return int.TryParse(numberText, out var number) ? number : 0;
+        }
+
+        private static bool IsSkeletonExpressionId(string characterId)
+        {
+            return !string.IsNullOrEmpty(characterId) &&
+                   characterId.StartsWith(SkeletonCharacterNamePrefix, System.StringComparison.Ordinal);
         }
 
         private void ApplyPortraitOutlineEffects(string activeSpeakerCharacterId)
@@ -720,6 +1263,12 @@ namespace TwelveMoons.UI
                 ref rightPortraitOutlineMaterial,
                 originalRightPortraitMaterial,
                 rightCharacterId,
+                activeSpeakerCharacterId);
+            ApplyPortraitOutlineEffect(
+                speakerExpressionImage,
+                ref speakerExpressionOutlineMaterial,
+                originalSpeakerExpressionMaterial,
+                activeSpeakerCharacterId,
                 activeSpeakerCharacterId);
         }
 
@@ -849,16 +1398,43 @@ namespace TwelveMoons.UI
                 return character.CharacterName;
             }
 
-            return characterId;
+            return CharacterDisplayNameUtility.GetDisplayName(characterId);
         }
 
         private void ResetDialogueCharacters()
         {
             leftCharacterId = string.Empty;
             rightCharacterId = string.Empty;
+            currentDialogueLineNumber = 0;
+            ResetOpeningSkeletonMotion();
             RefreshPortraits(null);
             RefreshSpeakerExpression(null);
             ApplyPortraitOutlineEffects(null);
+        }
+
+        private void ClearStoryVisualState()
+        {
+            ClearPortraitImage(leftPortrait, originalLeftPortraitMaterial);
+            ClearPortraitImage(rightPortrait, originalRightPortraitMaterial);
+            ClearPortraitImage(speakerExpressionImage, originalSpeakerExpressionMaterial);
+            RestoreSpeakerExpressionOriginalPosition();
+            openingSkeletonMotionActive = false;
+            activePresentationCueKey = string.Empty;
+            openingSkeletonSnapshot = "\u5f00\u573a\u9ab7\u9ac5\uff1a\u7b49\u5f85 S0001";
+        }
+
+        private static void ClearPortraitImage(Image portrait, Material originalMaterial)
+        {
+            if (portrait == null)
+            {
+                return;
+            }
+
+            portrait.sprite = null;
+            portrait.enabled = false;
+            portrait.color = Color.white;
+            portrait.material = originalMaterial;
+            portrait.transform.localScale = Vector3.one;
         }
 
         private void ShowOnlyPanel(GameObject activePanel)
@@ -936,7 +1512,7 @@ namespace TwelveMoons.UI
                 return;
             }
 
-            image.sprite = string.IsNullOrEmpty(imageId) ? null : Resources.Load<Sprite>(imageId);
+            image.sprite = string.IsNullOrEmpty(imageId) ? null : StoryImageResourceProvider.LoadSprite(imageId);
             image.enabled = image.sprite != null;
             image.color = image.sprite == null
                 ? new Color(0.19f, 0.2f, 0.22f, 1f)

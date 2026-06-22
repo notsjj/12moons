@@ -119,70 +119,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &40899836
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 40899837}
-  - component: {fileID: 40899838}
-  m_Layer: 0
-  m_Name: LowerHarborPoint
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &40899837
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 40899836}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.54, y: -0.35299993, z: -4.91}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1892143435}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &40899838
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 40899836}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
-  pointId: city_point_lower_harbor
-  drawSceneGizmo: 1
-  gizmoRadius: 0.25
-  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
-  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
-  showPortrait: 1
-  portraitResourceId: Art/Art/Character/IMG_0940
-  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
-  portraitLocalScale: {x: 0.35, y: 0.35, z: 0.35}
-  portraitMapScaleMultiplier: 0.333333
-  portraitSortingOrder: 50
-  portraitFacesCamera: 1
-  inspectorIsMatched: 1
-  inspectorPointName: "\u4E0B\u57CE\u533A\u7801\u5934"
-  inspectorAreaId: city_lower
-  inspectorPointType: BuildingSlot
-  inspectorDescription: "\u4E0B\u57CE\u533A\u7684\u56FA\u5B9A\u70B9\u4F4D\uFF1B\u7528\u4E8E\u9A8C\u8BC1\u672A\u6446\u653E\u70B9\u4F4D\u65F6\u7684
-    Inspector \u63D0\u793A\u3002"
-  inspectorMatchSummary: "PointId=city_point_lower_harbor, \u540D\u79F0=\u4E0B\u57CE\u533A\u7801\u5934,
-    \u57CE\u533A=city_lower, \u7C7B\u578B=BuildingSlot"
 --- !u!1 &95499535
 GameObject:
   m_ObjectHideFlags: 0
@@ -281,70 +217,6 @@ MonoBehaviour:
   letterService: {fileID: 1183544587}
   documentService: {fileID: 1183544588}
   cityCameraController: {fileID: 1543994035}
---- !u!1 &147798388
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 147798389}
-  - component: {fileID: 147798390}
-  m_Layer: 0
-  m_Name: RoyalGatePoint
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &147798389
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 147798388}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.127, y: 1.7, z: -1.478}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1892143435}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &147798390
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 147798388}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
-  pointId: city_point_royal_gate
-  drawSceneGizmo: 1
-  gizmoRadius: 0.25
-  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
-  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
-  showPortrait: 1
-  portraitResourceId: Art/Art/Character/IMG_0940
-  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
-  portraitLocalScale: {x: 0.35, y: 0.35, z: 0.35}
-  portraitMapScaleMultiplier: 0.333333
-  portraitSortingOrder: 50
-  portraitFacesCamera: 1
-  inspectorIsMatched: 1
-  inspectorPointName: "\u738B\u5BAB\u95E8\u524D"
-  inspectorAreaId: city_royal
-  inspectorPointType: BuildingSlot
-  inspectorDescription: "\u738B\u5BAB\u533A\u57DF\u7684\u56FA\u5B9A\u70B9\u4F4D\uFF1B\u9636\u6BB514\u53EA\u7528\u4E8E\u9A8C\u8BC1
-    PointId \u5339\u914D\u3002"
-  inspectorMatchSummary: "PointId=city_point_royal_gate, \u540D\u79F0=\u738B\u5BAB\u95E8\u524D,
-    \u57CE\u533A=city_royal, \u7C7B\u578B=BuildingSlot"
 --- !u!1 &152211876
 GameObject:
   m_ObjectHideFlags: 0
@@ -376,70 +248,106 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1872285472}
   m_LocalEulerAnglesHint: {x: 7.922, y: 43.938, z: 5.556}
---- !u!1 &177867567
+--- !u!1 &289590187 stripped
 GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: -6508548110786469911, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
   m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 177867568}
-  - component: {fileID: 177867569}
-  m_Layer: 0
-  m_Name: ChurchSquarePoint
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &177867568
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 177867567}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.837, y: 1.5410001, z: 1.574}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1892143435}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &177867569
+--- !u!114 &289590191
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 177867567}
+  m_GameObject: {fileID: 289590187}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
-  pointId: city_point_church_square
+  pointId: P0007
   drawSceneGizmo: 1
   gizmoRadius: 0.25
   matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
   unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
   showPortrait: 1
   portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
   portraitLocalOffset: {x: 0, y: 1.2, z: 0}
-  portraitLocalScale: {x: 0.35, y: 0.35, z: 0.35}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
   portraitMapScaleMultiplier: 0.333333
   portraitSortingOrder: 50
   portraitFacesCamera: 1
-  inspectorIsMatched: 1
-  inspectorPointName: "\u6559\u4F1A\u5E7F\u573A"
-  inspectorAreaId: city_church
-  inspectorPointType: BuildingSlot
-  inspectorDescription: "\u6559\u4F1A\u533A\u57DF\u7684\u56FA\u5B9A\u70B9\u4F4D\uFF1B\u540E\u7EED\u5EFA\u7B51\u6216\u652F\u7EBF\u53EF\u901A\u8FC7
-    PointId \u5B9A\u4F4D\u3002"
-  inspectorMatchSummary: "PointId=city_point_church_square, \u540D\u79F0=\u6559\u4F1A\u5E7F\u573A,
-    \u57CE\u533A=city_church, \u7C7B\u578B=BuildingSlot"
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
+--- !u!1 &396385752 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -5340174841280168160, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &396385756
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 396385752}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0013
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
 --- !u!1 &399654882
 GameObject:
   m_ObjectHideFlags: 0
@@ -472,69 +380,6 @@ Transform:
   - {fileID: 838051986}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &638862419
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 638862420}
-  - component: {fileID: 638862421}
-  m_Layer: 0
-  m_Name: AcademyArchivePoint
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &638862420
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638862419}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.04, y: 0.53700006, z: -2.35}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1892143435}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &638862421
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638862419}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
-  pointId: city_point_academy_archive
-  drawSceneGizmo: 1
-  gizmoRadius: 0.25
-  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
-  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
-  showPortrait: 1
-  portraitResourceId: Art/Art/Character/IMG_0940
-  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
-  portraitLocalScale: {x: 0.35, y: 0.35, z: 0.35}
-  portraitMapScaleMultiplier: 0.333333
-  portraitSortingOrder: 50
-  portraitFacesCamera: 1
-  inspectorIsMatched: 1
-  inspectorPointName: "\u5B66\u9662\u6863\u6848\u5BA4"
-  inspectorAreaId: city_academy
-  inspectorPointType: EffectSlot
-  inspectorDescription: "\u5B66\u9662\u533A\u57DF\u7684\u56FA\u5B9A\u70B9\u4F4D\uFF1B\u7528\u4E8E\u9A8C\u8BC1\u70B9\u4F4D\u7C7B\u578B\u8BFB\u53D6\u3002"
-  inspectorMatchSummary: "PointId=city_point_academy_archive, \u540D\u79F0=\u5B66\u9662\u6863\u6848\u5BA4,
-    \u57CE\u533A=city_academy, \u7C7B\u578B=EffectSlot"
 --- !u!1 &644112463 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -2395548318339889620, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
@@ -584,6 +429,51 @@ MonoBehaviour:
   inspectorCanCollect: 0
   inspectorSummary: 
   inspectorHoverOutlineBindingSnapshot: 
+--- !u!114 &644112469
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 644112463}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0003
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
 --- !u!1001 &691683115
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -632,18 +522,162 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -6508548110786469911, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u5DE5\u574A"
+      objectReference: {fileID: 0}
+    - target: {fileID: -5340174841280168160, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u6559\u4F1A"
+      objectReference: {fileID: 0}
+    - target: {fileID: -4225808938480771447, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u4E0A\u57CE\u533A2"
+      objectReference: {fileID: 0}
+    - target: {fileID: -3279685766219432502, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u6CB3\u9053"
+      objectReference: {fileID: 0}
+    - target: {fileID: -1911787985505420075, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u4E0B\u57CE\u533A\u7801\u5934"
+      objectReference: {fileID: 0}
+    - target: {fileID: -220396639015483497, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u8BCA\u6240"
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
       propertyPath: m_Name
       value: Map_01
+      objectReference: {fileID: 0}
+    - target: {fileID: 1038361332121040661, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u7CAE\u4ED3"
+      objectReference: {fileID: 0}
+    - target: {fileID: 2183391444791061480, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u56FE\u4E66\u9986"
+      objectReference: {fileID: 0}
+    - target: {fileID: 4135933967922779390, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u84C4\u6C34\u6C60"
+      objectReference: {fileID: 0}
+    - target: {fileID: 5345835302700909808, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u4E0A\u57CE\u533A3"
+      objectReference: {fileID: 0}
+    - target: {fileID: 6066204976352511712, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u8D2B\u6C11\u533A"
+      objectReference: {fileID: 0}
+    - target: {fileID: 6140907212322168604, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u89C2\u661F\u5854"
+      objectReference: {fileID: 0}
+    - target: {fileID: 6202206717407984477, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      propertyPath: m_Name
+      value: "\u4E0A\u57CE\u533A1"
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4135933967922779390, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1698703857}
+    - targetCorrespondingSourceObject: {fileID: -220396639015483497, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1820345753}
+    - targetCorrespondingSourceObject: {fileID: 2183391444791061480, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1053315845}
+    - targetCorrespondingSourceObject: {fileID: 5240202378498099184, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 998007443}
+    - targetCorrespondingSourceObject: {fileID: -1911787985505420075, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 691683117}
+    - targetCorrespondingSourceObject: {fileID: 6202206717407984477, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1384233200}
+    - targetCorrespondingSourceObject: {fileID: -4225808938480771447, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1704211841}
+    - targetCorrespondingSourceObject: {fileID: 6140907212322168604, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1945881388}
     - targetCorrespondingSourceObject: {fileID: -2395548318339889620, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 644112465}
+    - targetCorrespondingSourceObject: {fileID: -2395548318339889620, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 644112469}
+    - targetCorrespondingSourceObject: {fileID: -6508548110786469911, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 289590191}
+    - targetCorrespondingSourceObject: {fileID: -5340174841280168160, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 396385756}
+    - targetCorrespondingSourceObject: {fileID: 5345835302700909808, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1678825830}
+    - targetCorrespondingSourceObject: {fileID: 1038361332121040661, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1098768337}
+    - targetCorrespondingSourceObject: {fileID: 6066204976352511712, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1194122968}
   m_SourcePrefab: {fileID: 100100000, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+--- !u!1 &691683116 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -1911787985505420075, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &691683117
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 691683116}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0010
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
 --- !u!1 &692908649
 GameObject:
   m_ObjectHideFlags: 0
@@ -668,8 +702,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 692908649}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.11444673, y: 0.34109813, z: -0.04188156, w: 0.9320944}
-  m_LocalPosition: {x: -0.07, y: 2.5, z: 0.32}
+  m_LocalRotation: {x: 0.21800396, y: 0.30441818, z: -0.21529254, w: 0.90191627}
+  m_LocalPosition: {x: -0.665, y: 3.091, z: -0.198}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -699,8 +733,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 694616241}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.21594472, y: 0.6637038, z: -0.20926496, w: 0.6848893}
-  m_LocalPosition: {x: -0.95, y: 1.72, z: -2.35}
+  m_LocalRotation: {x: 0.27919555, y: 0.52870166, z: -0.16360098, w: 0.78470325}
+  m_LocalPosition: {x: -0.94, y: 1.677, z: -2.603}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -730,8 +764,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 729590069}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.21594472, y: 0.6637038, z: -0.20926496, w: 0.6848893}
-  m_LocalPosition: {x: -4.78, y: 1.56, z: -5.19}
+  m_LocalRotation: {x: 0.25228328, y: 0.5933954, z: -0.15550633, w: 0.7483668}
+  m_LocalPosition: {x: -4.4, y: 1.01, z: -6.29}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -993,13 +1027,113 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 996203911}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.087517545, y: 0.6907255, z: -0.08481038, w: 0.71277356}
-  m_LocalPosition: {x: -0.07, y: 2.5, z: 0.32}
+  m_LocalRotation: {x: 0.17552198, y: 0.5888063, z: -0.16038568, w: 0.77251256}
+  m_LocalPosition: {x: -0.4, y: 3.12, z: -0.17}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1872285472}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &998007439 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5240202378498099184, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &998007443
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 998007439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0014
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
+--- !u!1 &1053315841 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2183391444791061480, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1053315845
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1053315841}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0005
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
 --- !u!1 &1091164958
 GameObject:
   m_ObjectHideFlags: 0
@@ -1048,69 +1182,56 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!1 &1142542183
+--- !u!1 &1098768333 stripped
 GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 1038361332121040661, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
   m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1142542184}
-  - component: {fileID: 1142542185}
-  m_Layer: 0
-  m_Name: UpperMarketPoint
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1142542184
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1142542183}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.833, y: 0.2570001, z: 2.307}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1892143435}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1142542185
+--- !u!114 &1098768337
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1142542183}
+  m_GameObject: {fileID: 1098768333}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
-  pointId: city_point_upper_market
+  pointId: P0002
   drawSceneGizmo: 1
   gizmoRadius: 0.25
   matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
   unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
   showPortrait: 1
   portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
   portraitLocalOffset: {x: 0, y: 1.2, z: 0}
-  portraitLocalScale: {x: 0.35, y: 0.35, z: 0.35}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
   portraitMapScaleMultiplier: 0.333333
   portraitSortingOrder: 50
   portraitFacesCamera: 1
-  inspectorIsMatched: 1
-  inspectorPointName: "\u4E0A\u57CE\u533A\u96C6\u5E02"
-  inspectorAreaId: city_upper
-  inspectorPointType: BuildingSlot
-  inspectorDescription: "\u4E0A\u57CE\u533A\u7684\u56FA\u5B9A\u70B9\u4F4D\uFF1B\u5F53\u524D\u9636\u6BB5\u4E0D\u4EA7\u51FA\u8D44\u6E90\u4E5F\u4E0D\u89E6\u53D1\u5267\u60C5\u3002"
-  inspectorMatchSummary: "PointId=city_point_upper_market, \u540D\u79F0=\u4E0A\u57CE\u533A\u96C6\u5E02,
-    \u57CE\u533A=city_upper, \u7C7B\u578B=BuildingSlot"
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
 --- !u!1 &1183544577
 GameObject:
   m_ObjectHideFlags: 0
@@ -1179,7 +1300,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 166ff21d96214b169f289f607f9171cc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Config.ConfigManager
-  relativeConfigDirectory: Configs/Demo
+  relativeConfigDirectory: Configs/Plot
   loadOnAwake: 1
   preloadTables: []
 --- !u!114 &1183544581
@@ -1210,7 +1331,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.RuntimeDataService
   configManager: {fileID: 1183544580}
   createNewGameOnAwake: 1
-  initialDisasterId: disaster_flood_01
+  initialDisasterId: DI0001
   initialBackpackItems:
   - itemId: item_money
     count: 10
@@ -1326,7 +1447,108 @@ MonoBehaviour:
   taskService: {fileID: 1183544585}
   roundService: {fileID: 1183544584}
   maxDocumentsPerRound: 6
-  globalDocumentsPerRound: 2
+  randomDocumentsMinPerRound: 3
+  randomDocumentsMaxPerRound: 4
+--- !u!1 &1194122964 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6066204976352511712, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1194122968
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1194122964}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0004
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
+--- !u!1 &1384233196 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6202206717407984477, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1384233200
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1384233196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0009
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
 --- !u!1 &1543994030
 GameObject:
   m_ObjectHideFlags: 0
@@ -1539,11 +1761,162 @@ MonoBehaviour:
   inspectorCurrentViewName: 
   inspectorIsMoving: 0
   inspectorTargetSummary: 
+  inspectorCameraBindingSnapshot: 
   enableEntryCinematic: 1
   entryOrbitDuration: 0.8
   entryCinematicEndObjectName: GlobalViewPoint (1)
   entryCinematicEndViewPoint: {fileID: 0}
   inspectorIsPlayingEntryCinematic: 0
+--- !u!1 &1678825826 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5345835302700909808, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1678825830
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1678825826}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0012
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
+--- !u!1 &1698703853 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4135933967922779390, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1698703857
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1698703853}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0001
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
+--- !u!1 &1704211837 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -4225808938480771447, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1704211841
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1704211837}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0011
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
 --- !u!1 &1731711860
 GameObject:
   m_ObjectHideFlags: 0
@@ -1568,8 +1941,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1731711860}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.093357295, y: 0.6379964, z: -0.07833606, w: 0.76033455}
-  m_LocalPosition: {x: -0.07, y: 3.38, z: -2.05}
+  m_LocalRotation: {x: 0.14753588, y: 0.6528429, z: -0.12373919, w: 0.73261046}
+  m_LocalPosition: {x: -0.044, y: 3.585, z: -2.017}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1782,6 +2155,56 @@ Transform:
   - {fileID: 95499536}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1820345749 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -220396639015483497, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1820345753
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1820345749}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0006
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
 --- !u!1 &1831317175
 GameObject:
   m_ObjectHideFlags: 0
@@ -1868,42 +2291,56 @@ Transform:
   - {fileID: 729590070}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1892143434
+--- !u!1 &1945881384 stripped
 GameObject:
+  m_CorrespondingSourceObject: {fileID: 6140907212322168604, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
+  m_PrefabInstance: {fileID: 691683115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1945881388
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1892143435}
-  m_Layer: 0
-  m_Name: CityPointViews
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1892143435
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1892143434}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 147798389}
-  - {fileID: 177867568}
-  - {fileID: 1142542184}
-  - {fileID: 638862420}
-  - {fileID: 40899837}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_GameObject: {fileID: 1945881384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
+  pointId: P0008
+  drawSceneGizmo: 1
+  gizmoRadius: 0.25
+  matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
+  unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
+  showPortrait: 1
+  portraitResourceId: Art/Art/Character/IMG_0940
+  portraitPrefabResourcePath: "Prefabs/UI/\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
+  portraitLocalOffset: {x: 0, y: 1.2, z: 0}
+  portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
+  portraitMapScaleMultiplier: 0.333333
+  portraitSortingOrder: 50
+  portraitFacesCamera: 1
+  hoverOutlineRenderers: []
+  hoverCollider: {fileID: 0}
+  hoverOutlineEffect: {fileID: 0}
+  hoverOutlineColor: {r: 1, g: 0.78, b: 0.18, a: 1}
+  hoverOutlinePixelWidth: 3
+  autoBindHoverOutlineDependencies: 1
+  autoFitHoverColliderToRenderers: 1
+  requireCityRootActive: 1
+  gameEntry: {fileID: 0}
+  inspectorCityInteractionEnabled: 0
+  inspectorIsMatched: 0
+  inspectorPointName: 
+  inspectorAreaId: 
+  inspectorPointType: 
+  inspectorDescription: 
+  inspectorMatchSummary: 
+  inspectorActiveSideEventId: 
+  inspectorActiveSideEventStoryId: 
+  inspectorActiveSideEventCharacterId: 
+  inspectorActiveSideEventClickResult: 
 --- !u!1 &2002028476
 GameObject:
   m_ObjectHideFlags: 0
@@ -1945,6 +2382,5 @@ SceneRoots:
   - {fileID: 1183544579}
   - {fileID: 691683115}
   - {fileID: 1872285472}
-  - {fileID: 1892143435}
   - {fileID: 399654883}
   - {fileID: 1812713527}

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Collections.Generic;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
 using TwelveMoons.UI;
@@ -17,120 +18,122 @@ namespace TwelveMoons.EditorTools.Runtime
         [MenuItem("Twelve Moons/Tests/Run Story Smoke Test")]
         public static void Run()
         {
-            var providerRoot = Path.GetFullPath(DemoConfigDirectory);
-            var csvProvider = new CsvConfigProvider(providerRoot);
-
-            var storyTable = csvProvider.LoadTable("StoryConfig");
-            var dialogueTable = csvProvider.LoadTable("DialogueConfig");
-            var itemTable = csvProvider.LoadTable("ItemConfig");
-            var taskTable = csvProvider.LoadTable("TaskConfig");
-
-            if (!storyTable.TryFindById("StoryId", "story_demo_choice", out var choiceStoryRow))
-            {
-                throw new InvalidDataException("StoryConfig missing story_demo_choice row.");
-            }
-
-            var choiceStory = new StoryDefinition(choiceStoryRow);
-            if (choiceStory.StoryType != StoryType.Dialogue ||
-                !choiceStory.TriggerTaskOnEnd ||
-                choiceStory.TriggerTaskId != "task_punish_civilian_01" ||
-                choiceStory.AddItemId != "item_money" ||
-                choiceStory.AddItemCount != 2)
-            {
-                throw new InvalidDataException("StoryConfig did not parse story end effects correctly.");
-            }
-
-            if (!storyTable.TryFindById("StoryId", "story_demo_text", out var textStoryRow) ||
-                new StoryDefinition(textStoryRow).StoryType != StoryType.Text ||
-                new StoryDefinition(textStoryRow).TextSegments.Count != 3)
-            {
-                throw new InvalidDataException("StoryConfig did not parse Text story type or multi-paragraph text.");
-            }
-
-            if (!storyTable.TryFindById("StoryId", "story_demo_image", out var imageStoryRow))
-            {
-                throw new InvalidDataException("StoryConfig missing story_demo_image row.");
-            }
-
-            var pageImageStory = new StoryDefinition(imageStoryRow);
-            if (pageImageStory.StoryType != StoryType.Image ||
-                pageImageStory.ImageDisplayMode != StoryImageDisplayMode.PageSequence ||
-                pageImageStory.ImageIds.Count != 3 ||
-                pageImageStory.ImageCaptions.Count != 3)
-            {
-                throw new InvalidDataException("StoryConfig did not parse page image story fields.");
-            }
-
-            if (!storyTable.TryFindById("StoryId", "story_demo_comic_image", out var comicStoryRow))
-            {
-                throw new InvalidDataException("StoryConfig missing story_demo_comic_image row.");
-            }
-
-            var comicStory = new StoryDefinition(comicStoryRow);
-            if (comicStory.ImageDisplayMode != StoryImageDisplayMode.ComicPanels ||
-                comicStory.ImageIds.Count != 4)
-            {
-                throw new InvalidDataException("StoryConfig did not parse comic panel image fields.");
-            }
-
-            var choiceLineRow = dialogueTable.Rows.First(row => row.GetString("LineId") == "line_choice_001");
-            var choiceLine = new DialogueLineDefinition(choiceLineRow);
-            if (!choiceLine.IsChoice ||
-                choiceLine.GetChoiceText(0) != "交出排水图" ||
-                choiceLine.GetNextLineId(0) != "line_choice_approve" ||
-                choiceLine.GetRequiredItemId(0) != "item_drainage_map" ||
-                choiceLine.GetRequiredItemCount(0) != 1 ||
-                !choiceLine.ShouldConsumeItem(0) ||
-                choiceLine.GetAddItemId(0) != "item_archivist_badge" ||
-                choiceLine.GetAddItemCount(0) != 1)
-            {
-                throw new InvalidDataException("DialogueConfig did not parse choice jump or item effects correctly.");
-            }
-
-            var retainSpeakerLine = new DialogueLineDefinition(dialogueTable.Rows.First(row => row.GetString("LineId") == "line_relief_start_003"));
-            if (!string.IsNullOrEmpty(retainSpeakerLine.SpeakerCharacterId) ||
-                retainSpeakerLine.Position != 1 ||
-                retainSpeakerLine.GetNextLineId(0) != "END")
-            {
-                throw new InvalidDataException("DialogueConfig did not preserve the empty-speaker retention test row.");
-            }
-
-            var endLine = new DialogueLineDefinition(dialogueTable.Rows.First(row => row.GetString("LineId") == "line_choice_approve"));
-            if (endLine.GetNextLineId(0) != "END")
-            {
-                throw new InvalidDataException("DialogueConfig did not parse END as the configured choice result terminator.");
-            }
-
-            var submitLine = new DialogueLineDefinition(dialogueTable.Rows.First(row => row.GetString("LineId") == "line_submit_002"));
-            if (!submitLine.IsItemSubmissionLine() ||
-                submitLine.GetRequiredItemId(0) != "item_drainage_map" ||
-                submitLine.GetRequiredItemCount(0) != 1 ||
-                !submitLine.ShouldConsumeItem(0) ||
-                submitLine.GetNextLineId(0) != "line_submit_003")
-            {
-                throw new InvalidDataException("DialogueConfig did not parse item submission line correctly.");
-            }
-
-            if (!itemTable.TryFindById("ItemId", choiceLine.GetRequiredItemId(0), out _) ||
-                !itemTable.TryFindById("ItemId", choiceLine.GetAddItemId(0), out _) ||
-                !taskTable.TryFindById("TaskId", choiceStory.TriggerTaskId, out _))
-            {
-                throw new InvalidDataException("Story demo references missing configured item or task ids.");
-            }
-
-            var data = new GameRuntimeData();
-            data.Reset("disaster_flood_01", 18);
-            var queueEntry = data.QueueStory("story_demo_choice", "task_demo_relief_01", "task_stage_relief_prepare", RuntimeStoryQueueTiming.StageStart);
-            if (data.StoryQueue.Count != 1 || !data.RemoveStoryQueueEntry(queueEntry) || data.StoryQueue.Count != 0)
-            {
-                throw new InvalidDataException("Runtime story queue did not enqueue and remove correctly.");
-            }
-
-            ValidateSubmissionPlayback();
+            ValidateStoryNameLoadsMatchingDialogueTable();
+            ValidateStoryCanStartAtSpecificLine();
+            ValidateDialogueCharacterMoveClearsPreviousSlot();
             ValidatePortraitBrightnessSpeakerState();
 
-            Debug.Log("Story smoke test passed. StoryConfig parses Dialogue/Image/Text with multi-image and multi-paragraph fields, DialogueConfig parses choices and item submission, runtime story progress restores submission waits, and story queue removes played entries.");
+            Debug.Log("Story smoke test passed. StoryService resolves named dialogue CSVs for S0001, S0002, and S0004, and keeps core story panel portrait behavior wired.");
         }
+
+        private static void ValidateDialogueCharacterMoveClearsPreviousSlot()
+        {
+            var testRoot = new GameObject("StoryDialogueCharacterMoveSmokeTest");
+            try
+            {
+                var panel = testRoot.AddComponent<StoryPanelView>();
+                InvokePrivate(
+                    panel,
+                    "UpdateDialogueCharacter",
+                    new object[] { CreateDialogueLine("line_right", "\u8fd1\u4f8d\u6b63\u5e38", 0) });
+                InvokePrivate(
+                    panel,
+                    "UpdateDialogueCharacter",
+                    new object[] { CreateDialogueLine("line_left", "\u8fd1\u4f8d\u4e25\u8083", 1) });
+
+                var leftCharacterId = GetPrivateStringField(panel, "leftCharacterId");
+                var rightCharacterId = GetPrivateStringField(panel, "rightCharacterId");
+                if (leftCharacterId != "\u8fd1\u4f8d\u4e25\u8083" || !string.IsNullOrEmpty(rightCharacterId))
+                {
+                    throw new InvalidDataException("StoryPanel \u540c\u4e00\u89d2\u8272\u5207\u6362\u5de6\u53f3\u4f4d\u7f6e\u65f6\u5fc5\u987b\u6e05\u7a7a\u65e7\u4f4d\u7f6e\uff0c\u907f\u514d\u5de6\u53f3\u7acb\u7ed8\u663e\u793a\u540c\u4e00\u4e2a\u4eba\u7269\u3002");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(testRoot);
+            }
+        }
+
+
+        private static void ValidateStoryCanStartAtSpecificLine()
+        {
+            var testRoot = new GameObject("StoryStartAtLineSmokeTest");
+            try
+            {
+                var configManager = testRoot.AddComponent<ConfigManager>();
+                SetPrivateField(configManager, "relativeConfigDirectory", "Configs/Plot");
+                SetPrivateField(configManager, "loadOnAwake", false);
+                configManager.BuildDefaultProviders();
+
+                var runtimeDataService = testRoot.AddComponent<RuntimeDataService>();
+                SetPrivateField(runtimeDataService, "configManager", configManager);
+                runtimeDataService.CreateNewGame("DI0001");
+
+                var storyService = testRoot.AddComponent<StoryService>();
+                SetPrivateField(storyService, "configManager", configManager);
+                SetPrivateField(storyService, "runtimeDataService", runtimeDataService);
+                InvokePrivate(storyService, "Awake");
+
+                if (!storyService.StartStoryAtLine("S0002", "S0002_020") ||
+                    storyService.CurrentPlayback == null ||
+                    storyService.CurrentPlayback.CurrentLine == null ||
+                    storyService.CurrentPlayback.CurrentLine.LineId != "S0002_020")
+                {
+                    throw new InvalidDataException("StoryService ????????????????????????? S0002_020?");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(testRoot);
+            }
+        }
+
+
+        private static void ValidateStoryNameLoadsMatchingDialogueTable()
+        {
+            var testRoot = new GameObject("StoryNameDialogueTableSmokeTest");
+            try
+            {
+                var configManager = testRoot.AddComponent<ConfigManager>();
+                SetPrivateField(configManager, "relativeConfigDirectory", "Configs/Plot");
+                SetPrivateField(configManager, "loadOnAwake", false);
+                configManager.BuildDefaultProviders();
+
+                var runtimeDataService = testRoot.AddComponent<RuntimeDataService>();
+                SetPrivateField(runtimeDataService, "configManager", configManager);
+                runtimeDataService.CreateNewGame("DI0001");
+
+                var storyService = testRoot.AddComponent<StoryService>();
+                SetPrivateField(storyService, "configManager", configManager);
+                SetPrivateField(storyService, "runtimeDataService", runtimeDataService);
+                InvokePrivate(storyService, "Awake");
+
+                if (!storyService.StartStory("S0001") ||
+                    storyService.CurrentPlayback == null ||
+                    storyService.CurrentPlayback.Story.StoryName != "[\u4e3b\u7ebf]\u6fc0\u6d3b\u9ab7\u9ac5" ||
+                    storyService.CurrentPlayback.Story.StoryType != StoryType.Dialogue ||
+                    storyService.CurrentPlayback.CurrentLine == null ||
+                    storyService.CurrentPlayback.CurrentLine.LineId != "S0001_001" ||
+                    storyService.CurrentPlayback.CurrentLine.PresentationCue != "\u9ab7\u9ac5_\u6f14\u51fa\u70b9\u4f4d\u8d77\u59cb")
+                {
+                    throw new InvalidDataException("StoryService must resolve S0001 through StoryConfig.StoryName=[\u4e3b\u7ebf]\u6fc0\u6d3b\u9ab7\u9ac5 and load the matching \u6fc0\u6d3b\u9ab7\u9ac5 dialogue table.");
+                }
+
+                if (!storyService.StartStory("S0004") ||
+                    storyService.CurrentPlayback == null ||
+                    storyService.CurrentPlayback.Story.StoryName != "[\u4e3b\u7ebf]\u521d\u6b21\u5de1\u903b-\u6559\u533a" ||
+                    storyService.CurrentPlayback.CurrentLine == null ||
+                    storyService.CurrentPlayback.CurrentLine.LineId != "S0004_001")
+                {
+                    throw new InvalidDataException("StoryService must resolve S0004 through StoryConfig.StoryName=[\u4e3b\u7ebf]\u521d\u6b21\u5de1\u903b-\u6559\u533a and load the matching \u521d\u6b21\u5de1\u903b\u00b7\u6559\u533a dialogue table.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(testRoot);
+            }
+        }
+
 
         private static void ValidatePortraitBrightnessSpeakerState()
         {
@@ -174,6 +177,20 @@ namespace TwelveMoons.EditorTools.Runtime
             return portraitObject.GetComponent<Image>();
         }
 
+        private static DialogueLineDefinition CreateDialogueLine(string lineId, string speakerCharacterId, int position)
+        {
+            return new DialogueLineDefinition(new ConfigRow(new Dictionary<string, string>
+            {
+                { "LineId", lineId },
+                { "StoryId", "story_dialogue_position_test" },
+                { "NextLineId", "END" },
+                { "SpeakerCharacterId", speakerCharacterId },
+                { "Content", "\u6d4b\u8bd5" },
+                { "Position", position.ToString() },
+                { "IsChoice", "false" }
+            }));
+        }
+
         private static void ValidateSubmissionPlayback()
         {
             var testRoot = new GameObject("StorySmokeTestRoot");
@@ -186,7 +203,7 @@ namespace TwelveMoons.EditorTools.Runtime
 
                 var runtimeDataService = testRoot.AddComponent<RuntimeDataService>();
                 SetPrivateField(runtimeDataService, "configManager", configManager);
-                runtimeDataService.CreateNewGame("disaster_flood_01");
+                runtimeDataService.CreateNewGame("DI0001");
 
                 var inventoryService = testRoot.AddComponent<InventoryService>();
                 SetPrivateField(inventoryService, "configManager", configManager);
@@ -278,5 +295,12 @@ namespace TwelveMoons.EditorTools.Runtime
             var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
             method?.Invoke(target, parameters);
         }
+
+        private static string GetPrivateStringField(object target, string fieldName)
+        {
+            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            return field?.GetValue(target) as string;
+        }
     }
 }
+

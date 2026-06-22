@@ -27,7 +27,7 @@ namespace TwelveMoons.EditorTools.Runtime
 
                 var runtimeDataService = testRoot.AddComponent<RuntimeDataService>();
                 SetPrivateField(runtimeDataService, "configManager", configManager);
-                runtimeDataService.CreateNewGame("disaster_flood_01");
+                runtimeDataService.CreateNewGame("DI0001");
                 ValidateInitialBackpackItems(runtimeDataService);
 
                 var inventoryService = testRoot.AddComponent<InventoryService>();

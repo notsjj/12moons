@@ -20,13 +20,13 @@ namespace TwelveMoons.EditorTools.Runtime
             var itemTable = csvProvider.LoadTable("ItemConfig");
             var disasterTable = jsonProvider.LoadTable("DisasterConfig");
 
-            if (!disasterTable.TryFindById("DisasterId", "disaster_flood_01", out var disasterRow))
+            if (!disasterTable.TryFindById("DisasterId", "DI0001", out var disasterRow))
             {
-                throw new InvalidDataException("DisasterConfig missing disaster_flood_01 row.");
+                throw new InvalidDataException("DisasterConfig missing DI0001 row.");
             }
 
             var data = new GameRuntimeData();
-            data.Reset("disaster_flood_01", disasterRow.GetInt("TotalRound"));
+            data.Reset("DI0001", disasterRow.GetInt("TotalRound"));
 
             foreach (var row in itemTable.Rows)
             {

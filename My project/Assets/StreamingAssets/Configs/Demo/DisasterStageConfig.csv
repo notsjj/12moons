@@ -1,4 +1,0 @@
-DisasterId,StageId,StageName,StartRound,EndRound,Remark
-disaster_flood_01,stage_warning,预警期,1,6,洪水开局阶段测试
-disaster_flood_01,stage_peak,高峰期,7,12,洪水压力阶段测试
-disaster_flood_01,stage_aftermath,善后期,13,18,洪水恢复阶段测试

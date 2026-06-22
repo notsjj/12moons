@@ -1,9 +1,0 @@
-[
-  {
-    "DisasterId": "disaster_flood_01",
-    "DisasterName": "洪水",
-    "TotalRound": 18,
-    "Description": "用于配置加载和桌面最小循环测试的洪水灾难数据。",
-    "Remark": "灾难配置文件测试"
-  }
-]

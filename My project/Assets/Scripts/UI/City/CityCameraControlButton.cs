@@ -49,21 +49,32 @@ namespace TwelveMoons.UI.City
         public void MoveCamera()
         {
             ResolveReferences();
+
+            Debug.Log($"[城区按钮] 点击触发: displayName={displayName}, targetViewId={targetViewId}, " +
+                      $"cameraController={(cameraController != null ? cameraController.gameObject.name : "空")}", this);
+
             if (cameraController == null)
             {
                 RefreshBindingSnapshot("点击失败：缺少 CityCameraController");
-                Debug.LogWarning("城区摄像机按钮缺少 CityCameraController 引用。", this);
+                Debug.LogWarning("[城区按钮] ✗ 缺少 CityCameraController 引用，无法移动摄像机。", this);
                 return;
+            }
+
+            if (button != null && !button.interactable)
+            {
+                Debug.LogWarning($"[城区按钮] ✗ Button.interactable=false，按钮不可交互: {displayName}", this);
             }
 
             if (string.IsNullOrEmpty(targetViewId))
             {
                 RefreshBindingSnapshot("点击：回到默认全局视角");
+                Debug.Log($"[城区按钮] → 调用 MoveToDefaultView()");
                 cameraController.MoveToDefaultView();
                 return;
             }
 
             RefreshBindingSnapshot($"点击：移动到 {targetViewId}");
+            Debug.Log($"[城区按钮] → 调用 MoveToViewId(\"{targetViewId}\")");
             cameraController.MoveToViewId(targetViewId);
         }
 

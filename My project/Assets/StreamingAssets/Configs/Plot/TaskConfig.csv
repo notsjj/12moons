@@ -1,0 +1,11 @@
+﻿TaskId,TaskName,TaskType,Description,StartRound,EndRound,SuccessScore,FailScore,SuccessResultText,FailResultText,ShowInTaskPanel,Remark
+T0001,初步探索,Main,初步探索整个城市,1,1,0,0,,,1,
+T0002,商会建设,Main,主线任务：建立一个完整的 商会体系,2,5,3,0,,,1,任务示例，采用 T0001。
+T0003,观星台,Main,主线任务：这个观星台真的有必要建这么高吗......,7,8,1,0,,,1,
+T0004,投机者,Main,主线任务：在上城区闹事之前凑一批建材修屋顶,11,13,1,0,,,1,
+T0005,管道维修,Main,主线任务：为应对水灾，在争论结束后，准备提前维护排水系统，预估其承受量,14,19,6,0,,,1,
+T0006,水灾的抉择,Faction,派系任务：有时候选择是痛苦的——尤其是当你需要为你的选择承担责任之时,20,20,2,0,,,1,
+T0007,救灾,Faction,派系任务：救灾,21,23,2,0,,,1,
+字段,说明,,,,,,,,,,
+TaskId,任务唯一 ID；示例使用 T0001。,,,,,,,,,,
+TaskType,Main / Small / Faction / Side。,,,,,,,,,,

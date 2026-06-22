@@ -66,6 +66,9 @@ namespace TwelveMoons.EditorTools.Runtime
             }
 
             ValidateCityHudGlobalButtonTarget();
+            ValidateCityHudAreaButtonTargets();
+            ValidateBaseSceneCameraViewPoints();
+            ValidateCityCameraRequestedIdDoesNotFallThrough();
             ValidateChineseObjectNames("Assets/Resources/Prefabs/UI/共享HUD面板.prefab");
             ValidateChineseObjectNames("Assets/Resources/Prefabs/UI/物品卡片.prefab");
             ValidateSharedHudVisibilityApi();
@@ -395,20 +398,20 @@ namespace TwelveMoons.EditorTools.Runtime
             var sourcePath = "Assets/Scripts/UI/StoryPanelView.cs";
             if (!File.Exists(sourcePath))
             {
-                throw new FileNotFoundException("缺少剧情面板脚本。");
+                throw new FileNotFoundException("?????????");
             }
 
             var source = File.ReadAllText(sourcePath);
             if (source.Contains("SetPortraitSprite(speakerExpressionImage"))
             {
-                throw new InvalidOperationException("剧情面板说话者表情图暂时不应关联刷新成人物立绘。");
+                throw new InvalidOperationException("?????????????????????");
             }
 
-            if (source.Contains("speakerExpressionImage.enabled = false") ||
-                source.Contains("speakerExpressionImage.sprite =") ||
-                source.Contains("speakerExpressionImage.material ="))
+            if (!source.Contains("SkeletonExpressionRoots") ||
+                !source.Contains("IsSkeletonExpressionId") ||
+                !source.Contains("StoryImageResourceProvider.TryLoadSprite(activeSpeakerCharacterId, SkeletonExpressionRoots"))
             {
-                throw new InvalidOperationException("剧情面板说话者表情图应保留 Prefab 原图，代码不应修改它的图片、显隐或材质。");
+                throw new InvalidOperationException("??????????????????????");
             }
         }
 
@@ -651,10 +654,100 @@ namespace TwelveMoons.EditorTools.Runtime
                 throw new InvalidOperationException("城区 HUD 面板缺少“全局”摄像机按钮。");
             }
 
-            if (globalButton.TargetViewId != "GlobalViewPoint")
+            if (globalButton.TargetViewId != "GlobalViewPoint (1)")
             {
-                throw new InvalidOperationException($"城区 HUD 全局按钮应绑定到 GlobalViewPoint，当前为 {globalButton.TargetViewId}。");
+                throw new InvalidOperationException($"城区 HUD 全局按钮应绑定到 GlobalViewPoint (1)，当前为 {globalButton.TargetViewId}。");
             }
         }
+
+        private static void ValidateCityHudAreaButtonTargets()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/UI/\u57ce\u533aHUD\u9762\u677f.prefab");
+            if (prefab == null)
+            {
+                throw new FileNotFoundException("\u7f3a\u5c11\u57ce\u533a HUD \u9762\u677f Prefab\u3002");
+            }
+
+            var expectedTargets = new System.Collections.Generic.Dictionary<string, string>
+            {
+                ["\u738b\u5ba4"] = "city_royal",
+                ["\u6559\u4f1a"] = "city_church",
+                ["\u4e0a\u57ce\u533a"] = "city_upper",
+                ["\u5b66\u9662"] = "city_academy",
+                ["\u4e0b\u57ce\u533a"] = "city_lower"
+            };
+
+            var buttons = prefab.GetComponentsInChildren<CityCameraControlButton>(true);
+            foreach (var pair in expectedTargets)
+            {
+                var button = buttons.FirstOrDefault(candidate => candidate != null && candidate.DisplayName == pair.Key);
+                if (button == null)
+                {
+                    throw new InvalidOperationException($"\u57ce\u533a HUD \u9762\u677f\u7f3a\u5c11\u201c{pair.Key}\u201d\u6444\u50cf\u673a\u6309\u94ae\u3002");
+                }
+
+                if (button.TargetViewId != pair.Value)
+                {
+                    throw new InvalidOperationException($"\u57ce\u533a HUD \u9762\u677f\u201c{pair.Key}\u201d\u6309\u94ae\u5e94\u7ed1\u5b9a\u5230 {pair.Value}\uff0c\u5f53\u524d\u4e3a {button.TargetViewId}\u3002");
+                }
+            }
+        }
+
+        private static void ValidateCityCameraRequestedIdDoesNotFallThrough()
+        {
+            var sourcePath = "Assets/Scripts/City/CityCameraController.cs";
+            if (!File.Exists(sourcePath))
+            {
+                throw new FileNotFoundException("缺少城区摄像机控制脚本。");
+            }
+
+            var source = File.ReadAllText(sourcePath);
+            if (!source.Contains("var matchesRequestedPoint = point.ViewId == requestedId") ||
+                !source.Contains("if (!matchesRequestedPoint)") ||
+                !source.Contains("return null;"))
+            {
+                throw new InvalidOperationException("城区摄像机按按钮请求具体 viewId 时，非匹配的 viewPoints 项必须返回 null，不能落到第一个点位。 ");
+            }
+        }
+
+        private static void ValidateBaseSceneCameraViewPoints()
+        {
+            var scenePath = "Assets/Scenes/BaseScene.unity";
+            if (!File.Exists(scenePath))
+            {
+                throw new FileNotFoundException("\u7f3a\u5c11 BaseScene \u573a\u666f\u6587\u4ef6\u3002");
+            }
+
+            var sceneText = File.ReadAllText(scenePath);
+            var requiredPoints = new[]
+            {
+                "RoyalViewPoint",
+                "ChurchViewPoint",
+                "UpperCityViewPoint",
+                "AcademyViewPoint",
+                "LowerCityViewPoint"
+            };
+
+            foreach (var pointName in requiredPoints)
+            {
+                if (!sceneText.Contains($"m_Name: {pointName}"))
+                {
+                    throw new InvalidOperationException($"BaseScene \u7f3a\u5c11\u6444\u50cf\u673a\u70b9\u4f4d\uff1a{pointName}\u3002");
+                }
+            }
+
+            if (!sceneText.Contains("initialDisasterId: DI0001"))
+            {
+                throw new InvalidOperationException("BaseScene 的初始灾难 ID 必须是 DI0001，否则第一回合无法解析 DS0001/晴天。");
+            }
+
+            if (sceneText.Contains("m_Name: ChurchViewPoint") &&
+                sceneText.Contains("m_Name: UpperCityViewPoint") &&
+                sceneText.Contains("m_LocalPosition: {x: -0.07, y: 2.5, z: 0.32}"))
+            {
+                throw new InvalidOperationException("BaseScene \u4e2d ChurchViewPoint \u548c UpperCityViewPoint \u4e0d\u80fd\u7ee7\u7eed\u5171\u7528\u65e7\u7684\u91cd\u590d\u5750\u6807\u3002");
+            }
+        }
+
     }
 }

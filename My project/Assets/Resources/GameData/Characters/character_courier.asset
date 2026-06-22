@@ -17,3 +17,4 @@ MonoBehaviour:
   factionId: civilian
   portraitId: portrait_courier
   description: "\u5F80\u8FD4\u5404\u57CE\u533A\u9012\u9001\u6025\u62A5\u7684\u4FE1\u4F7F\u3002"
+  expressionPortraitIds: []

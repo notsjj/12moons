@@ -18,6 +18,7 @@ namespace TwelveMoons.EditorTools.Runtime
             try
             {
                 PrepareFlow(context);
+                ValidateOpeningTutorialApi(context);
                 LogPlannedFlow(context);
 
                 if (!context.RuntimeDataService.Data.StoryQueue.Any(candidate => candidate.QueuedRound == 1) ||
@@ -82,10 +83,24 @@ namespace TwelveMoons.EditorTools.Runtime
             }
         }
 
+
+        private static void ValidateOpeningTutorialApi(TestContext context)
+        {
+            if (!context.LoopController.OpeningTutorialEnabled)
+            {
+                throw new InvalidDataException("DeskLoopController ???????????????? S0001/S0002 ??????");
+            }
+
+            if (string.IsNullOrEmpty(context.LoopController.OpeningTutorialSnapshot))
+            {
+                throw new InvalidDataException("DeskLoopController ?????? Inspector ????????????????");
+            }
+        }
+
         private static void PrepareFlow(TestContext context)
         {
             context.ConfigManager.BuildDefaultProviders();
-            context.RuntimeDataService.CreateNewGame("disaster_flood_01");
+            context.RuntimeDataService.CreateNewGame("DI0001");
             context.InventoryService.Refresh();
             context.FactionService.Refresh();
             context.RoundService.Refresh();

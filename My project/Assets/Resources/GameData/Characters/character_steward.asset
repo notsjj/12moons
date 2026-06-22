@@ -17,3 +17,4 @@ MonoBehaviour:
   factionId: civilian
   portraitId: portrait_steward
   description: "\u8D1F\u8D23\u8BB0\u5F55\u4F4E\u57CE\u533A\u8D48\u6D4E\u7269\u8D44\u7684\u7BA1\u4E8B\u3002"
+  expressionPortraitIds: []

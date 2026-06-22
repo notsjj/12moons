@@ -1,0 +1,5 @@
+﻿ItemId,ItemName,ItemType,Description,IconId,CanDrag,CanConsume,Remark
+I0001,排水图纸,TaskItem,临时排水渠施工图纸。,icon_drainage_map,1,1,任务道具示例，采用 I0001。
+I0002,金币,Money,用于公文提交和资源结算的金币。,icon_money,1,1,资源物品：供公文负金币选项弹出物品面板。
+I0003,建材,Material,用于公文提交和城市建设的建材。,icon_material,1,1,资源物品：供公文负建材选项弹出物品面板。
+I0004,食物,Food,用于公文提交和灾害救济的食物。,icon_food,1,1,资源物品：供公文负食物选项弹出物品面板。

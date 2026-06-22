@@ -68,7 +68,7 @@ namespace TwelveMoons.Core.Runtime
             foreach (var row in characterTable.Rows)
             {
                 var definition = new CharacterDefinition(row);
-                if (string.IsNullOrWhiteSpace(definition.CharacterId))
+                if (!IsValidCharacterId(definition.CharacterId))
                 {
                     continue;
                 }
@@ -81,7 +81,7 @@ namespace TwelveMoons.Core.Runtime
             foreach (var row in documentTable.Rows)
             {
                 var definition = new DocumentDefinition(row);
-                if (string.IsNullOrWhiteSpace(definition.DocumentId))
+                if (!IsValidDocumentId(definition.DocumentId))
                 {
                     continue;
                 }
@@ -94,6 +94,18 @@ namespace TwelveMoons.Core.Runtime
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             lastGeneratedSignature = signature;
+        }
+
+        private static bool IsValidCharacterId(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value) &&
+                   System.Text.RegularExpressions.Regex.IsMatch(value.Trim(), @"^(C\d{4}|character_[A-Za-z0-9_]+)$");
+        }
+
+        private static bool IsValidDocumentId(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value) &&
+                   System.Text.RegularExpressions.Regex.IsMatch(value.Trim(), @"^(D\d{4}|document_[A-Za-z0-9_]+)$");
         }
 
         private static T LoadOrCreateAsset<T>(string assetPath) where T : ScriptableObject

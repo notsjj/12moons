@@ -199,32 +199,127 @@ namespace TwelveMoons.City
             JumpToTarget("global", "\u5168\u5c40\u5730\u56fe", defaultViewPoint);
         }
 
+        [ContextMenu("\u6d4b\u8bd5\uff1a\u79fb\u52a8\u5230\u6559\u4f1a (city_church)")]
+        private void TestMoveToChurch()
+        {
+            MoveToViewId("city_church");
+        }
+
+        [ContextMenu("\u6d4b\u8bd5\uff1a\u79fb\u52a8\u5230\u738b\u5ba4 (city_royal)")]
+        private void TestMoveToRoyal()
+        {
+            MoveToViewId("city_royal");
+        }
+
         public void MoveToViewId(string viewId)
         {
+            Debug.Log($"[城区摄像机] MoveToViewId 调用: viewId=\"{viewId}\", viewPoints数量={viewPoints.Count}, " +
+                      $"cityCamera={(cityCamera != null ? cityCamera.gameObject.name : "空")}, " +
+                      $"isActiveAndEnabled={isActiveAndEnabled}", this);
+
             if (string.IsNullOrEmpty(viewId))
             {
                 MoveToDefaultView();
                 return;
             }
 
-            foreach (var point in viewPoints)
+            for (var i = 0; i < viewPoints.Count; i++)
             {
+                var point = viewPoints[i];
+                if (point == null)
+                {
+                    Debug.Log($"[城区摄像机] viewPoints[{i}] 为 null，跳过");
+                    continue;
+                }
+
+                Debug.Log($"[城区摄像机] 检查 viewPoints[{i}]: viewId=\"{point.ViewId}\", " +
+                          $"displayName=\"{point.DisplayName}\", target={(point.Target != null ? point.Target.name : "空")}");
+
                 var target = ResolveViewPointTarget(point, viewId);
                 if (target != null)
                 {
+                    Debug.Log($"[城区摄像机] ✓ 在 viewPoints 中找到匹配: {point.ViewId} → {target.name} " +
+                              $"位置={target.position}");
                     MoveToTarget(point.ViewId, point.DisplayName, target);
                     return;
                 }
             }
 
-            var sceneTarget = FindSceneTransformIncludingInactive(viewId);
-            if (sceneTarget != null)
+            // 依次尝试按钮 targetViewId 的名称变体查找：
+            // 先精确匹配，再将 city_church 转换为 ChurchViewPoint 等场景命名。
+            foreach (var variant in BuildViewIdVariants(viewId))
             {
-                MoveToTarget(viewId, viewId, sceneTarget);
-                return;
+                var sceneTarget = FindSceneTransformIncludingInactive(variant);
+                if (sceneTarget != null)
+                {
+                    Debug.Log($"[城区摄像机] ✓ 通过名称变体找到: {variant} → {sceneTarget.name}");
+                    MoveToTarget(variant, variant, sceneTarget);
+                    return;
+                }
             }
 
-            Debug.LogWarning($"\u627e\u4e0d\u5230\u57ce\u533a\u6444\u50cf\u673a\u89c2\u5bdf\u70b9\uff1a{viewId}", this);
+            Debug.LogWarning($"[城区摄像机] ✗ 找不到城区摄像机观察点：{viewId}", this);
+        }
+
+        /// <summary>
+        /// 根据按钮 targetViewId 生成场景查找变体。
+        /// 例如 city_church 会生成 ChurchViewPoint、Church、city_church 等候选名。
+        /// </summary>
+        private static IEnumerable<string> BuildViewIdVariants(string viewId)
+        {
+            var seen = new HashSet<string>();
+            foreach (var variant in BuildViewIdVariantCandidates(viewId))
+            {
+                if (!string.IsNullOrEmpty(variant) && seen.Add(variant))
+                {
+                    yield return variant;
+                }
+            }
+        }
+
+        private static IEnumerable<string> BuildViewIdVariantCandidates(string viewId)
+        {
+            yield return viewId;
+
+            switch (viewId)
+            {
+                case "city_royal":
+                    yield return "RoyalViewPoint";
+                    yield return "Royal";
+                    yield break;
+                case "city_church":
+                    yield return "ChurchViewPoint";
+                    yield return "Church";
+                    yield break;
+                case "city_upper":
+                    yield return "UpperCityViewPoint";
+                    yield return "UpperCity";
+                    yield break;
+                case "city_academy":
+                    yield return "AcademyViewPoint";
+                    yield return "Academy";
+                    yield break;
+                case "city_lower":
+                    yield return "LowerCityViewPoint";
+                    yield return "LowerCity";
+                    yield break;
+            }
+
+            var namePart = viewId;
+            var underscore = namePart.IndexOf('_');
+            if (underscore >= 0 && underscore < namePart.Length - 1)
+            {
+                namePart = namePart.Substring(underscore + 1);
+            }
+
+            if (string.IsNullOrEmpty(namePart))
+            {
+                yield break;
+            }
+
+            var capitalized = char.ToUpperInvariant(namePart[0]) + namePart.Substring(1);
+            yield return capitalized + "ViewPoint";
+            yield return capitalized;
         }
 
         public void MoveToViewIndex(int index)
@@ -370,14 +465,19 @@ namespace TwelveMoons.City
         private void MoveToTarget(string viewId, string viewName, Transform target)
         {
             ResolveCamera();
+            Debug.Log($"[城区摄像机] MoveToTarget: viewId={viewId}, viewName={viewName}, " +
+                      $"target={(target != null ? target.name : "空")}, targetPos={(target != null ? target.position.ToString() : "N/A")}, " +
+                      $"cityCamera={(cityCamera != null ? cityCamera.gameObject.name : "空")}", this);
+
             if (cityCamera == null || target == null)
             {
-                Debug.LogWarning("\u57ce\u533a\u6444\u50cf\u673a\u6216\u76ee\u6807\u70b9\u4f4d\u4e3a\u7a7a\uff0c\u65e0\u6cd5\u79fb\u52a8\u3002", this);
+                Debug.LogWarning($"[城区摄像机] ✗ MoveToTarget 失败: cityCamera={(cityCamera != null ? "有" : "空")}, target={(target != null ? "有" : "空")}", this);
                 return;
             }
 
             StopButtonMove();
             moveRoutine = StartCoroutine(MoveRoutine(viewId, viewName, target));
+            Debug.Log($"[城区摄像机] → 已启动 MoveRoutine 协程, moveDuration={moveDuration}");
         }
 
         private void JumpToTarget(string viewId, string viewName, Transform target)
@@ -409,6 +509,9 @@ namespace TwelveMoons.City
             var duration = Mathf.Max(0f, moveDuration);
             var elapsed = 0f;
 
+            Debug.Log($"[城区摄像机] MoveRoutine 开始: 从 {startPosition} 移动到 {targetPosition}, " +
+                      $"duration={duration}s");
+
             if (duration <= 0f)
             {
                 ApplyCameraTarget(target);
@@ -435,6 +538,7 @@ namespace TwelveMoons.City
             ApplyCameraTarget(target);
             SetInspectorSnapshot(viewId, viewName, target, false);
             moveRoutine = null;
+            Debug.Log($"[城区摄像机] MoveRoutine 完成: 当前位置={cityCamera.transform.position}");
         }
 
         private void ApplyCameraTarget(Transform target)
@@ -668,20 +772,47 @@ namespace TwelveMoons.City
                 return null;
             }
 
-            if (!string.IsNullOrEmpty(requestedId) &&
-                point.Target != null &&
-                (point.ViewId == requestedId || point.Target.name == requestedId))
+            if (!string.IsNullOrEmpty(requestedId))
+            {
+                var matchesRequestedPoint = point.ViewId == requestedId ||
+                    (point.Target != null && point.Target.name == requestedId);
+                if (!matchesRequestedPoint)
+                {
+                    return null;
+                }
+
+                if (point.Target != null)
+                {
+                    return point.Target;
+                }
+
+                foreach (var variant in BuildViewIdVariants(requestedId))
+                {
+                    var target = FindSceneTransformIncludingInactive(variant);
+                    if (target != null)
+                    {
+                        return target;
+                    }
+                }
+
+                return FindSceneTransformIncludingInactive(point.DisplayName);
+            }
+
+            if (point.Target != null)
             {
                 return point.Target;
             }
 
-            if (point.Target != null && string.IsNullOrEmpty(requestedId))
+            foreach (var variant in BuildViewIdVariants(point.ViewId))
             {
-                return point.Target;
+                var target = FindSceneTransformIncludingInactive(variant);
+                if (target != null)
+                {
+                    return target;
+                }
             }
 
-            return FindSceneTransformIncludingInactive(point.ViewId) ??
-                FindSceneTransformIncludingInactive(point.DisplayName);
+            return FindSceneTransformIncludingInactive(point.DisplayName);
         }
 
         private Transform FindConfiguredViewPointTarget(string viewIdOrObjectName)

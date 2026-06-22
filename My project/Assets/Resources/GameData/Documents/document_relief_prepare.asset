@@ -37,7 +37,7 @@ MonoBehaviour:
     requiredItemId: 
     requiredItemCount: 0
     consumeItem: 0
-    addItemId: item_drainage_map
+    addItemId: I0001
     addItemCount: 1
     nextDocumentId: document_relief_followup
     nextDocumentDelayRound: 1

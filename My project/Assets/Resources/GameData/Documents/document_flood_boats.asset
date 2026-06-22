@@ -17,7 +17,7 @@ MonoBehaviour:
   bodyText: "\u8239\u592B\u8BF7\u6C42\u767B\u8BB0\u79C1\u4EBA\u5C0F\u8239\uFF0C\u7528\u4E8E\u7D27\u6025\u6E21\u4EBA\uFF1B\u8D35\u65CF\u8239\u4E3B\u62C5\u5FC3\u8FD9\u4F1A\u66B4\u9732\u81EA\u5BB6\u8239\u53EA\u3002"
   proposerCharacterId: character_courier
   documentType: Disaster
-  factionLogoName: "\u8D35\u65CF"
+  factionLogoName: "\u5DE5\u4F1A"
   disasterId: disaster_flood_01
   disasterStageId: stage_warning
   taskId: 

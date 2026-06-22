@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
+using TwelveMoons.UI;
 using UnityEngine;
 
 namespace TwelveMoons.City
@@ -18,12 +19,18 @@ namespace TwelveMoons.City
         [Header("依赖服务：回合、任务、道具和剧情")]
         [Tooltip("运行时数据服务；用于读取当前回合，并记录每个支线事件是否已经触发。")]
         [SerializeField] private RuntimeDataService runtimeDataService;
+        [Tooltip("回合服务；用于在回合推进时刷新当前可见支线事件并通知场景点位重新绑定。")]
+        [SerializeField] private RoundService roundService;
         [Tooltip("剧情服务；点击支线角色后通过它播放 SideEventConfig.StoryId 对应剧情。")]
         [SerializeField] private StoryService storyService;
         [Tooltip("任务服务；仅用于检查 RequiredTaskId 和 RequiredTaskState，不直接由支线表触发任务。")]
         [SerializeField] private TaskService taskService;
         [Tooltip("物品栏服务；用于检查 RequiredItemId 和 RequiredItemCount 是否满足。")]
         [SerializeField] private InventoryService inventoryService;
+
+        [Header("支线剧情显示：打开剧情面板")]
+        [Tooltip("UI 启动器；支线事件成功启动 StoryService 后，会通过它打开剧情面板。为空时运行时自动查找。")]
+        [SerializeField] private BaseSceneUIBootstrap uiBootstrap;
 
         [Header("运行时只读快照：支线事件状态")]
         [Tooltip("SideEventConfig 中成功读取到的支线事件数量。")]
@@ -58,6 +65,30 @@ namespace TwelveMoons.City
             ResolveDependencies();
             LoadDefinitions();
             RefreshInspectorSnapshot();
+        }
+
+
+        private void OnEnable()
+        {
+            ResolveDependencies();
+            if (roundService != null)
+            {
+                roundService.RoundChanged -= HandleRoundChanged;
+                roundService.RoundChanged += HandleRoundChanged;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (roundService != null)
+            {
+                roundService.RoundChanged -= HandleRoundChanged;
+            }
+        }
+
+        private void HandleRoundChanged()
+        {
+            Refresh();
         }
 
         private void Start()
@@ -148,6 +179,8 @@ namespace TwelveMoons.City
                 return false;
             }
 
+            uiBootstrap?.ShowStory();
+
             runtimeDataService.Data.GetOrCreateSideEvent(definition.SideEventId)
                 .RecordTriggered(runtimeDataService.Data.CurrentRound);
             resultMessage = $"已播放支线事件 {definition.SideEventId}，剧情 {definition.StoryId}。";
@@ -167,6 +200,11 @@ namespace TwelveMoons.City
                 runtimeDataService = FindFirstObjectByType<RuntimeDataService>(FindObjectsInactive.Include);
             }
 
+            if (roundService == null)
+            {
+                roundService = FindFirstObjectByType<RoundService>(FindObjectsInactive.Include);
+            }
+
             if (storyService == null)
             {
                 storyService = FindFirstObjectByType<StoryService>(FindObjectsInactive.Include);
@@ -180,6 +218,11 @@ namespace TwelveMoons.City
             if (inventoryService == null)
             {
                 inventoryService = FindFirstObjectByType<InventoryService>(FindObjectsInactive.Include);
+            }
+
+            if (uiBootstrap == null)
+            {
+                uiBootstrap = FindFirstObjectByType<BaseSceneUIBootstrap>(FindObjectsInactive.Include);
             }
         }
 

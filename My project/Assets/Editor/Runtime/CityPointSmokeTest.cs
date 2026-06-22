@@ -1,5 +1,7 @@
 using System;
+using System.Linq;
 using TwelveMoons.City;
+using TwelveMoons.Core;
 using TwelveMoons.Core.Config;
 using UnityEditor;
 using UnityEngine;
@@ -20,55 +22,124 @@ namespace TwelveMoons.EditorTools.Runtime
                 configManager.BuildDefaultProviders();
 
                 if (!configManager.TryGetTable("CityPointConfig", out var table) ||
-                    table.Rows.Count < 4 ||
-                    !table.TryFindById("PointId", "city_point_royal_gate", out _))
+                    !table.TryFindById("PointId", "P0001", out _) ||
+                    !table.TryFindById("PointId", "P0014", out _))
                 {
-                    throw new InvalidOperationException("CityPointConfig demo data is missing required point rows.");
+                    throw new InvalidOperationException("CityPointConfig must contain the new P0001-P0014 city point ids.");
                 }
 
-                var royalGateView = CreatePointView(root.transform, "RoyalGatePointView", "city_point_royal_gate");
-                var churchSquareView = CreatePointView(root.transform, "ChurchSquarePointView", "city_point_church_square");
-                var upperMarketView = CreatePointView(root.transform, "UpperMarketPointView", "city_point_upper_market");
-                var academyArchiveView = CreatePointView(root.transform, "AcademyArchivePointView", "city_point_academy_archive");
+                var pointViews = table.Rows
+                    .Select(row => row.GetString("PointId"))
+                    .Where(pointId => !string.IsNullOrEmpty(pointId))
+                    .Select(pointId => CreatePointView(root.transform, $"PointView_{pointId}", pointId))
+                    .ToArray();
 
                 var registry = root.AddComponent<CityPointRegistry>();
-                ConfigureRegistry(
-                    registry,
-                    configManager,
-                    royalGateView,
-                    churchSquareView,
-                    upperMarketView,
-                    academyArchiveView);
+                ConfigureRegistry(registry, configManager, pointViews);
                 registry.RefreshAndBind();
 
                 if (registry.ConfigCount != table.Rows.Count ||
-                    registry.MatchedViewCount != 4 ||
+                    registry.MatchedViewCount != table.Rows.Count ||
                     !string.IsNullOrEmpty(registry.UnmatchedViewPointIds) ||
-                    !registry.UnusedConfigPointIds.Contains("city_point_lower_harbor"))
+                    !string.IsNullOrEmpty(registry.UnusedConfigPointIds) ||
+                    !string.IsNullOrEmpty(registry.DuplicateViewPointIds))
                 {
-                    throw new InvalidOperationException("CityPointRegistry failed to match CityPointView PointId values against CityPointConfig.");
+                    throw new InvalidOperationException("Every CityPointConfig.PointId must have one matching CityPointView and no duplicate scene point ids.");
                 }
 
-                if (!registry.TryGetDefinition("city_point_royal_gate", out var definition) ||
-                    definition.PointName != "王宫门前")
-                {
-                    throw new InvalidOperationException("CityPointRegistry could not resolve the royal gate point definition.");
-                }
-
-                if (!registry.TryGetView("city_point_royal_gate", out var view) ||
+                if (!registry.TryGetView("P0001", out var view) ||
                     !view.IsMatched ||
-                    view.Definition.PointId != "city_point_royal_gate")
+                    view.Definition.PointId != "P0001")
                 {
-                    throw new InvalidOperationException("CityPointView did not receive the matched CityPointDefinition.");
+                    throw new InvalidOperationException("CityPointView did not receive the matched P0001 definition.");
                 }
 
-                Debug.Log("City point smoke test passed. CityPointView PointId values match CityPointConfig rows and expose unmatched config IDs for scene completion.");
+                ValidatePointHoverOutlineApi();
+                ValidatePointInteractionRequiresCityEntry();
+
+                Debug.Log("City point smoke test passed. All P0001-P0014 CityPointConfig ids match CityPointView instances, with no missing or duplicate point ids.");
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(root);
             }
         }
+
+        private static void ValidatePointHoverOutlineApi()
+        {
+            var pointObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            pointObject.name = "HoverOutlinePointView";
+            try
+            {
+                var pointView = pointObject.AddComponent<CityPointView>();
+                pointView.InitializeRuntimeHoverDependenciesForTest();
+
+                if (!pointView.IsHoverOutlineRuntimeReady)
+                {
+                    throw new InvalidOperationException("CityPointView must auto-bind renderers, a same-object collider, and CityBuildingOutlineEffect for hover outlines.");
+                }
+
+                if (pointObject.GetComponents<CityPointView>().Length != 1)
+                {
+                    throw new InvalidOperationException("CityPointView should not allow duplicate components on the same GameObject.");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(pointObject);
+            }
+        }
+
+
+        private static void ValidatePointInteractionRequiresCityEntry()
+        {
+            var root = new GameObject("CityPointEntryGateRoot");
+            var deskRoot = new GameObject("DeskRoot");
+            var cityRoot = new GameObject("CityRoot");
+            var pointObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                deskRoot.transform.SetParent(root.transform, false);
+                cityRoot.transform.SetParent(root.transform, false);
+                pointObject.transform.SetParent(root.transform, false);
+
+                var entry = root.AddComponent<GameEntry>();
+                SetGameEntryRoots(entry, deskRoot, cityRoot);
+
+                var pointView = pointObject.AddComponent<CityPointView>();
+                pointView.Configure("P0001");
+                pointView.InitializeRuntimeHoverDependenciesForTest();
+
+                entry.ShowDesk();
+                pointObject.SendMessage("OnMouseEnter", SendMessageOptions.DontRequireReceiver);
+                if (pointView.IsHoverOutlineVisible)
+                {
+                    throw new InvalidOperationException("CityPointView must keep hover outline disabled before the player enters the city.");
+                }
+
+                entry.ShowCity();
+                pointObject.SendMessage("OnMouseEnter", SendMessageOptions.DontRequireReceiver);
+                if (!pointView.IsHoverOutlineVisible)
+                {
+                    throw new InvalidOperationException("CityPointView should enable hover outline after GameEntry switches into the city.");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+                UnityEngine.Object.DestroyImmediate(pointObject);
+            }
+        }
+
+        private static void SetGameEntryRoots(GameEntry entry, GameObject deskRoot, GameObject cityRoot)
+        {
+            var serializedObject = new SerializedObject(entry);
+            serializedObject.FindProperty("deskRoot").objectReferenceValue = deskRoot;
+            serializedObject.FindProperty("cityRoot").objectReferenceValue = cityRoot;
+            serializedObject.FindProperty("showDeskOnStart").boolValue = false;
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
 
         private static CityPointView CreatePointView(Transform parent, string objectName, string pointId)
         {

@@ -1,0 +1,14 @@
+﻿TaskStageId,TaskId,StageIndex,StartOffsetRound,EndOffsetRound,StartStoryId,EndStoryId,BeforeDocumentCharacterId,BeforeDocumentStoryId,StartLetterId,EndLetterId,LinkedDocumentIds,StageDescription,Remark
+TS0001,T0001,1,0,0,S0001,,C0028,S0002,,,,,
+TS0002,T0002,1,0,3,,S0007,,,,,,建立商会,相对任务激活回合计算阶段开始/结束；公文由 LinkedDocumentIds 关联。
+TS0003,T0003,1,0,1,,S0014,C0014,S0012,,,D0001,建立一个观星台,
+TS0004,T0004,1,0,2,,S0016,,,,,,凑一批建材为上城区修屋顶,
+TS0005,T0005,1,0,0,S0017,S0018,,,,,,提前维护排水系统,
+TS0006,T0005,2,0,0,,S0019,,,,,,勘探队遇到阻碍，被迫中断,
+TS0007,T0005,3,0,2,S0020,,,,,,,各方势力重新集结人手勘探,
+TS0008,T0005,4,0,0,S0022,,,,,,,初步完成，但是失败了,
+TS0009,T0006,1,0,0,S0023,S0026,,,,,,选择你站队的派系,
+TS0010,T0007,1,0,2,S0027,S0028,,,,,,你最终选择了院长的提案，毕竟工厂真的很诱人,
+字段,说明,,,,,,,,,,,,
+TaskStageId,任务阶段唯一 ID；示例使用 TS0001。,,,,,,,,,,,,
+LinkedDocumentIds,阶段关联公文列表，用 | 分隔，如 D0001|D0002。,,,,,,,,,,,,

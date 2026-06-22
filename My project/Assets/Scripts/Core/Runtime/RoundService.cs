@@ -42,11 +42,13 @@ namespace TwelveMoons.Core.Runtime
 
         private void Start()
         {
+            EnsureInitialRuntimeData();
             RoundChanged?.Invoke();
         }
 
         public void Refresh()
         {
+            EnsureInitialRuntimeData();
             LoadDisasterStageConfig();
             RoundChanged?.Invoke();
         }
@@ -76,12 +78,25 @@ namespace TwelveMoons.Core.Runtime
             RoundChanged?.Invoke();
         }
 
+        
+        public void EnsureInitialRuntimeData()
+        {
+            if (runtimeDataService == null || runtimeDataService.Data.CurrentRound > 0)
+            {
+                return;
+            }
+
+            runtimeDataService.CreateNewGameWithInitialDisaster();
+        }
+
         public DisasterStageDefinition ResolveDisasterStage(int round)
         {
             if (runtimeDataService == null)
             {
                 return null;
             }
+
+            EnsureInitialRuntimeData();
 
             if (disasterStageResolver == null)
             {

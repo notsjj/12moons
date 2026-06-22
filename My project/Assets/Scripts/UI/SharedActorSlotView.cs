@@ -126,6 +126,12 @@ namespace TwelveMoons.UI
                 portraitImage.sprite = portrait;
                 portraitImage.color = portrait != null ? Color.white : placeholderPortraitColor;
                 portraitImage.enabled = true;
+
+                // 切换到新精灵后恢复原生尺寸，避免因上一张图的拉伸导致比例异常。
+                if (portrait != null)
+                {
+                    portraitImage.SetNativeSize();
+                }
             }
 
             SetVisible(true, false, false, onComplete);

@@ -150,11 +150,14 @@ namespace TwelveMoons.UI
         private bool isBodyTypewriterPlaying;
         private bool isFeedbackTypewriterPlaying;
         private bool startBodyTypewriterWhenOpened;
+        private bool isSingleDocumentFlow;
 
         public bool IsDocumentFlowActive =>
             gameObject.activeInHierarchy && (currentDocument != null || currentEntry != null || isFeedbackTypewriterPlaying || waitingForContinue || waitingForDragExit || isActorTransitioningSnapshot);
 
         public bool IsActorTransitioning => isActorTransitioningSnapshot;
+
+        public bool IsSingleDocumentFlow => isSingleDocumentFlow;
 
         public GameObject ExitHintImageObject => exitHintImage;
 
@@ -273,6 +276,18 @@ namespace TwelveMoons.UI
 
         public void BeginDocumentFlow()
         {
+            BeginDocumentFlowInternal(false);
+        }
+
+        public void BeginSingleDocumentFlow()
+        {
+            BeginDocumentFlowInternal(true);
+        }
+
+        private void BeginDocumentFlowInternal(bool singleDocumentFlow)
+        {
+            isSingleDocumentFlow = singleDocumentFlow;
+
             if (documentService == null ||
                 !documentService.TryGetNextPendingDocument(out var entry, out var document))
             {
@@ -321,6 +336,7 @@ namespace TwelveMoons.UI
             currentEntry = null;
             currentDocument = null;
             waitingForContinue = false;
+            isSingleDocumentFlow = false;
             SetDragExitState(false);
             ClearTransientFeedback();
             HideExitHint();
@@ -437,7 +453,8 @@ namespace TwelveMoons.UI
             submitSlot?.Clear();
             SetButtonsInteractable(false);
 
-            if (documentService != null &&
+            if (!isSingleDocumentFlow &&
+                documentService != null &&
                 documentService.TryGetNextPendingDocument(out var nextEntry, out var nextDocument))
             {
                 TransitionToNextDocument(nextEntry, nextDocument);
@@ -955,6 +972,7 @@ namespace TwelveMoons.UI
             currentEntry = null;
             currentDocument = null;
             waitingForContinue = false;
+            isSingleDocumentFlow = false;
             SetDragExitState(false);
             isActorTransitioningSnapshot = false;
             ClearTransientFeedback();
@@ -966,8 +984,14 @@ namespace TwelveMoons.UI
                 cityExploreButton.interactable = true;
             }
 
-            gameObject.SetActive(false);
+            // 必须在 SetActive(false) 之前通知，这样 DeskLoopController 读取
+            // IsDocumentFlowActive 时 gameObject 仍处于激活状态，能正确区分
+            // "流程刚结束（面板仍激活但无文档）" 和 "面板已隐藏"。
+            // 如果放在 SetActive(false) 之后，activeInHierarchy 为 false，
+            // DeskLoopController 无法检测到 wasDocumentFlowActive → false 的跳变，
+            // 导致城区按钮遮罩永远不会打开。
             NotifyDocumentFlowStateChanged();
+            gameObject.SetActive(false);
         }
 
         private void HideClosedDocumentVisuals()

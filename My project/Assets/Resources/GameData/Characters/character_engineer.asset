@@ -17,3 +17,4 @@ MonoBehaviour:
   factionId: academy
   portraitId: portrait_engineer
   description: "\u8D1F\u8D23\u89C4\u5212\u8857\u9053\u6392\u6C34\u548C\u77F3\u6865\u4FEE\u8865\u7684\u5DE5\u7A0B\u5E08\u3002"
+  expressionPortraitIds: []

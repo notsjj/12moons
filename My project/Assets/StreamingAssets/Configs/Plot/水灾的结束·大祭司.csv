@@ -1,0 +1,4 @@
+﻿LineId,StoryId,NextLineId,SpeakerCharacterId,Content,Position,IsChoice,RequiredItemIds,RequiredItemCounts,ConsumeItems,AddItemIds,AddItemCounts,Remark
+S0031_001,S0031,S0031_002,,在全下城区的祈祷声中，大祭司独自站在了祭台之上，他看着天上的乌云，那水灾的罪魁祸首，伸出了手。,0,false,,,,,,此事件为结算事件，目的为结算救灾情况：根据选择的不同，最后的描述与结果各不相同，根据小任务的完成情况与最后势力任务是否完成决定最后下城区的完成情况。
+S0031_002,S0031,S0031_003,,伴随着神术的吟唱，狂风开始在祭台之上汇聚，而天上的云层反复被某种存在搅动一般开始翻涌。,0,false,,,,,,
+S0031_003,S0031,END,,在持续数天的吟唱之下，风暴在云层之上诞生，厚重的积雨云被瞬间卷至别处，阳光洒了下来，落在了王都之上。,0,false,,,,,,

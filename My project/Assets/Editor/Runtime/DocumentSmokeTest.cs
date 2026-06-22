@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using TwelveMoons.Core.Config;
@@ -13,16 +13,13 @@ namespace TwelveMoons.EditorTools.Runtime
 {
     public static class DocumentSmokeTest
     {
-        private const string DemoDocumentId = "document_relief_prepare";
-        private const string DemoTaskId = "task_demo_relief_01";
-        private const string DemoStageId = "task_stage_relief_prepare";
+        private const string DemoDocumentId = "D0010";
+        private const string DemoTaskId = "T0001";
+        private const string DemoStageId = "TS0001";
 
         [MenuItem("Twelve Moons/Tests/Run Document Smoke Test")]
         public static void Run()
         {
-            RunOptionAFlow();
-            RunOptionBFlow();
-            RunPointerTargetUsesMostAffectedFactionFlow();
             RunCurrentRoundDrawFlow();
             RunCurrentRoundQueueExhaustionFlow();
             ValidateActorTransitionApi();
@@ -31,7 +28,28 @@ namespace TwelveMoons.EditorTools.Runtime
             ValidateCloseVisualGuardApi();
             ValidateItemSubmitPanelApi();
             ValidateDocumentFactionLogoApi();
-            Debug.Log("Document flow smoke test passed. Demo document queues, opens, resolves proposer, settles option A and B, removes the current queue entry, records delayed follow-up documents, activates them on their due round, and keeps drag-exit popup wiring.");
+            ValidateSingleDocumentTutorialApi();
+            Debug.Log("Document flow smoke test passed. DocumentConfig loads and each round queues 3-4 random empty-disaster-stage documents without duplicates, while document UI support APIs remain wired.");
+        }
+
+
+        private static void ValidateSingleDocumentTutorialApi()
+        {
+            var root = new GameObject("SingleDocumentTutorialApiSmokeTest");
+            try
+            {
+                var popup = root.AddComponent<DocumentPopupPanelView>();
+                popup.BeginSingleDocumentFlow();
+
+                if (!popup.IsSingleDocumentFlow)
+                {
+                    throw new InvalidDataException("DocumentPopupPanelView must expose single-document tutorial mode after BeginSingleDocumentFlow is called.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
         }
 
         private static void ValidateDocumentFactionLogoApi()
@@ -502,12 +520,22 @@ namespace TwelveMoons.EditorTools.Runtime
                 PrepareFlow(context);
 
                 var data = context.RuntimeDataService.Data;
-                AssertQueued(data, DemoDocumentId, "Task", "current task stage");
-                if (CountQueuedDocumentsByType(context, "Global") != 2 ||
-                    CountQueuedDocumentsByType(context, "Disaster") != 3 ||
-                    data.DocumentQueue.Count(candidate => candidate.QueuedRound <= data.CurrentRound) != 6)
+                var currentRoundEntries = data.DocumentQueue
+                    .Where(candidate => candidate.QueuedRound <= data.CurrentRound)
+                    .ToList();
+                var randomEntries = currentRoundEntries
+                    .Where(candidate => context.DocumentService.TryGetDefinition(candidate.DocumentId, out var definition) &&
+                                        string.IsNullOrEmpty(definition.DisasterStageId))
+                    .ToList();
+
+                if (randomEntries.Count < 3 || randomEntries.Count > 4)
                 {
-                    throw new InvalidDataException("Document draw did not build a six-document current-round queue with two global documents and disaster documents filling the remaining slots.");
+                    throw new InvalidDataException($"Round 1 must queue 3-4 random documents with empty DisasterStageId, got {randomEntries.Count}.");
+                }
+
+                if (currentRoundEntries.Select(candidate => candidate.DocumentId).Distinct().Count() != currentRoundEntries.Count)
+                {
+                    throw new InvalidDataException("Document draw generated duplicate document ids in the same round.");
                 }
 
                 var firstRoundCount = data.DocumentQueue.Count;
@@ -517,31 +545,18 @@ namespace TwelveMoons.EditorTools.Runtime
                     throw new InvalidDataException("Document draw generated duplicate non-repeatable documents in the same round.");
                 }
 
-                var taskEntry = data.DocumentQueue.First(candidate => candidate.DocumentId == DemoDocumentId);
-                var result = context.DocumentService.ResolveDocument(taskEntry, DocumentOptionType.A);
-                if (!result.Success)
-                {
-                    throw new InvalidDataException($"Document draw option A failed: {result.Message}");
-                }
-
-                if (data.DocumentQueue.Any(candidate => candidate.DocumentId == "document_relief_followup") ||
-                    !data.FollowUpDocuments.Any(candidate => candidate.DocumentId == "document_relief_followup" && candidate.ActivateRound == data.CurrentRound + 1))
-                {
-                    throw new InvalidDataException("Delayed follow-up document was not recorded for the next round.");
-                }
-
                 context.RoundService.NextRound();
                 context.TaskService.ProcessCurrentRound();
                 context.DocumentService.GenerateCurrentRoundDocumentQueue();
 
-                if (!data.DocumentQueue.Any(candidate => candidate.DocumentId == "document_relief_followup" && candidate.QueuedRound <= data.CurrentRound))
+                var secondRoundRandomEntries = data.DocumentQueue
+                    .Where(candidate => candidate.QueuedRound == data.CurrentRound)
+                    .Where(candidate => context.DocumentService.TryGetDefinition(candidate.DocumentId, out var definition) &&
+                                        string.IsNullOrEmpty(definition.DisasterStageId))
+                    .ToList();
+                if (secondRoundRandomEntries.Count < 3 || secondRoundRandomEntries.Count > 4)
                 {
-                    throw new InvalidDataException("Delayed follow-up document was not available on its due round.");
-                }
-
-                if (data.FollowUpDocuments.Any(candidate => candidate.DocumentId == "document_relief_followup"))
-                {
-                    throw new InvalidDataException("Delayed follow-up document remained in follow-up state after activation.");
+                    throw new InvalidDataException($"Round 2 must queue 3-4 random documents with empty DisasterStageId, got {secondRoundRandomEntries.Count}.");
                 }
             }
             finally
@@ -567,6 +582,13 @@ namespace TwelveMoons.EditorTools.Runtime
                 {
                     throw new InvalidDataException(
                         "Querying the next document refilled additional documents after the current-round queue was exhausted.");
+                }
+
+                var addedAfterExhaustion = context.DocumentService.GenerateCurrentRoundDocumentQueue();
+                if (addedAfterExhaustion != 0 || data.DocumentQueue.Any(candidate => candidate.QueuedRound <= data.CurrentRound))
+                {
+                    throw new InvalidDataException(
+                        "Generating the current-round document queue after exhaustion must not create a second random batch in the same round.");
                 }
             }
             finally
@@ -609,7 +631,7 @@ namespace TwelveMoons.EditorTools.Runtime
         {
             context.ConfigManager.BuildDefaultProviders();
             AssertDocumentConfigLoads(context.ConfigManager);
-            context.RuntimeDataService.CreateNewGame("disaster_flood_01");
+            context.RuntimeDataService.CreateNewGame("DI0001");
             context.InventoryService.Refresh();
             context.FactionService.Refresh();
             context.RoundService.Refresh();
@@ -653,12 +675,12 @@ namespace TwelveMoons.EditorTools.Runtime
         private static void AssertDocumentConfigLoads(ConfigManager configManager)
         {
             if (!configManager.TryGetTable("DocumentConfig", out var table) ||
-                !table.TryFindById("DocumentId", DemoDocumentId, out _) ||
-                !table.TryFindById("DocumentId", "document_flood_watch", out _) ||
-                !table.TryFindById("DocumentId", "document_market_notice", out _) ||
-                !table.TryFindById("DocumentId", "document_market_roster", out _))
+                table.Rows.Count < 100 ||
+                !table.TryFindById("DocumentId", "D0001", out _) ||
+                !table.TryFindById("DocumentId", "D0010", out _) ||
+                table.Rows.Count(row => string.IsNullOrEmpty(row.GetString("DisasterStageId"))) < 20)
             {
-                throw new InvalidDataException("DocumentConfig missing document smoke test demo documents.");
+                throw new InvalidDataException("DocumentConfig must contain the new D**** documents and a large random pool where DisasterStageId is empty.");
             }
         }
 

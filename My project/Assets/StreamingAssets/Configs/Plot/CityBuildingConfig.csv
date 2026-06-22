@@ -1,0 +1,8 @@
+BuildingId,BuildingName,DefaultVisible,BuildingEffectType,ProduceItemId,ProduceCount,ReduceFactionId,ReduceSuspicionValue,CooldownRound,Remark
+B0001,补上洞的贫民窟,,,,,F0001,2,1,
+B0002,观星台,,,,,F0002,2,2,
+B0003,小观星台,,,,,F0002,1,2,
+B0004,大图书馆,,,,,,,,
+B0005,教会小诊所,,,,,F0003,1,1,
+B0006,加固粮仓,,,I0003,2,,,1,
+B0007,小礼拜堂,,,10001,1,F0003,1,2,

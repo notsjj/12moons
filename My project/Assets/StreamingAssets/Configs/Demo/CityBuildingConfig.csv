@@ -1,3 +1,0 @@
-BuildingId,BuildingName,CityAreaId,PointId,DefaultVisible,BuildingEffectType,ProduceItemId,ProduceCount,ReduceFactionId,ReduceSuspicionValue,CooldownRound,Remark
-building_relief_depot,赈济仓,city_royal,city_point_royal_gate,false,Resource,item_food,2,,0,1,公文解锁后显示，点击把粮食加入 InventoryPanel。
-building_church_shelter,教会收容所,city_church,city_point_church_square,true,Suspicion,,0,church,5,1,默认显示的质疑度建筑，点击降低教会质疑度。

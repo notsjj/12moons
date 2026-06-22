@@ -31,7 +31,7 @@ namespace TwelveMoons.EditorTools.Runtime
             }
 
             var data = new GameRuntimeData();
-            data.Reset("disaster_flood_01", 18);
+            data.Reset("DI0001", 18);
             data.AddLetter("letter_relief_start");
             data.AddLetter("letter_relief_prepare_end");
             data.AddLetter("letter_relief_start");

@@ -10,6 +10,7 @@ namespace TwelveMoons.Core.Runtime
             StoryId = row.GetString("StoryId");
             StoryName = row.GetString("StoryName");
             StoryType = StoryTypeUtility.Parse(row.GetString("StoryType"));
+            StoryContentAssetId = row.GetString("StoryContentAssetId");
             ImageId = row.GetString("ImageId");
             ImageDisplayMode = StoryImageDisplayModeUtility.Parse(row.GetString("ImageDisplayMode"));
             ImageIds = Split(row.GetString("ImageIds"));
@@ -20,6 +21,7 @@ namespace TwelveMoons.Core.Runtime
 
             ImageCaptions = Split(row.GetString("ImageCaptions"));
             TextContent = row.GetString("TextContent");
+            BackgroundImageId = row.GetString("背景图片", row.GetString("BackgroundImageId"));
             TextSegments = Split(TextContent);
             if (TextSegments.Count == 0 && !string.IsNullOrEmpty(TextContent))
             {
@@ -38,6 +40,8 @@ namespace TwelveMoons.Core.Runtime
 
         public StoryType StoryType { get; }
 
+        public string StoryContentAssetId { get; }
+
         public string ImageId { get; }
 
         public StoryImageDisplayMode ImageDisplayMode { get; }
@@ -47,6 +51,8 @@ namespace TwelveMoons.Core.Runtime
         public List<string> ImageCaptions { get; }
 
         public string TextContent { get; }
+
+        public string BackgroundImageId { get; }
 
         public List<string> TextSegments { get; }
 

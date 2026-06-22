@@ -9,7 +9,8 @@ namespace TwelveMoons.EditorTools.Runtime
     public static class TaskSmokeTest
     {
         private const string DemoConfigDirectory = "Assets/StreamingAssets/Configs/Demo";
-        private const string DemoTaskId = "task_demo_relief_01";
+        private const string OpeningTaskId = "T0001";
+        private const string OpeningStageId = "TS0001";
 
         [MenuItem("Twelve Moons/Tests/Run Task Smoke Test")]
         public static void Run()
@@ -22,59 +23,50 @@ namespace TwelveMoons.EditorTools.Runtime
             var taskTable = csvProvider.LoadTable("TaskConfig");
             var taskStageTable = csvProvider.LoadTable("TaskStageConfig");
 
-            if (!disasterTable.TryFindById("DisasterId", "disaster_flood_01", out var disasterRow))
+            if (!disasterTable.TryFindById("DisasterId", "DI0001", out var disasterRow))
             {
-                throw new InvalidDataException("DisasterConfig missing disaster_flood_01 row.");
+                throw new InvalidDataException("DisasterConfig missing DI0001 row.");
             }
 
-            if (!taskTable.TryFindById("TaskId", DemoTaskId, out var taskRow))
+            if (!taskTable.TryFindById("TaskId", OpeningTaskId, out var taskRow) ||
+                taskRow.GetInt("StartRound") != 1)
             {
-                throw new InvalidDataException("TaskConfig missing phase 6 demo task row.");
+                throw new InvalidDataException("TaskConfig must activate T0001 on round 1.");
+            }
+
+            if (!taskStageTable.TryFindById("TaskStageId", OpeningStageId, out var stageRow))
+            {
+                throw new InvalidDataException("TaskStageConfig missing TS0001 row.");
             }
 
             var data = new GameRuntimeData();
-            data.Reset("disaster_flood_01", disasterRow.GetInt("TotalRound"));
+            data.Reset("DI0001", disasterRow.GetInt("TotalRound"));
             var task = data.GetOrCreateTask(taskRow.GetString("TaskId"));
             task.Activate(data.CurrentRound);
 
-            var stageCount = 0;
-            foreach (var row in taskStageTable.Rows)
-            {
-                if (row.GetString("TaskId") == DemoTaskId)
-                {
-                    stageCount++;
-                    var stage = new TaskStageDefinition(row);
-                    if (stage.StartOffsetRound == 0)
-                    {
-                        data.QueueStory(stage.StartStoryId, task.TaskId, stage.TaskStageId, RuntimeStoryQueueTiming.StageStart);
-                        data.ReceivePhaseTestLetter(stage.StartLetterId);
-                        foreach (var documentId in stage.LinkedDocumentIds)
-                        {
-                            data.QueueDocument(documentId, task.TaskId, stage.TaskStageId, stage.BeforeDocumentCharacterId);
-                        }
-                    }
-                }
-            }
+            var stage = new TaskStageDefinition(stageRow);
+            data.QueueStory(stage.StartStoryId, task.TaskId, stage.TaskStageId, RuntimeStoryQueueTiming.StageStart);
+            data.QueueStory(stage.BeforeDocumentStoryId, task.TaskId, stage.TaskStageId, RuntimeStoryQueueTiming.BeforeDocument);
 
             task.AddScore(2);
             task.Complete(data.CurrentRound);
 
-            if (stageCount != 2 ||
-                data.StoryQueue.Count != 1 ||
-                data.Letters.Count != 1 ||
-                data.DocumentQueue.Count != 1 ||
+            if (stage.TaskId != OpeningTaskId ||
+                stage.StartStoryId != "S0001" ||
+                stage.BeforeDocumentStoryId != "S0002" ||
+                stage.BeforeDocumentCharacterId != "C0028" ||
+                data.StoryQueue.Count != 2 ||
+                data.StoryQueue[0].StoryId != "S0001" ||
+                data.StoryQueue[0].Timing != RuntimeStoryQueueTiming.StageStart ||
+                data.StoryQueue[1].StoryId != "S0002" ||
+                data.StoryQueue[1].Timing != RuntimeStoryQueueTiming.BeforeDocument ||
                 task.Status != TaskRuntimeStatus.Completed ||
                 task.Score != 2)
             {
-                throw new InvalidDataException("Task smoke test failed.");
+                throw new InvalidDataException("Task stage smoke test failed to queue S0001 and S0002 from TaskStageConfig.");
             }
 
-            Debug.Log("Task smoke test passed. Demo task activates, stage config parses, one start story queues, one start letter is received, one task document queues, and task score can complete the task.");
-        }
-
-        private static RuntimeLetterState ReceivePhaseTestLetter(this GameRuntimeData data, string letterId)
-        {
-            return string.IsNullOrEmpty(letterId) ? null : data.AddLetter(letterId);
+            Debug.Log("Task smoke test passed. T0001 activates on round 1 and TS0001 queues S0001 as stage start plus S0002 as before-document story.");
         }
     }
 }

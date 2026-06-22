@@ -23,7 +23,7 @@ namespace TwelveMoons.EditorTools.Runtime
                 ConfigureFactionService(factionService, configManager, runtimeDataService);
 
                 configManager.BuildDefaultProviders();
-                runtimeDataService.CreateNewGame("disaster_flood_01");
+                runtimeDataService.CreateNewGame("DI0001");
                 factionService.Refresh();
 
                 if (runtimeDataService.Data.Factions.Count != 4)
@@ -87,7 +87,7 @@ namespace TwelveMoons.EditorTools.Runtime
             var serializedObject = new SerializedObject(runtimeDataService);
             serializedObject.FindProperty("configManager").objectReferenceValue = configManager;
             serializedObject.FindProperty("createNewGameOnAwake").boolValue = false;
-            serializedObject.FindProperty("initialDisasterId").stringValue = "disaster_flood_01";
+            serializedObject.FindProperty("initialDisasterId").stringValue = "DI0001";
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 

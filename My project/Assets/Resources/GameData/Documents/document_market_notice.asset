@@ -17,7 +17,7 @@ MonoBehaviour:
   bodyText: "\u5E93\u623F\u7BA1\u4E8B\u5448\u4E0A\u4E34\u65F6\u8D48\u6D4E\u4ED3\u56FE\u7EB8\uFF0C\u8BF7\u6C42\u7ACB\u523B\u62E8\u51FA\u8BB8\u53EF\uFF0C\u5728\u738B\u5BAB\u95E8\u524D\u642D\u8D77\u53EF\u53CD\u590D\u53D1\u7CAE\u7684\u8D48\u6D4E\u4ED3\u3002"
   proposerCharacterId: character_steward
   documentType: Global
-  factionLogoName: "\u5DE5\u574A"
+  factionLogoName: "\u5DE5\u4F1A"
   disasterId: 
   disasterStageId: 
   taskId: 

@@ -55,6 +55,11 @@ namespace TwelveMoons.Core.Runtime
             return storiesById.TryGetValue(storyId, out story);
         }
 
+        public bool TryGetDialogueLine(string lineId, out DialogueLineDefinition line)
+        {
+            return dialogueLinesById.TryGetValue(lineId, out line);
+        }
+
         public bool TryGetCharacter(string characterId, out CharacterDefinition character)
         {
             return charactersById.TryGetValue(characterId, out character);
@@ -88,6 +93,34 @@ namespace TwelveMoons.Core.Runtime
 
             CurrentPlayback = new StoryPlaybackState(story, firstLine);
             RestoreWaitingSubmission(story.StoryId);
+            NotifyStoryChanged();
+            return true;
+        }
+
+        public bool StartStoryAtLine(string storyId, string lineId)
+        {
+            if (!TryGetStory(storyId, out var story))
+            {
+                Debug.LogWarning($"StoryId {storyId} is not configured in StoryConfig.", this);
+                return false;
+            }
+
+            if (story.StoryType != StoryType.Dialogue)
+            {
+                Debug.LogWarning($"Story {story.StoryId} is not a dialogue story and cannot start at DialogueConfig line {lineId}.", this);
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(lineId) ||
+                !dialogueLinesById.TryGetValue(lineId, out var line) ||
+                !string.Equals(line.StoryId, story.StoryId, StringComparison.Ordinal))
+            {
+                Debug.LogWarning($"Dialogue line {lineId} is not configured for story {story.StoryId}.", this);
+                return false;
+            }
+
+            CurrentPlayback = new StoryPlaybackState(story, line);
+            runtimeDataService?.Data.ClearStoryProgress(story.StoryId);
             NotifyStoryChanged();
             return true;
         }
@@ -316,29 +349,164 @@ namespace TwelveMoons.Core.Runtime
 
         private void LoadDialogueDefinitions()
         {
-            if (!configManager.TryGetTable("DialogueConfig", out var table))
+            LoadDialogueTable("DialogueConfig", replaceExistingStoryLines: false);
+
+            foreach (var story in stories)
             {
-                Debug.LogWarning("StoryService cannot load DialogueConfig.", this);
-                return;
+                foreach (var tableName in GetStoryDialogueTableNameCandidates(story))
+                {
+                    if (TryLoadDialogueTable(tableName, out var table))
+                    {
+                        LoadDialogueRows(table.Rows, replaceExistingStoryLines: true);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private bool TryLoadDialogueTable(string tableName, out ConfigTable table)
+        {
+            table = null;
+            if (string.IsNullOrWhiteSpace(tableName) || configManager == null)
+            {
+                return false;
             }
 
-            foreach (var row in table.Rows)
+            try
             {
+                table = configManager.LoadTable(tableName.Trim());
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void LoadDialogueTable(string tableName, bool replaceExistingStoryLines)
+        {
+            if (TryLoadDialogueTable(tableName, out var table))
+            {
+                LoadDialogueRows(table.Rows, replaceExistingStoryLines);
+            }
+        }
+
+        private void LoadDialogueRows(IEnumerable<ConfigRow> rows, bool replaceExistingStoryLines)
+        {
+            var activeStoryId = string.Empty;
+            var replacedStoryIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var sourceRow in rows)
+            {
+                var row = sourceRow;
+                var storyId = row.GetString("StoryId");
+                if (!string.IsNullOrEmpty(storyId))
+                {
+                    activeStoryId = storyId;
+                }
+                else if (!string.IsNullOrEmpty(activeStoryId))
+                {
+                    var values = new Dictionary<string, string>(sourceRow.Values);
+                    values["StoryId"] = activeStoryId;
+                    row = new ConfigRow(values);
+                    storyId = activeStoryId;
+                }
+
                 var line = new DialogueLineDefinition(row);
                 if (string.IsNullOrEmpty(line.LineId) || string.IsNullOrEmpty(line.StoryId))
                 {
                     continue;
                 }
 
-                dialogueLinesById[line.LineId] = line;
-                if (!dialogueLinesByStoryId.TryGetValue(line.StoryId, out var lines))
+                if (replaceExistingStoryLines && replacedStoryIds.Add(line.StoryId))
                 {
-                    lines = new List<DialogueLineDefinition>();
-                    dialogueLinesByStoryId[line.StoryId] = lines;
+                    RemoveDialogueLinesForStory(line.StoryId);
                 }
 
-                lines.Add(line);
+                AddDialogueLine(line);
             }
+        }
+
+        private void AddDialogueLine(DialogueLineDefinition line)
+        {
+            dialogueLinesById[line.LineId] = line;
+            if (!dialogueLinesByStoryId.TryGetValue(line.StoryId, out var lines))
+            {
+                lines = new List<DialogueLineDefinition>();
+                dialogueLinesByStoryId[line.StoryId] = lines;
+            }
+
+            lines.Add(line);
+        }
+
+        private void RemoveDialogueLinesForStory(string storyId)
+        {
+            if (!dialogueLinesByStoryId.TryGetValue(storyId, out var existingLines))
+            {
+                return;
+            }
+
+            foreach (var existingLine in existingLines)
+            {
+                dialogueLinesById.Remove(existingLine.LineId);
+            }
+
+            dialogueLinesByStoryId.Remove(storyId);
+        }
+
+        private static IEnumerable<string> GetStoryDialogueTableNameCandidates(StoryDefinition story)
+        {
+            if (story == null)
+            {
+                yield break;
+            }
+
+            foreach (var candidate in UniqueNonEmpty(
+                story.StoryContentAssetId,
+                NormalizeStoryDialogueTableName(story.StoryName),
+                story.StoryName,
+                NormalizeStoryDialogueTableName(story.StoryName).Replace("-", "\u00b7")))
+            {
+                yield return candidate;
+            }
+        }
+
+        private static IEnumerable<string> UniqueNonEmpty(params string[] values)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var value in values)
+            {
+                var trimmed = value != null ? value.Trim() : string.Empty;
+                if (!string.IsNullOrEmpty(trimmed) && seen.Add(trimmed))
+                {
+                    yield return trimmed;
+                }
+            }
+        }
+
+        private static string NormalizeStoryDialogueTableName(string storyName)
+        {
+            if (string.IsNullOrWhiteSpace(storyName))
+            {
+                return string.Empty;
+            }
+
+            var normalized = storyName.Trim();
+            normalized = RemoveLeadingBracketTag(normalized, '[', ']');
+            normalized = RemoveLeadingBracketTag(normalized, '\u3010', '\u3011');
+            return normalized.Trim();
+        }
+
+        private static string RemoveLeadingBracketTag(string value, char openBracket, char closeBracket)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value[0] != openBracket)
+            {
+                return value;
+            }
+
+            var closingIndex = value.IndexOf(closeBracket);
+            return closingIndex >= 0 && closingIndex + 1 < value.Length
+                ? value.Substring(closingIndex + 1)
+                : value;
         }
 
         private void LoadCharacterDefinitions()
@@ -351,11 +519,17 @@ namespace TwelveMoons.Core.Runtime
             foreach (var row in table.Rows)
             {
                 var character = new CharacterDefinition(row);
-                if (!string.IsNullOrEmpty(character.CharacterId))
+                if (IsValidCharacterId(character.CharacterId))
                 {
                     charactersById[character.CharacterId] = character;
                 }
             }
+        }
+
+        private static bool IsValidCharacterId(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value) &&
+                   System.Text.RegularExpressions.Regex.IsMatch(value.Trim(), @"^(C\d{4}|character_[A-Za-z0-9_]+)$");
         }
 
         private DialogueLineDefinition GetFirstDialogueLine(string storyId)

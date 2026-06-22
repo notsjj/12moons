@@ -46,7 +46,7 @@ namespace TwelveMoons.EditorTools.Runtime
 
                 var runtimeDataService = root.AddComponent<RuntimeDataService>();
                 ConfigureRuntimeDataService(runtimeDataService, configManager);
-                runtimeDataService.CreateNewGame("disaster_flood_01");
+                runtimeDataService.CreateNewGame("DI0001");
 
                 var inventoryService = root.AddComponent<InventoryService>();
                 ConfigureInventoryService(inventoryService, configManager, runtimeDataService);

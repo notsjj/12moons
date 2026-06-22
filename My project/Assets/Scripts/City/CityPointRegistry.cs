@@ -24,6 +24,9 @@ namespace TwelveMoons.City
         [Tooltip("启用后刷新时自动收集场景中所有 CityPointView，包含未激活物体。")]
         [SerializeField] private bool autoCollectSceneViews = true;
 
+        [Tooltip("启用后，刷新时会用 GameObject 名称匹配 CityPointConfig.PointName，并自动回填对应 PointId；用于把场景中与点位名称同名的建筑对齐到表格。")]
+        [SerializeField] private bool autoAlignPointIdByObjectName = true;
+
         [Header("运行时只读快照：点位匹配状态")]
         [Tooltip("CityPointConfig 中成功读取到的配置数量。")]
         [SerializeField] private int inspectorConfigCount;
@@ -42,6 +45,9 @@ namespace TwelveMoons.City
 
         [Tooltip("场景中重复填写的 PointId 列表；重复点位会造成后续建筑或支线定位不明确。")]
         [SerializeField] private string inspectorDuplicateViewPointIds;
+
+        [Tooltip("运行时只读：本次刷新中通过物体名称自动回填 PointId 的点位列表。")]
+        [SerializeField] private string inspectorNameAlignedPointIds;
 
         private readonly Dictionary<string, CityPointDefinition> definitions =
             new Dictionary<string, CityPointDefinition>();
@@ -82,6 +88,7 @@ namespace TwelveMoons.City
             ResolveConfigManager();
             LoadDefinitions();
             CollectSceneViewsIfNeeded();
+            AlignViewPointIdsByObjectName();
             BindViews();
             RefreshInspectorSnapshot();
         }
@@ -137,6 +144,48 @@ namespace TwelveMoons.City
                 .OrderBy(view => view.PointId)
                 .ThenBy(view => view.name)
                 .ToList();
+        }
+        private void AlignViewPointIdsByObjectName()
+        {
+            inspectorNameAlignedPointIds = string.Empty;
+            if (!autoAlignPointIdByObjectName || pointViews == null || pointViews.Count == 0 || definitions.Count == 0)
+            {
+                return;
+            }
+
+            var definitionsByPointName = definitions.Values
+                .Where(definition => definition != null && !string.IsNullOrWhiteSpace(definition.PointName))
+                .GroupBy(definition => NormalizePointName(definition.PointName))
+                .Where(group => group.Count() == 1)
+                .ToDictionary(group => group.Key, group => group.First());
+            var aligned = new List<string>();
+
+            foreach (var view in pointViews)
+            {
+                if (view == null)
+                {
+                    continue;
+                }
+
+                var objectName = NormalizePointName(view.gameObject.name);
+                if (string.IsNullOrEmpty(objectName) || !definitionsByPointName.TryGetValue(objectName, out var definition))
+                {
+                    continue;
+                }
+
+                if (view.PointId != definition.PointId)
+                {
+                    view.Configure(definition.PointId);
+                    aligned.Add($"{view.gameObject.name}:{definition.PointId}");
+                }
+            }
+
+            inspectorNameAlignedPointIds = string.Join(", ", aligned.OrderBy(id => id));
+        }
+
+        private static string NormalizePointName(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
         }
 
         private void BindViews()

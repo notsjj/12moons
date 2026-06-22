@@ -1,0 +1,5 @@
+FactionId,FactionName,InitSuspicion,MaxSuspicion,LowSuspicionThreshold,LowSuspicionLetterId,HighSuspicionThreshold,PunishTaskId,Remark
+F0001,平民,50,100,30,L0001,90,T0001,阵营示例，采用 F0001；惩罚任务这里只做引用示例。
+F0002,学院,40,100,30,,80,,
+F0003,教会,40,100,20,,70,,
+F0004,贵族,60,100,20,,75,,

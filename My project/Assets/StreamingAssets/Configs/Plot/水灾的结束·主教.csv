@@ -1,0 +1,4 @@
+﻿LineId,StoryId,NextLineId,SpeakerCharacterId,Content,Position,IsChoice,RequiredItemIds,RequiredItemCounts,ConsumeItems,AddItemIds,AddItemCounts,Remark
+S0030_001,S0030,S0030_002,,在主教的带领下，总牧师的唱诗开始与祭司的祷告相融合，最后的大祭司的引导下，暴雨的水流开始汇聚。,0,false,,,,,,此事件为结算事件，目的为结算救灾情况：根据选择的不同，最后的描述与结果各不相同，根据小任务的完成情况与最后势力任务是否完成决定最后下城区的完成情况。
+S0030_002,S0030,S0030_003,,新开辟的河道在有序的灌注之下开始上涨，最后停在了原定计划的水位线上。,0,false,,,,,,
+S0030_003,S0030,END,,原本汹涌的河流开始伴随着雨势的减弱而慢慢平缓，尽管不少牧师与祭司都哑了嗓子，但所有人胜过了天灾。,0,false,,,,,,

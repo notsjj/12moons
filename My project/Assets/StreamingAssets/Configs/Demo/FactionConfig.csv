@@ -1,5 +1,0 @@
-FactionId,FactionName,InitSuspicion,MaxSuspicion,LowSuspicionThreshold,LowSuspicionLetterId,HighSuspicionThreshold,PunishTaskId,Remark
-noble,贵族,50,100,20,letter_noble_low_01,90,task_punish_noble_01,阵营质疑度测试配置
-academy,学院,50,100,20,letter_academy_low_01,90,task_punish_academy_01,阵营质疑度测试配置
-church,教会,50,100,20,letter_church_low_01,90,task_punish_church_01,阵营质疑度测试配置
-civilian,平民,50,100,20,letter_civilian_low_01,90,task_punish_civilian_01,阵营质疑度测试配置

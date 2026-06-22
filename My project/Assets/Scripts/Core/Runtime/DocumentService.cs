@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TwelveMoons.City;
 using TwelveMoons.Core.Config;
@@ -8,7 +8,7 @@ namespace TwelveMoons.Core.Runtime
 {
     public sealed class DocumentService : MonoBehaviour
     {
-        [Header("依赖服务：配置、运行时、物品、阵营、任务和回合")]
+        [Header("依赖服务：配置、运行时、背包、阵营、任务和回合")]
         [Tooltip("配置管理器；用于读取 DocumentConfig 和 CharacterConfig。")]
         [SerializeField] private ConfigManager configManager;
         [Tooltip("运行时数据服务；用于读取当前回合、任务、公文队列和后续公文。")]
@@ -22,11 +22,13 @@ namespace TwelveMoons.Core.Runtime
         [Tooltip("回合服务；用于判断当前灾难阶段并在回合变化时刷新公文队列。")]
         [SerializeField] private RoundService roundService;
 
-        [Header("抽取规则：每回合公文数量限制")]
-        [Tooltip("当前回合最多进入待处理队列的公文数量。")]
+        [Header("公文抽取规则：每回合公文数量限制")]
+        [Tooltip("当前回合最多进入待处理队列的公文数量；用于避免阶段公文、任务公文和随机公文一次性堆满界面。")]
         [SerializeField] private int maxDocumentsPerRound = 6;
-        [Tooltip("每回合优先抽取的全局公文数量。")]
-        [SerializeField] private int globalDocumentsPerRound = 2;
+        [Tooltip("灾难阶段 ID 为空的随机公文每回合最少抽取数量；配置为 3 可保证每回合有稳定公文密度。")]
+        [SerializeField] private int randomDocumentsMinPerRound = 3;
+        [Tooltip("灾难阶段 ID 为空的随机公文每回合最多抽取数量；配置为 4 可让随机公文均匀分布在所有回合。")]
+        [SerializeField] private int randomDocumentsMaxPerRound = 4;
 
         private readonly List<DocumentDefinition> definitions = new List<DocumentDefinition>();
         private readonly Dictionary<string, DocumentDefinition> definitionsById =
@@ -82,6 +84,18 @@ namespace TwelveMoons.Core.Runtime
             return charactersById.TryGetValue(characterId, out definition);
         }
 
+        public bool EnsureCurrentRoundDocumentQueue()
+        {
+            if (runtimeDataService == null)
+            {
+                return false;
+            }
+
+            var beforeCount = GetCurrentRoundDueCount();
+            GenerateCurrentRoundDocumentQueue();
+            return GetCurrentRoundDueCount() > beforeCount;
+        }
+
         public bool TryGetNextPendingDocument(out RuntimeDocumentQueueEntry entry, out DocumentDefinition definition)
         {
             entry = null;
@@ -120,20 +134,42 @@ namespace TwelveMoons.Core.Runtime
                 return 0;
             }
 
+            LoadConfigs();
+            if (definitions.Count == 0)
+            {
+                return 0;
+            }
+
             var added = 0;
             added += QueueCurrentTaskDocuments();
             added += QueueDueFollowUpDocuments();
 
             var remainingSlots = GetRemainingCurrentRoundSlots();
-            if (remainingSlots > 0)
+            if (remainingSlots > 0 && !HasProcessedRoundDraw("DisasterStage"))
             {
-                added += QueueMatchedDocuments("Global", Mathf.Min(globalDocumentsPerRound, remainingSlots), IsGlobalDocument);
+                added += QueueMatchedDocuments("DisasterStage", remainingSlots, MatchesCurrentDisasterStage);
+                MarkRoundDrawProcessed("DisasterStage");
             }
 
             remainingSlots = GetRemainingCurrentRoundSlots();
-            if (remainingSlots > 0)
+            if (remainingSlots > 0 && !HasProcessedRoundDraw("Random"))
             {
-                added += QueueMatchedDocuments("Disaster", remainingSlots, MatchesCurrentDisasterStage);
+                var randomCount = Mathf.Min(GetCurrentRoundRandomDocumentTarget(), remainingSlots);
+                added += QueueMatchedDocuments("Random", randomCount, IsRandomDocument);
+
+                var minDocuments = Mathf.Max(0, randomDocumentsMinPerRound);
+                var shortfall = minDocuments - GetCurrentRoundDueCount();
+                if (shortfall > 0)
+                {
+                    var fillSlots = GetRemainingCurrentRoundSlots();
+                    if (fillSlots > 0)
+                    {
+                        var fillCount = Mathf.Min(shortfall, fillSlots);
+                        added += QueueMatchedDocuments("RandomBackfill", fillCount, IsRandomDocument);
+                    }
+                }
+
+                MarkRoundDrawProcessed("Random");
             }
 
             if (added > 0)
@@ -142,6 +178,26 @@ namespace TwelveMoons.Core.Runtime
             }
 
             return added;
+        }
+
+        private int GetCurrentRoundDueCount()
+        {
+            if (runtimeDataService == null)
+            {
+                return 0;
+            }
+
+            var currentRound = runtimeDataService.Data.CurrentRound;
+            var count = 0;
+            foreach (var entry in runtimeDataService.Data.DocumentQueue)
+            {
+                if (entry.QueuedRound <= currentRound)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private void HandleRoundChanged()
@@ -208,6 +264,18 @@ namespace TwelveMoons.Core.Runtime
             }
 
             var entry = runtimeDataService.Data.QueueDocument(documentId, taskId, taskStageId, beforeDocumentCharacterId, delayRound);
+            DocumentsChanged?.Invoke();
+            return entry;
+        }
+
+        public RuntimeDocumentQueueEntry QueueDocumentFirst(string documentId, string taskId = "", string taskStageId = "", string beforeDocumentCharacterId = "", int delayRound = 0)
+        {
+            if (runtimeDataService == null || string.IsNullOrEmpty(documentId))
+            {
+                return null;
+            }
+
+            var entry = runtimeDataService.Data.QueueDocumentFirst(documentId, taskId, taskStageId, beforeDocumentCharacterId, delayRound);
             DocumentsChanged?.Invoke();
             return entry;
         }
@@ -280,7 +348,7 @@ namespace TwelveMoons.Core.Runtime
             foreach (var row in table.Rows)
             {
                 var definition = new DocumentDefinition(row);
-                if (string.IsNullOrEmpty(definition.DocumentId))
+                if (!IsValidDocumentId(definition.DocumentId))
                 {
                     continue;
                 }
@@ -305,7 +373,7 @@ namespace TwelveMoons.Core.Runtime
             foreach (var row in table.Rows)
             {
                 var definition = new CharacterDefinition(row);
-                if (!string.IsNullOrEmpty(definition.CharacterId))
+                if (IsValidCharacterId(definition.CharacterId))
                 {
                     charactersById[definition.CharacterId] = definition;
                 }
@@ -661,7 +729,6 @@ namespace TwelveMoons.Core.Runtime
                 return false;
             }
 
-            runtimeDataService.Data.MarkDocumentDrawProcessed(drawKey);
             if (HasQueuedDocument(definition.DocumentId, taskId, taskStageId))
             {
                 return false;
@@ -672,6 +739,7 @@ namespace TwelveMoons.Core.Runtime
                 taskId,
                 taskStageId,
                 beforeDocumentCharacterId);
+            runtimeDataService.Data.MarkDocumentDrawProcessed(drawKey);
             return true;
         }
 
@@ -692,7 +760,7 @@ namespace TwelveMoons.Core.Runtime
 
         private bool MatchesCurrentDisasterStage(DocumentDefinition definition)
         {
-            if (!IsDocumentType(definition, "Disaster") || runtimeDataService == null)
+            if (definition == null || runtimeDataService == null || string.IsNullOrEmpty(definition.DisasterStageId))
             {
                 return false;
             }
@@ -704,26 +772,50 @@ namespace TwelveMoons.Core.Runtime
                 return false;
             }
 
-            if (string.IsNullOrEmpty(definition.DisasterStageId))
-            {
-                return true;
-            }
-
             var stage = roundService != null
                 ? roundService.ResolveDisasterStage(data.CurrentRound)
                 : null;
             return stage != null && stage.StageId == definition.DisasterStageId;
         }
 
-        private static bool IsGlobalDocument(DocumentDefinition definition)
+        private bool IsRandomDocument(DocumentDefinition definition)
         {
-            return IsDocumentType(definition, "Global");
+            // 随机公文定义：DisasterStageId 为空的公文。
+            // 不再额外检查 DisasterId，避免因运行时灾难 ID 未初始化或
+            // 不匹配导致全部随机公文被过滤。DisasterStageId 为空本身
+            // 即代表该公文不绑定特定灾难阶段，可在任意回合被抽取。
+            return definition != null &&
+                   string.IsNullOrEmpty(definition.DisasterStageId);
         }
 
-        private static bool IsDocumentType(DocumentDefinition definition, string documentType)
+        private int GetCurrentRoundRandomDocumentTarget()
         {
-            return definition != null &&
-                string.Equals(definition.DocumentType, documentType, StringComparison.OrdinalIgnoreCase);
+            var min = Mathf.Max(0, randomDocumentsMinPerRound);
+            var max = Mathf.Max(min, randomDocumentsMaxPerRound);
+            if (min == max)
+            {
+                return min;
+            }
+
+            var round = runtimeDataService != null ? runtimeDataService.Data.CurrentRound : 0;
+            return min + Mathf.Abs(round * 17 + 11) % (max - min + 1);
+        }
+
+        private bool HasProcessedRoundDraw(string drawSource)
+        {
+            return runtimeDataService != null &&
+                   runtimeDataService.Data.HasProcessedDocumentDraw(MakeRoundDrawKey(drawSource));
+        }
+
+        private void MarkRoundDrawProcessed(string drawSource)
+        {
+            runtimeDataService?.Data.MarkDocumentDrawProcessed(MakeRoundDrawKey(drawSource));
+        }
+
+        private string MakeRoundDrawKey(string drawSource)
+        {
+            var round = runtimeDataService != null ? runtimeDataService.Data.CurrentRound : 0;
+            return $"{drawSource}:Round:{round}";
         }
 
         private string MakeDrawKey(DocumentDefinition definition, string drawSource)
@@ -755,9 +847,22 @@ namespace TwelveMoons.Core.Runtime
             return null;
         }
 
+        private static bool IsValidCharacterId(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value) &&
+                   System.Text.RegularExpressions.Regex.IsMatch(value.Trim(), @"^(C\d{4}|character_[A-Za-z0-9_]+)$");
+        }
+
+        private static bool IsValidDocumentId(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value) &&
+                   System.Text.RegularExpressions.Regex.IsMatch(value.Trim(), @"^(D\d{4}|document_[A-Za-z0-9_]+)$");
+        }
+
         private static DocumentResolutionResult Fail(string message)
         {
             return new DocumentResolutionResult(false, message, message, message);
         }
     }
 }
+

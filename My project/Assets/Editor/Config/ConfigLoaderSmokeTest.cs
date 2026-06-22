@@ -24,9 +24,9 @@ namespace TwelveMoons.EditorTools.Config
                 throw new InvalidDataException("ItemConfig missing item_money row.");
             }
 
-            if (!disasterTable.TryFindById("DisasterId", "disaster_flood_01", out var disasterRow))
+            if (!disasterTable.TryFindById("DisasterId", "DI0001", out var disasterRow))
             {
-                throw new InvalidDataException("DisasterConfig missing disaster_flood_01 row.");
+                throw new InvalidDataException("DisasterConfig missing DI0001 row.");
             }
 
             Debug.Log(

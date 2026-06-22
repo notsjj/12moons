@@ -28,15 +28,18 @@ namespace TwelveMoons.EditorTools
                 return;
             }
 
-            var worldParent = FindCityWorldParent();
-            var pointsRoot = FindOrCreatePointsRoot(worldParent);
-            var pointViews = CreateDemoPointViews(pointsRoot.transform);
+            var pointViews = BindNamedScenePointViews(configManager);
+            if (pointViews.Count == 0)
+            {
+                Fail("没有找到任何与 CityPointConfig.PointName 同名的场景建筑物体，未修改点位绑定。");
+                return;
+            }
             var registry = FindOrCreateRegistry(cityRoot.transform, configManager, pointViews);
             registry.RefreshAndBind();
 
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
             Selection.activeObject = registry.gameObject;
-            Debug.Log("阶段14城区点位绑定已局部创建：CityPointRegistry 挂在 CityRoot/CityPointRegistry，CityPointView 挂在 CityPointViews 下的点位空物体。");
+            Debug.Log("阶段14城区点位绑定已局部创建：CityPointRegistry 挂在 CityRoot/CityPointRegistry，CityPointView 已按 CityPointConfig.PointName 绑定到同名场景建筑。");
         }
 
         private static GameObject FindCityRoot()
@@ -50,65 +53,37 @@ namespace TwelveMoons.EditorTools
             return GameObject.Find("CityRoot");
         }
 
-        private static Transform FindCityWorldParent()
+        private static List<CityPointView> BindNamedScenePointViews(ConfigManager configManager)
         {
-            var cityMap = FindSceneObjectByName("城区地图_01") ?? FindSceneObjectByName("City_01");
-            if (cityMap != null)
+            var pointViews = new List<CityPointView>();
+            if (configManager == null || !configManager.TryGetTable("CityPointConfig", out var table))
             {
-                return cityMap.transform.parent;
+                Debug.LogError("无法读取 CityPointConfig，不能按点位名称绑定场景建筑。");
+                return pointViews;
             }
 
-            var fallbackRoot = GameObject.Find("CityWorldRoot");
-            if (fallbackRoot == null)
+            foreach (var row in table.Rows)
             {
-                fallbackRoot = new GameObject("CityWorldRoot");
-                Debug.LogWarning("找不到 3D 地图 City_01，已创建 CityWorldRoot 承载城区点位空物体。");
+                var pointId = row.GetString("PointId");
+                var pointName = row.GetString("PointName");
+                if (string.IsNullOrWhiteSpace(pointId) || string.IsNullOrWhiteSpace(pointName))
+                {
+                    continue;
+                }
+
+                var pointObject = FindSceneObjectByName(pointName.Trim());
+                if (pointObject == null)
+                {
+                    Debug.LogWarning($"CityPointConfig 点位 {pointId}/{pointName} 找不到同名场景建筑物体，已跳过。只会影响该点位支线生成。 ");
+                    continue;
+                }
+
+                var view = pointObject.GetComponent<CityPointView>() ?? pointObject.AddComponent<CityPointView>();
+                view.Configure(pointId);
+                pointViews.Add(view);
             }
 
-            return fallbackRoot.transform;
-        }
-
-        private static GameObject FindOrCreatePointsRoot(Transform worldParent)
-        {
-            var existing = FindSceneObjectByName("CityPointViews");
-            if (existing == null)
-            {
-                existing = new GameObject("CityPointViews");
-            }
-
-            if (existing.transform.parent != worldParent)
-            {
-                existing.transform.SetParent(worldParent, false);
-            }
-
-            return existing;
-        }
-
-        private static List<CityPointView> CreateDemoPointViews(Transform parent)
-        {
-            return new List<CityPointView>
-            {
-                CreatePointView(parent, "RoyalGatePoint", "city_point_royal_gate", new Vector3(-1.4f, 0f, 1.4f)),
-                CreatePointView(parent, "ChurchSquarePoint", "city_point_church_square", new Vector3(-3.6f, 0f, 0.4f)),
-                CreatePointView(parent, "UpperMarketPoint", "city_point_upper_market", new Vector3(2.6f, 0f, 0.8f)),
-                CreatePointView(parent, "AcademyArchivePoint", "city_point_academy_archive", new Vector3(0.4f, 0f, 2.8f)),
-                CreatePointView(parent, "LowerHarborPoint", "city_point_lower_harbor", new Vector3(0f, 0f, -2.4f))
-            };
-        }
-
-        private static CityPointView CreatePointView(Transform parent, string objectName, string pointId, Vector3 localPosition)
-        {
-            var point = parent.Find(objectName);
-            if (point == null)
-            {
-                point = new GameObject(objectName).transform;
-                point.SetParent(parent, false);
-            }
-
-            point.localPosition = localPosition;
-            var view = point.GetComponent<CityPointView>() ?? point.gameObject.AddComponent<CityPointView>();
-            view.Configure(pointId);
-            return view;
+            return pointViews;
         }
 
         private static CityPointRegistry FindOrCreateRegistry(

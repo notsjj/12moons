@@ -8,47 +8,49 @@ namespace TwelveMoons.EditorTools.Runtime
 {
     public static class RoundSmokeTest
     {
-        private const string DemoConfigDirectory = "Assets/StreamingAssets/Configs/Demo";
+        private const string PlotConfigDirectory = "Assets/StreamingAssets/Configs/Plot";
 
         [MenuItem("Twelve Moons/Tests/Run Round Smoke Test")]
         public static void Run()
         {
-            var providerRoot = Path.GetFullPath(DemoConfigDirectory);
+            var providerRoot = Path.GetFullPath(PlotConfigDirectory);
             var csvProvider = new CsvConfigProvider(providerRoot);
             var jsonProvider = new JsonConfigProvider(providerRoot);
 
             var disasterTable = jsonProvider.LoadTable("DisasterConfig");
             var stageTable = csvProvider.LoadTable("DisasterStageConfig");
 
-            if (!disasterTable.TryFindById("DisasterId", "disaster_flood_01", out var disasterRow))
+            if (!disasterTable.TryFindById("DisasterId", "DI0001", out var disasterRow))
             {
-                throw new InvalidDataException("DisasterConfig missing disaster_flood_01 row.");
+                throw new InvalidDataException("DisasterConfig 缺少 DI0001 行。");
             }
 
             var data = new GameRuntimeData();
-            data.Reset("disaster_flood_01", disasterRow.GetInt("TotalRound"));
+            data.Reset("DI0001", disasterRow.GetInt("TotalRound"));
 
             var resolver = new DisasterStageResolver(stageTable);
             var firstStage = resolver.Resolve(data.DisasterId, data.CurrentRound);
-            data.SetCurrentRound(7);
-            var middleStage = resolver.Resolve(data.DisasterId, data.CurrentRound);
+            data.SetCurrentRound(3);
+            var secondStage = resolver.Resolve(data.DisasterId, data.CurrentRound);
             data.SetCurrentRound(data.TotalRound);
             var finalStage = resolver.Resolve(data.DisasterId, data.CurrentRound);
             var blocked = data.TryAdvanceRound();
 
             if (data.TotalRound != 18 ||
                 firstStage == null ||
-                firstStage.StageId != "stage_warning" ||
-                middleStage == null ||
-                middleStage.StageId != "stage_peak" ||
+                firstStage.StageId != "DS0001" ||
+                firstStage.StageName != "晴天" ||
+                secondStage == null ||
+                secondStage.StageId != "DS0002" ||
+                secondStage.StageName != "阴" ||
                 finalStage == null ||
-                finalStage.StageId != "stage_aftermath" ||
+                finalStage.StageName != "大雨" ||
                 blocked)
             {
-                throw new InvalidDataException("Round smoke test failed.");
+                throw new InvalidDataException("Round smoke test failed：DI0001 的回合必须按 DisasterStageConfig 解析阶段名称。");
             }
 
-            Debug.Log("Round smoke test passed. TotalRound=18; rounds 1, 7, and 18 resolve to configured disaster stages; advancing after final round is blocked.");
+            Debug.Log("Round smoke test passed. DI0001 resolves configured DisasterStageConfig stage names by current round.");
         }
     }
 }

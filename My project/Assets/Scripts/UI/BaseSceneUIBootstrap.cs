@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace TwelveMoons.UI
 {
@@ -13,6 +13,7 @@ namespace TwelveMoons.UI
         private static readonly UIType NewspaperPanel = new UIType("Prefabs/UI/报纸面板", UILayer.Popup);
         private static readonly UIType LetterReaderPanel = new UIType("Prefabs/UI/信件阅读面板", UILayer.Popup);
         private static readonly UIType LoadingPanel = new UIType("Prefabs/UI/加载过场面板", UILayer.Overlay);
+        private static readonly UIType BlackScreenPanel = new UIType("Prefabs/UI/\u9ed1\u573a\u9762\u677f", UILayer.Overlay);
 
         [Header("UI 上下文")]
         [Tooltip("BaseScene 中的 UI 上下文；为空时自动从当前物体或场景中查找。")]
@@ -25,6 +26,10 @@ namespace TwelveMoons.UI
         [Header("启动调试开关")]
         [Tooltip("进入游戏时是否显示各 UI Prefab 内的调试按钮。正式流程应保持关闭。")]
         [SerializeField] private bool showDebugControlsOnStart;
+
+        [Header("\u5171\u4eabHUD\u4efb\u52a1\u9762\u677f\uff1a\u9ed8\u8ba4\u663e\u793a\u72b6\u6001")]
+        [Tooltip("\u542f\u7528\u540e\uff0c\u5171\u4eabHUD\u6bcf\u6b21\u6253\u5f00\u65f6\u4f1a\u540c\u65f6\u663e\u793a\u4efb\u52a1\u9762\u677f\uff1b\u5173\u95ed\u65f6\u8fdb\u5165\u6e38\u620f\u9ed8\u8ba4\u9690\u85cf\u5171\u4eabHUD\u4e0b\u7684\u4efb\u52a1\u9762\u677f\uff0c\u53ea\u4fdd\u7559\u56de\u5408\u7b49\u57fa\u7840HUD\u3002")]
+        [SerializeField] private bool showTaskPanelWhenSharedHudOpens;
 
         [Header("LoadingPanel 运行时调试")]
         [Tooltip("启用后，在 Play 模式按 P 键会显示并重播 LoadingPanel 过场；此调试播放不会切换到城区。")]
@@ -71,10 +76,22 @@ namespace TwelveMoons.UI
         public void ShowCity()
         {
             ShowSharedHud(true);
-            ShowAndPrepare(CityHudPanel);
+            var cityObject = ShowAndPrepare(CityHudPanel);
+            EnsureCityHudPanelBinding(cityObject);
             uiManager?.HideUI(DeskPanel);
         }
 
+
+        private void EnsureCityHudPanelBinding(GameObject cityObject)
+        {
+            if (cityObject == null)
+            {
+                return;
+            }
+
+            var cityHudPanel = cityObject.GetComponent<CityHudPanelView>() ?? cityObject.AddComponent<CityHudPanelView>();
+            cityHudPanel.ApplyContext(uiContext);
+        }
         public void ShowStory()
         {
             ShowAndPrepare(StoryPanel);
@@ -121,12 +138,20 @@ namespace TwelveMoons.UI
             uiManager?.HideUI(StoryPanel);
         }
 
-        public void ShowDocumentPopup()
+        public DocumentPopupPanelView ShowDocumentPopup()
         {
             var popupObject = ShowAndPrepare(DocumentPopupPanel);
-            var popup = popupObject != null ? popupObject.GetComponent<DocumentPopupPanelView>() : null;
+            if (popupObject == null)
+            {
+                return null;
+            }
+
+            BringPopupToFront(popupObject);
+            var popup = popupObject.GetComponent<DocumentPopupPanelView>() ??
+                popupObject.GetComponentInChildren<DocumentPopupPanelView>(true);
             RegisterDocumentPopupStateListener(popup);
             HandleDocumentPopupStateChanged();
+            return popup;
         }
 
         public void ShowNewspaper()
@@ -161,6 +186,32 @@ namespace TwelveMoons.UI
         public void HideLoadingPanel()
         {
             uiManager?.HideUI(LoadingPanel);
+        }
+
+        public BlackScreenPanelView ShowBlackScreenPanel()
+        {
+            var blackScreenObject = ShowAndPrepare(BlackScreenPanel);
+            if (blackScreenObject == null)
+            {
+                return null;
+            }
+
+            var overlayRoot = uiManager != null ? uiManager.GetLayerRoot(UILayer.Overlay) : null;
+            overlayRoot?.SetAsLastSibling();
+            blackScreenObject.transform.SetAsLastSibling();
+
+            var view = blackScreenObject.GetComponent<BlackScreenPanelView>();
+            if (view == null)
+            {
+                view = blackScreenObject.AddComponent<BlackScreenPanelView>();
+            }
+
+            return view;
+        }
+
+        public void HideBlackScreenPanel()
+        {
+            uiManager?.HideUI(BlackScreenPanel);
         }
 
         public void HidePopup(UIType type)
@@ -239,7 +290,7 @@ namespace TwelveMoons.UI
                 return;
             }
 
-            SetSharedHudPanelVisibility(sharedHudObject, showTaskPanel, !IsObservedDocumentFlowActive());
+            SetSharedHudPanelVisibility(sharedHudObject, showTaskPanel && showTaskPanelWhenSharedHudOpens, !IsObservedDocumentFlowActive());
             BringSharedHudToFront(sharedHudObject);
             BringActiveLoadingPanelToFront();
         }
@@ -259,6 +310,18 @@ namespace TwelveMoons.UI
             var overlayRoot = uiManager != null ? uiManager.GetLayerRoot(UILayer.Overlay) : null;
             overlayRoot?.SetAsLastSibling();
             loadingObject.transform.SetAsLastSibling();
+        }
+
+        private void BringPopupToFront(GameObject popupObject)
+        {
+            if (popupObject == null)
+            {
+                return;
+            }
+
+            var popupRoot = uiManager != null ? uiManager.GetLayerRoot(UILayer.Popup) : null;
+            popupRoot?.SetAsLastSibling();
+            popupObject.transform.SetAsLastSibling();
         }
 
         private void BringActiveLoadingPanelToFront()

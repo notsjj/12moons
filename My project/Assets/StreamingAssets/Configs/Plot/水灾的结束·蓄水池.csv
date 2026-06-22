@@ -1,0 +1,4 @@
+﻿LineId,StoryId,NextLineId,SpeakerCharacterId,Content,Position,IsChoice,RequiredItemIds,RequiredItemCounts,ConsumeItems,AddItemIds,AddItemCounts,Remark
+S0032_001,S0032,S0032_002,,最后的检查完成，伴随着净水系统的轰鸣，无法及时排出的雨水开始汇入蓄水池的第一层。,0,false,,,,,,此事件为结算事件，目的为结算救灾情况：根据选择的不同，最后的描述与结果各不相同，根据小任务的完成情况与最后势力任务是否完成决定最后下城区的完成情况。
+S0032_002,S0032,S0032_003,,在净水系统的运作之下，净水池部分开始被蓄满，有经由管道流向需要他们的地方。,0,false,,,,,,
+S0032_003,S0032,END,,尽管还无法破解净水核心所用遗物的运转原理，但此刻，这个奇迹一般的蓄水池已经归王都所有。,0,false,,,,,,

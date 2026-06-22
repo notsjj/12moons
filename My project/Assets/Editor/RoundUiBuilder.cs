@@ -251,7 +251,7 @@ namespace TwelveMoons.EditorTools
             var serializedObject = new SerializedObject(runtimeDataService);
             serializedObject.FindProperty("configManager").objectReferenceValue = configManager;
             serializedObject.FindProperty("createNewGameOnAwake").boolValue = true;
-            serializedObject.FindProperty("initialDisasterId").stringValue = "disaster_flood_01";
+            serializedObject.FindProperty("initialDisasterId").stringValue = "DI0001";
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 

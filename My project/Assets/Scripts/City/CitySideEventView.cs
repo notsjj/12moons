@@ -1,3 +1,4 @@
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -54,6 +55,18 @@ namespace TwelveMoons.City
         [Tooltip("角色 Sprite 外轮廓 Shader；留空时会自动查找 TwelveMoons/SpriteAlphaOutline。")]
         [SerializeField] private Shader spriteOutlineShader;
 
+
+        [Header("\u652f\u7ebf\u4e8b\u4ef6\u6a21\u578b\uff1a\u6709\u4e8b\u4ef6\u65f6\u663e\u793a Man \u6a21\u578b")]
+        [Tooltip("\u652f\u7ebf\u4e8b\u4ef6\u9ed8\u8ba4\u663e\u793a\u7684 3D \u6a21\u578b Resources \u8def\u5f84\uff1b\u5f53\u524d\u4f7f\u7528 Assets/Resources/Art/Man.fbx\u3002")]
+        [SerializeField] private string modelResourcePath = "Art/Man";
+        [Tooltip("\u652f\u7ebf\u4e8b\u4ef6\u6a21\u578b\u7684\u6839\u7269\u4f53\uff1b\u4e3a\u7a7a\u65f6\u4f1a\u4ece modelResourcePath \u52a0\u8f7d\u5e76\u5b9e\u4f8b\u5316\u3002")]
+        [SerializeField] private Transform modelRoot;
+        [Tooltip("\u652f\u7ebf\u4e8b\u4ef6\u6a21\u578b\u76f8\u5bf9\u70b9\u4f4d\u7684\u672c\u5730\u504f\u79fb\uff1b\u53ea\u79fb\u52a8\u6a21\u578b\u6839\u7269\u4f53\uff0c\u4e0d\u6539\u70b9\u4f4d\u4f4d\u7f6e\u3002")]
+        [SerializeField] private Vector3 modelLocalOffset = Vector3.zero;
+        [Tooltip("\u652f\u7ebf\u4e8b\u4ef6\u6a21\u578b\u672c\u5730\u7f29\u653e\uff1b\u6240\u6709\u5206\u91cf\u4f1a\u9650\u5236\u4e3a\u975e\u8d1f\u6570\u3002")]
+        [SerializeField] private Vector3 modelLocalScale = Vector3.one;
+        [Tooltip("\u6a21\u578b\u60ac\u505c\u63cf\u8fb9\u7ec4\u4ef6\uff1b\u4e3a\u7a7a\u65f6\u8fd0\u884c\u65f6\u81ea\u52a8\u6dfb\u52a0\uff0c\u590d\u7528\u57ce\u533a\u5efa\u7b51\u7684\u5168\u5c40\u63cf\u8fb9\u6e32\u67d3\u3002")]
+        [SerializeField] private CityBuildingOutlineEffect modelOutlineEffect;
         [Header("运行时只读快照：支线角色状态")]
         [Tooltip("当前支线角色是否已经绑定到 SideEventConfig 配置。")]
         [SerializeField] private bool inspectorIsBound;
@@ -76,18 +89,22 @@ namespace TwelveMoons.City
         private Material originalSpriteMaterial;
         private Material runtimeOutlineMaterial;
         private bool isUsingOutlineMaterial;
+        private Renderer[] modelRenderers = System.Array.Empty<Renderer>();
+        private bool isUsingModelOutline;
 
         public string SideEventId => sideEventId;
 
         public bool IsBound => definition != null;
 
-        public bool IsCharacterVisible => characterSpriteRenderer != null && characterSpriteRenderer.enabled;
+        public bool IsCharacterVisible => IsModelVisualVisible || (characterSpriteRenderer != null && characterSpriteRenderer.enabled);
+
+        public bool IsModelVisualVisible => modelRoot != null && modelRoot.gameObject.activeInHierarchy;
 
         public bool IsExclamationVisible => exclamationRoot != null && exclamationRoot.gameObject.activeInHierarchy;
 
         public bool CanStartStory => canStartStory;
 
-        public bool IsHoverOutlineVisible => isUsingOutlineMaterial;
+        public bool IsHoverOutlineVisible => isUsingOutlineMaterial || isUsingModelOutline;
 
         private void Awake()
         {
@@ -142,7 +159,9 @@ namespace TwelveMoons.City
 
         public void EnsureDefaultWorldVisuals()
         {
-            if (characterSpriteRenderer == null)
+            EnsureModelVisual();
+
+            if (characterSpriteRenderer == null && modelRoot == null)
             {
                 var spriteObject = new GameObject("CharacterSprite");
                 spriteObject.transform.SetParent(transform, false);
@@ -159,8 +178,15 @@ namespace TwelveMoons.City
                 clickableCollider = boxCollider;
             }
 
-            EnsureExclamation();
-            ApplySprite();
+            RemoveExclamationVisual();
+            if (modelRoot == null)
+            {
+                ApplySprite();
+            }
+            else if (characterSpriteRenderer != null)
+            {
+                characterSpriteRenderer.enabled = false;
+            }
         }
 
         public void Bind(SideEventDefinition sideEventDefinition, CitySideEventService sideEventService)
@@ -209,6 +235,12 @@ namespace TwelveMoons.City
                 return;
             }
 
+            if (IsStoryBlockingClick())
+            {
+                inspectorLastClickResult = "\u5267\u60c5\u64ad\u653e\u4e2d\uff0c\u652f\u7ebf\u4e8b\u4ef6\u70b9\u51fb\u5df2\u4e34\u65f6\u7981\u7528\u3002";
+                return;
+            }
+
             if (service.TryStartSideEvent(sideEventId, out var resultMessage))
             {
                 inspectorLastClickResult = resultMessage;
@@ -219,6 +251,12 @@ namespace TwelveMoons.City
             }
 
             inspectorLastClickResult = resultMessage;
+        }
+
+        private bool IsStoryBlockingClick()
+        {
+            var storyService = service != null ? service.StoryService : null;
+            return storyService != null && storyService.CurrentPlayback != null;
         }
 
         public void OnPointerClick(PointerEventData eventData)
@@ -337,6 +375,49 @@ namespace TwelveMoons.City
             }
         }
 
+        private void EnsureModelVisual()
+        {
+            if (modelRoot == null)
+            {
+                var prefab = string.IsNullOrEmpty(modelResourcePath) ? null : Resources.Load<GameObject>(modelResourcePath);
+                if (prefab != null)
+                {
+                    var modelInstance = Instantiate(prefab, transform, false);
+                    modelInstance.name = prefab.name;
+                    modelRoot = modelInstance.transform;
+                }
+            }
+
+            if (modelRoot == null)
+            {
+                return;
+            }
+
+            modelRoot.localPosition = modelLocalOffset;
+            modelRoot.localScale = ClampVector(modelLocalScale);
+            modelRoot.localRotation = Quaternion.identity;
+            CacheModelRenderers();
+            EnsureModelOutlineEffect();
+        }
+
+        private void CacheModelRenderers()
+        {
+            modelRenderers = modelRoot != null
+                ? modelRoot.GetComponentsInChildren<Renderer>(true)
+                    .Where(renderer => renderer != null && renderer.GetComponent<TMP_Text>() == null)
+                    .ToArray()
+                : System.Array.Empty<Renderer>();
+        }
+
+        private void EnsureModelOutlineEffect()
+        {
+            if (modelOutlineEffect == null)
+            {
+                modelOutlineEffect = GetComponent<CityBuildingOutlineEffect>() ??
+                    gameObject.AddComponent<CityBuildingOutlineEffect>();
+            }
+        }
+
         private void ApplySprite()
         {
             if (characterSpriteRenderer == null)
@@ -368,7 +449,7 @@ namespace TwelveMoons.City
 
             if (!string.IsNullOrEmpty(inspectorDisplayCharacterId))
             {
-                var configuredSprite = Resources.Load<Sprite>(inspectorDisplayCharacterId);
+                var configuredSprite = UI.CharacterPlaceholderPortraitProvider.LoadPortrait(inspectorDisplayCharacterId);
                 if (configuredSprite != null)
                 {
                     return configuredSprite;
@@ -376,6 +457,25 @@ namespace TwelveMoons.City
             }
 
             return GetFallbackCharacterSprite();
+        }
+
+        private void RemoveExclamationVisual()
+        {
+            ResolveExclamationReferences();
+            if (exclamationRoot != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(exclamationRoot.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(exclamationRoot.gameObject);
+                }
+            }
+
+            exclamationRoot = null;
+            exclamationText = null;
         }
 
         private void EnsureExclamation()
@@ -426,9 +526,14 @@ namespace TwelveMoons.City
         {
             isVisible = visible;
 
+            if (modelRoot != null)
+            {
+                modelRoot.gameObject.SetActive(visible);
+            }
+
             if (characterSpriteRenderer != null)
             {
-                characterSpriteRenderer.enabled = visible;
+                characterSpriteRenderer.enabled = visible && modelRoot == null;
             }
 
             if (!visible)
@@ -436,10 +541,7 @@ namespace TwelveMoons.City
                 ApplyHoverHighlight(false);
             }
 
-            if (exclamationRoot != null)
-            {
-                exclamationRoot.gameObject.SetActive(visible);
-            }
+            RemoveExclamationVisual();
 
             if (clickableCollider != null)
             {
@@ -518,6 +620,12 @@ namespace TwelveMoons.City
         {
             HideLegacyOutlineRenderer();
 
+            if (modelRoot != null)
+            {
+                ApplyModelHoverHighlight(enabled);
+                return;
+            }
+
             if (!enabled || !isVisible || characterSpriteRenderer == null || !characterSpriteRenderer.enabled)
             {
                 RestoreSpriteMaterial();
@@ -542,6 +650,28 @@ namespace TwelveMoons.City
             outlineMaterial.SetFloat(OutlinePixelWidthId, Mathf.Max(1, hoverOutlinePixelWidth));
             characterSpriteRenderer.sharedMaterial = outlineMaterial;
             isUsingOutlineMaterial = true;
+        }
+
+        private void ApplyModelHoverHighlight(bool enabled)
+        {
+            if (!enabled || !isVisible || modelRoot == null || !modelRoot.gameObject.activeInHierarchy)
+            {
+                isUsingModelOutline = false;
+                modelOutlineEffect?.SetVisible(false);
+                return;
+            }
+
+            EnsureModelOutlineEffect();
+            CacheModelRenderers();
+            if (modelOutlineEffect == null || modelRenderers == null || !modelRenderers.Any(renderer => renderer != null))
+            {
+                isUsingModelOutline = false;
+                return;
+            }
+
+            modelOutlineEffect.Configure(modelRenderers, hoverOutlineColor, hoverOutlinePixelWidth);
+            modelOutlineEffect.SetVisible(true);
+            isUsingModelOutline = true;
         }
 
         private Material EnsureRuntimeOutlineMaterial()
@@ -592,6 +722,11 @@ namespace TwelveMoons.City
 
         private void UpdateBillboard()
         {
+            if (modelRoot != null)
+            {
+                return;
+            }
+
             if (!isVisible)
             {
                 return;
@@ -702,6 +837,7 @@ namespace TwelveMoons.City
             exclamationBobSpeed = Mathf.Max(0f, exclamationBobSpeed);
             hoverOutlinePixelWidth = Mathf.Max(1, hoverOutlinePixelWidth);
             defaultClickSize = ClampVector(defaultClickSize);
+            modelLocalScale = ClampVector(modelLocalScale);
         }
     }
 }

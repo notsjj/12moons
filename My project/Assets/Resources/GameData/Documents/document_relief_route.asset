@@ -34,7 +34,7 @@ MonoBehaviour:
     churchSuspicionChange: 0
     civilianSuspicionChange: -1
     taskScoreChange: 1
-    requiredItemId: item_drainage_map
+    requiredItemId: I0001
     requiredItemCount: 1
     consumeItem: 0
     addItemId: 

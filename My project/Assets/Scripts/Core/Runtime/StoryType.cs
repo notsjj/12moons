@@ -18,7 +18,7 @@ namespace TwelveMoons.Core.Runtime
                 return parsed;
             }
 
-            return StoryType.Text;
+            return StoryType.Dialogue;
         }
     }
 }

@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a5790691942fb347b77bcda58688fd4, type: 3}
+  m_Name: D0087
+  m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.DocumentDefinitionAsset
+  documentId: D0087
+  title: "\u65E0\u4E1A\u8005"
+  bodyText: "\u73B0\u5728\u57CE\u91CC\u7684\u5931\u4E1A\u95EE\u9898\u6709\u4E9B\u4E25\u91CD\u4E86\u4E0D\u662F\u4E48\uFF1F\u4E0D\u8FC7\u6362\u4E2A\u60F3\u6CD5\uFF0C\u6211\u4EEC\u53EF\u4EE5\u7528\u6BD4\u5E73\u5E38\u66F4\u4F4E\u7684\u6210\u672C\u8C03\u9063\u4ED6\u4EEC\uFF0C\u6BD4\u5982\u2026\u2026\u53BB\u7EF4\u62A4\u6C34\u575D\u600E\u4E48\u6837\uFF1F"
+  proposerCharacterId: C0025
+  documentType: Task
+  factionLogoName: "\u8D35\u65CF"
+  disasterId: DI0001
+  disasterStageId: 
+  taskId: 
+  taskStageId: 
+  isRepeatable: 0
+  remark: 
+  optionA:
+    text: "\u540C\u610F"
+    moneyChange: 0
+    materialChange: 0
+    foodChange: 0
+    nobleSuspicionChange: 0
+    academySuspicionChange: 0
+    churchSuspicionChange: 0
+    civilianSuspicionChange: 0
+    taskScoreChange: 0
+    requiredItemId: 
+    requiredItemCount: 0
+    consumeItem: 0
+    addItemId: 
+    addItemCount: 0
+    nextDocumentId: 
+    nextDocumentDelayRound: 0
+    unlockBuildingId: 
+    resultText: 
+    proposerFeedbackText: "\u4EBA\u4EEC\u6709\u4E86\u5DE5\u4F5C\uFF0C\u8FD8\u80FD\u5E2E\u52A9\u519C\u4E1A\u53D1\u5C55\uFF0C\u4E00\u4E3E\u4E24\u5F97\u3002"
+    feedbackFactionId: F0001
+    factionFeedbackText: "\u867D\u7136\u7D2F\u4E86\u70B9\uFF0C\u4F46\u662F\u80FD\u5403\u4E0A\u996D\u5C31\u884C\u3002"
+  optionB:
+    text: "\u62D2\u7EDD"
+    moneyChange: 0
+    materialChange: 0
+    foodChange: 0
+    nobleSuspicionChange: 0
+    academySuspicionChange: 0
+    churchSuspicionChange: 0
+    civilianSuspicionChange: 0
+    taskScoreChange: 0
+    requiredItemId: 
+    requiredItemCount: 0
+    consumeItem: 0
+    addItemId: 
+    addItemCount: 0
+    nextDocumentId: 
+    nextDocumentDelayRound: 0
+    unlockBuildingId: 
+    resultText: 
+    proposerFeedbackText: "\u771F\u53EF\u60DC\uFF0C\u4EE5\u540E\u518D\u60F3\u8981\u5EFA\u6C34\u575D\u5C31\u8981\u8D35\u5F88\u591A\u4E86\u3002"
+    feedbackFactionId: F0001
+    factionFeedbackText: "\u8D81\u4EBA\u4E4B\u5371\u7684\u5265\u524A\u7B97\u4EC0\u4E48\u672C\u4E8B\u3002"

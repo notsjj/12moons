@@ -1,6 +1,0 @@
-PointId,PointName,AreaId,PointType,Description,SortOrder,Remark
-city_point_royal_gate,王宫门前,city_royal,BuildingSlot,王宫区域的固定点位；阶段14只用于验证 PointId 匹配。,10,阶段14演示点位
-city_point_church_square,教会广场,city_church,BuildingSlot,教会区域的固定点位；后续建筑或支线可通过 PointId 定位。,20,阶段14演示点位
-city_point_upper_market,上城区集市,city_upper,BuildingSlot,上城区的固定点位；当前阶段不产出资源也不触发剧情。,30,阶段14演示点位
-city_point_academy_archive,学院档案室,city_academy,EffectSlot,学院区域的固定点位；用于验证点位类型读取。,40,阶段14演示点位
-city_point_lower_harbor,下城区码头,city_lower,BuildingSlot,下城区的固定点位；用于验证未摆放点位时的 Inspector 提示。,50,阶段14演示点位

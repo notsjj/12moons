@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using TwelveMoons.Core.Config;
@@ -27,18 +27,20 @@ namespace TwelveMoons.Core.Runtime
         [Tooltip("勾选后 Awake 时立即按初始灾难 ID 创建一局新游戏，方便在 Inspector 中观察运行时数据。")]
         [SerializeField] private bool createNewGameOnAwake;
         [Tooltip("创建新游戏时使用的灾难 ID，必须存在于 DisasterConfig。")]
-        [SerializeField] private string initialDisasterId = "disaster_flood_01";
+        [SerializeField] private string initialDisasterId = "DI0001";
 
-        [Header("初始背包：新开局直接给玩家的五张卡片")]
-        [Tooltip("新开局时写入背包的初始物品。只写运行时数量，不创建正式 UI 或按钮；物品定义仍从 ItemConfig 读取。")]
+        [Header("初始背包：新开局直接给玩家的卡片")]
+        [Tooltip("新开局时写入背包的初始物品。旧场景里 item_money/item_food 等旧 ID 会在运行时自动映射到 ItemConfig 当前资源物品。")]
         [SerializeField] private InitialBackpackItem[] initialBackpackItems =
         {
-            new InitialBackpackItem { itemId = "item_money", count = 10 },
-            new InitialBackpackItem { itemId = "item_material", count = 10 },
-            new InitialBackpackItem { itemId = "item_food", count = 5 },
-            new InitialBackpackItem { itemId = "item_drainage_map", count = 1 },
-            new InitialBackpackItem { itemId = "item_archivist_badge", count = 1 }
+            new InitialBackpackItem { itemId = "I0001", count = 1 },
+            new InitialBackpackItem { itemId = "I0002", count = 10 },
+            new InitialBackpackItem { itemId = "I0004", count = 10 }
         };
+        [Tooltip("新开局金币最低数量；会按 ItemConfig 中 ItemType=Money 的物品写入，避免旧场景初始背包 ID 没迁移导致金币卡牌不显示。")]
+        [SerializeField, Min(0)] private int initialMoneyMinimumCount = 10;
+        [Tooltip("新开局食物最低数量；会按 ItemConfig 中 ItemType=Food 的物品写入，避免旧场景初始背包 ID 没迁移导致食物卡牌不显示。")]
+        [SerializeField, Min(0)] private int initialFoodMinimumCount = 10;
 
         [Header("运行时调试可视化：只读观察当前回合、公文、任务和剧情")]
         [Tooltip("勾选后每帧末尾刷新下方快照，便于在 Play 模式 Inspector 中观察当前回合数据。")]
@@ -216,20 +218,103 @@ namespace TwelveMoons.Core.Runtime
 
         private void ApplyInitialBackpackItems()
         {
-            if (initialBackpackItems == null)
+            if (initialBackpackItems != null)
+            {
+                foreach (var item in initialBackpackItems)
+                {
+                    if (item == null || string.IsNullOrEmpty(item.itemId))
+                    {
+                        continue;
+                    }
+
+                    var itemId = ResolveInitialItemId(item.itemId);
+                    if (string.IsNullOrEmpty(itemId))
+                    {
+                        continue;
+                    }
+
+                    Data.GetOrCreateItem(itemId).SetCount(Math.Max(0, item.count));
+                }
+            }
+
+            ApplyInitialItemMinimumByType(InventoryItemType.Money, initialMoneyMinimumCount);
+            ApplyInitialItemMinimumByType(InventoryItemType.Food, initialFoodMinimumCount);
+        }
+
+        private string ResolveInitialItemId(string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId))
+            {
+                return string.Empty;
+            }
+
+            if (IsConfiguredItemId(itemId))
+            {
+                return itemId;
+            }
+
+            switch (itemId)
+            {
+                case "item_money":
+                    return TryFindItemIdByType(InventoryItemType.Money, out var moneyItemId) ? moneyItemId : string.Empty;
+                case "item_material":
+                    return TryFindItemIdByType(InventoryItemType.Material, out var materialItemId) ? materialItemId : string.Empty;
+                case "item_food":
+                    return TryFindItemIdByType(InventoryItemType.Food, out var foodItemId) ? foodItemId : string.Empty;
+                case "item_drainage_map":
+                    return IsConfiguredItemId("I0001") ? "I0001" : string.Empty;
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private void ApplyInitialItemMinimumByType(InventoryItemType itemType, int minimumCount)
+        {
+            if (minimumCount <= 0 || !TryFindItemIdByType(itemType, out var itemId))
             {
                 return;
             }
 
-            foreach (var item in initialBackpackItems)
-            {
-                if (item == null || string.IsNullOrEmpty(item.itemId))
-                {
-                    continue;
-                }
+            var item = Data.GetOrCreateItem(itemId);
+            item.SetCount(Math.Max(item.Count, minimumCount));
+        }
 
-                Data.GetOrCreateItem(item.itemId).SetCount(Math.Max(0, item.count));
+        private bool IsConfiguredItemId(string itemId)
+        {
+            if (configManager == null || !configManager.TryGetTable("ItemConfig", out var itemTable))
+            {
+                return false;
             }
+
+            foreach (var row in itemTable.Rows)
+            {
+                if (string.Equals(row.GetString("ItemId"), itemId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryFindItemIdByType(InventoryItemType itemType, out string itemId)
+        {
+            itemId = string.Empty;
+            if (configManager == null || !configManager.TryGetTable("ItemConfig", out var itemTable))
+            {
+                return false;
+            }
+
+            foreach (var row in itemTable.Rows)
+            {
+                if (InventoryItemTypeUtility.Parse(row.GetString("ItemType")) == itemType)
+                {
+                    itemId = row.GetString("ItemId");
+                    return !string.IsNullOrEmpty(itemId);
+                }
+            }
+
+            return false;
         }
 
         private void InitializeConfiguredFactions()

@@ -1,0 +1,9 @@
+[
+  {
+    "DisasterId": "DI0001",
+    "DisasterName": "水灾",
+    "TotalRound": 18,
+    "Description": "连续暴雨导致城市积水，玩家需要在 18 回合内处理灾害与阵营压力。",
+    "Remark": "示例灾难，采用统一 ID。"
+  }
+]
