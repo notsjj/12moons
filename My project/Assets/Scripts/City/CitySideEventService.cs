@@ -239,17 +239,78 @@ namespace TwelveMoons.City
 
             foreach (var row in table.Rows)
             {
-                var definition = new SideEventDefinition(row);
-                if (string.IsNullOrEmpty(definition.SideEventId))
+                AddDefinition(new SideEventDefinition(row));
+            }
+
+            AddStoryPointDefinitions();
+            inspectorConfigCount = definitions.Count;
+        }
+
+        private void AddDefinition(SideEventDefinition definition)
+        {
+            if (definition == null || string.IsNullOrEmpty(definition.SideEventId))
+            {
+                return;
+            }
+
+            definitions.Add(definition);
+            definitionsById[definition.SideEventId] = definition;
+        }
+
+        private void AddStoryPointDefinitions()
+        {
+            if (configManager == null || !configManager.TryGetTable("StoryConfig", out var storyTable))
+            {
+                return;
+            }
+
+            var sideEventStoryIds = definitions
+                .Where(definition => definition != null && !string.IsNullOrEmpty(definition.StoryId))
+                .Select(definition => definition.StoryId)
+                .ToHashSet(StringComparer.Ordinal);
+
+            foreach (var row in storyTable.Rows)
+            {
+                var story = new StoryDefinition(row);
+                if (string.IsNullOrEmpty(story.StoryId) ||
+                    sideEventStoryIds.Contains(story.StoryId) ||
+                    story.RoundNumber <= 0 ||
+                    !StoryTriggerUnitIds.IsCityPointTrigger(story.TriggerUnitId))
                 {
                     continue;
                 }
 
-                definitions.Add(definition);
-                definitionsById[definition.SideEventId] = definition;
-            }
+                var pointId = StoryTriggerUnitIds.ResolvePointId(
+                    story.TriggerUnitId,
+                    story.StoryId,
+                    story.RoundNumber);
+                if (string.IsNullOrEmpty(pointId))
+                {
+                    continue;
+                }
 
-            inspectorConfigCount = definitions.Count;
+                AddDefinition(CreateStoryPointDefinition(story, pointId));
+            }
+        }
+
+        private static SideEventDefinition CreateStoryPointDefinition(StoryDefinition story, string pointId)
+        {
+            return new SideEventDefinition(new ConfigRow(new Dictionary<string, string>
+            {
+                { "SideEventId", $"Story_{story.StoryId}" },
+                { "Round", story.RoundNumber.ToString() },
+                { "CityAreaId", string.Empty },
+                { "PointId", pointId },
+                { "DisplayCharacterId", string.Empty },
+                { "StoryId", story.StoryId },
+                { "ExpireRound", story.RoundNumber.ToString() },
+                { "IsOneTime", "1" },
+                { "RequiredTaskId", string.Empty },
+                { "RequiredTaskState", string.Empty },
+                { "RequiredItemId", string.Empty },
+                { "RequiredItemCount", "0" },
+                { "Remark", "StoryConfig scheduled story" }
+            }));
         }
 
         private bool MeetsTaskRequirement(SideEventDefinition definition)

@@ -15,7 +15,7 @@ MonoBehaviour:
   documentId: document_market_roster
   title: "\u7CA5\u68DA\u8F6E\u503C\u8868"
   bodyText: "\u5C0F\u540F\u8BE2\u95EE\u662F\u5426\u516C\u5E03\u7CA5\u68DA\u8F6E\u503C\u8868\uFF0C\u8BA9\u5404\u8857\u533A\u77E5\u9053\u4ECA\u65E5\u7531\u8C01\u8D1F\u8D23\u53D1\u7CA5\u3002"
-  proposerCharacterId: character_steward
+  proposerCharacterId: C0028
   documentType: Global
   factionLogoName: "\u5DE5\u4F1A"
   disasterId: 

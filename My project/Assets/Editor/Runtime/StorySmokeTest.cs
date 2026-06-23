@@ -19,6 +19,12 @@ namespace TwelveMoons.EditorTools.Runtime
         public static void Run()
         {
             ValidateStoryNameLoadsMatchingDialogueTable();
+            ValidateChineseStoryBackgroundField();
+            ValidateDialogueLineBackgroundField();
+            ValidateStoryScheduleFields();
+            ValidateStoryQueueDedupesSameStoryTiming();
+            ValidateFloodEndingResolver();
+            ValidateStoryPanelUsesDialoguePanelImageForBackground();
             ValidateStoryCanStartAtSpecificLine();
             ValidateDialogueCharacterMoveClearsPreviousSlot();
             ValidatePortraitBrightnessSpeakerState();
@@ -54,6 +60,118 @@ namespace TwelveMoons.EditorTools.Runtime
             }
         }
 
+        private static void ValidateChineseStoryBackgroundField()
+        {
+            var story = new StoryDefinition(new ConfigRow(new Dictionary<string, string>
+            {
+                { "StoryId", "story_background_field_test" },
+                { "StoryName", "\u80cc\u666f\u5b57\u6bb5\u6d4b\u8bd5" },
+                { "StoryType", "Dialogue" },
+                { "\u80cc\u666f\u56fe\u7247", "\u5b9d\u5e93and\u5360\u661f\u5ba4" }
+            }));
+
+            if (story.BackgroundImageId != "\u5b9d\u5e93and\u5360\u661f\u5ba4")
+            {
+                throw new InvalidDataException("StoryDefinition must read StoryConfig.\u80cc\u666f\u56fe\u7247 so dialogue backgrounds can use per-story map sprites.");
+            }
+        }
+
+        private static void ValidateDialogueLineBackgroundField()
+        {
+            var line = new DialogueLineDefinition(new ConfigRow(new Dictionary<string, string>
+            {
+                { "LineId", "story_dialogue_background_test_001" },
+                { "StoryId", "story_dialogue_background_test" },
+                { "NextLineId", "END" },
+                { "Content", "\u6d4b\u8bd5" },
+                { "\u80cc\u666fID", "\u6559\u533a\u80cc\u666f" }
+            }));
+
+            if (line.BackgroundImageId != "\u6559\u533a\u80cc\u666f")
+            {
+                throw new InvalidDataException("DialogueLineDefinition must read \u80cc\u666fID so each dialogue row can override the story panel background.");
+            }
+        }
+
+        private static void ValidateStoryScheduleFields()
+        {
+            var story = new StoryDefinition(new ConfigRow(new Dictionary<string, string>
+            {
+                { "StoryId", "story_schedule_field_test" },
+                { "StoryName", "schedule" },
+                { "StoryType", "Dialogue" },
+                { "\u89e6\u53d1\u5355\u4f4did", "P0013" },
+                { "\u56de\u5408\u6570", "7" }
+            }));
+
+            if (story.TriggerUnitId != "P0013" || story.RoundNumber != 7)
+            {
+                throw new InvalidDataException("StoryDefinition must read StoryConfig.\u89e6\u53d1\u5355\u4f4did and StoryConfig.\u56de\u5408\u6570 for round/point scheduling.");
+            }
+        }
+
+        private static void ValidateStoryQueueDedupesSameStoryTiming()
+        {
+            var data = new GameRuntimeData();
+            data.Reset("DI0001", 30);
+            data.QueueStory("S0002", "T0001", "TS0001", RuntimeStoryQueueTiming.BeforeDocument);
+            data.QueueStory("S0002", string.Empty, string.Empty, 1, RuntimeStoryQueueTiming.BeforeDocument);
+
+            if (data.StoryQueue.Count != 1 ||
+                data.StoryQueue[0].TaskId != "T0001" ||
+                data.StoryQueue[0].TaskStageId != "TS0001")
+            {
+                throw new InvalidDataException("Runtime story queue must dedupe the same StoryId/round/timing so StoryConfig scheduling cannot duplicate or replace TaskStage before-document actors.");
+            }
+        }
+
+        private static void ValidateFloodEndingResolver()
+        {
+            var data = new GameRuntimeData();
+            data.Reset("DI0001", 30);
+
+            if (FloodEndingStoryResolver.ResolveStoryId(data) != "S0032")
+            {
+                throw new InvalidDataException("Flood ending resolver should fall back to S0032/\u84c4\u6c34\u6c60 when no stronger runtime condition exists.");
+            }
+
+            data.GetOrCreateTask("T0007").Activate(21);
+            data.GetOrCreateTask("T0007").AddScore(2);
+            data.GetOrCreateTask("T0007").Complete(23);
+            if (FloodEndingStoryResolver.ResolveStoryId(data) != "S0029")
+            {
+                throw new InvalidDataException("Completed relief task T0007 should resolve to S0029/\u536b\u961f\u957f flood ending.");
+            }
+        }
+
+        private static void ValidateStoryPanelUsesDialoguePanelImageForBackground()
+        {
+            var testRoot = new GameObject("StoryDialogueBackgroundImageSmokeTest", typeof(Image));
+            try
+            {
+                var rootImage = testRoot.GetComponent<Image>();
+                rootImage.color = Color.red;
+
+                var dialogueObject = new GameObject("DialoguePanel", typeof(RectTransform), typeof(Image));
+                dialogueObject.transform.SetParent(testRoot.transform, false);
+                var dialogueImage = dialogueObject.GetComponent<Image>();
+                dialogueImage.color = Color.white;
+
+                var panel = testRoot.AddComponent<StoryPanelView>();
+                SetPrivateField(panel, "dialoguePanel", dialogueObject);
+                InvokePrivate(panel, "Awake");
+                InvokePrivate(panel, "ApplyBackgroundImage", new object[] { string.Empty });
+
+                if (dialogueImage.color != Color.black || rootImage.color != Color.red)
+                {
+                    throw new InvalidDataException("StoryPanel must apply dialogue \u80cc\u666fID sprites to the \u5bf9\u8bdd\u9762\u677f Image before falling back to the root image.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(testRoot);
+            }
+        }
 
         private static void ValidateStoryCanStartAtSpecificLine()
         {
@@ -303,4 +421,3 @@ namespace TwelveMoons.EditorTools.Runtime
         }
     }
 }
-

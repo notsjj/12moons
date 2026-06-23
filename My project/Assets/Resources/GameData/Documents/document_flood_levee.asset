@@ -15,7 +15,7 @@ MonoBehaviour:
   documentId: document_flood_levee
   title: "\u5317\u5824\u52A0\u56FA\u4EE4"
   bodyText: "\u5DE5\u7A0B\u961F\u62A5\u544A\u5317\u5824\u6709\u4E00\u6BB5\u571F\u5C42\u677E\u52A8\uFF0C\u8BF7\u6C42\u8D81\u96E8\u52BF\u5C1A\u8F7B\u8C03\u62E8\u5EFA\u6750\u52A0\u56FA\u3002"
-  proposerCharacterId: character_steward
+  proposerCharacterId: C0028
   documentType: Disaster
   factionLogoName: "\u5DE5\u4F1A"
   disasterId: disaster_flood_01

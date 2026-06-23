@@ -6,7 +6,9 @@ namespace TwelveMoons.Core.Runtime
     {
         StageStart,
         StageEnd,
-        BeforeDocument
+        BeforeDocument,
+        ExploreBefore,
+        ExploreAfter
     }
 
     [Serializable]
@@ -19,9 +21,9 @@ namespace TwelveMoons.Core.Runtime
             int queuedRound,
             RuntimeStoryQueueTiming timing)
         {
-            StoryId = storyId;
-            TaskId = taskId;
-            TaskStageId = taskStageId;
+            StoryId = storyId ?? string.Empty;
+            TaskId = taskId ?? string.Empty;
+            TaskStageId = taskStageId ?? string.Empty;
             QueuedRound = Math.Max(1, queuedRound);
             Timing = timing;
         }

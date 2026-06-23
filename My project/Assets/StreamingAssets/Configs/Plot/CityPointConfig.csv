@@ -1,4 +1,4 @@
-PointId,PointName,PointType,DefaultVisible,Remark
+﻿PointId,PointName,PointType,DefaultVisible,Remark
 P0001,蓄水池,SideEvent,1,
 P0002,粮仓,SideEvent,0,
 P0003,学院,SideEvent,1,
@@ -7,7 +7,7 @@ P0005,图书馆,SideEvent,0,
 P0006,诊所,SideEvent,0,
 P0007,工坊,SideEvent,1,
 P0008,观星塔,SideEvent,0,
-P0009,,SideEvent,1,
+P0009,上城区1,SideEvent,1,
 P0010,码头,SideEvent,1,
 P0011,上城区2,SideEvent,1,
 P0012,上城区3,SideEvent,1,

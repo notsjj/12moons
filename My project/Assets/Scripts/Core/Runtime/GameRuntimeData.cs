@@ -162,9 +162,38 @@ namespace TwelveMoons.Core.Runtime
             string taskStageId,
             RuntimeStoryQueueTiming timing)
         {
-            var entry = new RuntimeStoryQueueEntry(storyId, taskId, taskStageId, CurrentRound, timing);
+            return QueueStory(storyId, taskId, taskStageId, CurrentRound, timing);
+        }
+
+        public RuntimeStoryQueueEntry QueueStory(
+            string storyId,
+            string taskId,
+            string taskStageId,
+            int queuedRound,
+            RuntimeStoryQueueTiming timing)
+        {
+            var safeRound = Math.Max(1, queuedRound);
+            var existing = storyQueue.FirstOrDefault(candidate =>
+                candidate.StoryId == (storyId ?? string.Empty) &&
+                candidate.QueuedRound == safeRound &&
+                candidate.Timing == timing);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var entry = new RuntimeStoryQueueEntry(storyId, taskId, taskStageId, safeRound, timing);
             storyQueue.Add(entry);
             return entry;
+        }
+
+        public bool HasQueuedStory(string storyId, int queuedRound, RuntimeStoryQueueTiming timing)
+        {
+            var safeRound = Math.Max(1, queuedRound);
+            return storyQueue.Any(candidate =>
+                candidate.StoryId == (storyId ?? string.Empty) &&
+                candidate.QueuedRound == safeRound &&
+                candidate.Timing == timing);
         }
 
         public bool RemoveStoryQueueEntry(RuntimeStoryQueueEntry entry)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using TwelveMoons.Core.Config;
 
@@ -46,6 +46,8 @@ namespace TwelveMoons.Core.Runtime
         public IReadOnlyList<string> AddItemIds { get; }
 
         public IReadOnlyList<int> AddItemCounts { get; }
+
+        public string BackgroundImageId { get; }
 
         public string PresentationCue { get; }
 

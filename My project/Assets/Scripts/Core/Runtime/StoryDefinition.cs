@@ -21,7 +21,9 @@ namespace TwelveMoons.Core.Runtime
 
             ImageCaptions = Split(row.GetString("ImageCaptions"));
             TextContent = row.GetString("TextContent");
-            BackgroundImageId = row.GetString("背景图片", row.GetString("BackgroundImageId"));
+            BackgroundImageId = row.GetString("\u80cc\u666f\u56fe\u7247", row.GetString("BackgroundImageId"));
+            TriggerUnitId = row.GetString("\u89e6\u53d1\u5355\u4f4did", row.GetString("TriggerUnitId"));
+            RoundNumber = row.GetInt("\u56de\u5408\u6570", row.GetInt("RoundNumber"));
             TextSegments = Split(TextContent);
             if (TextSegments.Count == 0 && !string.IsNullOrEmpty(TextContent))
             {
@@ -53,6 +55,10 @@ namespace TwelveMoons.Core.Runtime
         public string TextContent { get; }
 
         public string BackgroundImageId { get; }
+
+        public string TriggerUnitId { get; }
+
+        public int RoundNumber { get; }
 
         public List<string> TextSegments { get; }
 

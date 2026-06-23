@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using TwelveMoons.Core;
 using TwelveMoons.Core.Runtime;
@@ -11,6 +11,11 @@ namespace TwelveMoons.City
     [DisallowMultipleComponent]
     public sealed class CityPointView : MonoBehaviour
     {
+        private const string BuildingActorPointName = "\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d";
+        private const string PointPortraitName = "\u70b9\u4f4d\u4eba\u7269\u7acb\u7ed8";
+        private const string EventPromptName = "\u4e8b\u4ef6\u63d0\u793a";
+        private const string LegacyManName = "Man";
+
         [Header("点位配置匹配：对应 CityPointConfig.PointId")]
         [Tooltip("\u57ce\u533a\u70b9\u4f4d ID\uff1b\u5fc5\u987b\u4e0e CityPointConfig \u8868\u4e2d\u7684 PointId \u5b8c\u5168\u4e00\u81f4\uff0c\u6ce8\u518c\u5668\u4f1a\u7528\u5b83\u5339\u914d\u914d\u7f6e\u3002")]
         [SerializeField] private string pointId;
@@ -27,10 +32,8 @@ namespace TwelveMoons.City
         [Header("\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d\uff1a\u652f\u7ebf\u4e8b\u4ef6\u51fa\u73b0\u65f6\u663e\u793a")]
         [Tooltip("\u662f\u5426\u5141\u8bb8\u8be5\u70b9\u4f4d\u751f\u6210\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d\uff1b\u5f53\u524d\u56de\u5408\u6709\u652f\u7ebf\u4e8b\u4ef6\u65f6\u4f1a\u81ea\u52a8\u663e\u793a\u3002")]
         [SerializeField] private bool showPortrait = true;
-        [Tooltip("\u6ca1\u6709\u652f\u7ebf\u89d2\u8272 ID \u65f6\u4f7f\u7528\u7684\u4e34\u65f6\u4eba\u7269\u7acb\u7ed8\u8d44\u6e90\u8def\u5f84\u3002")]
-        [SerializeField] private string portraitResourceId = "Art/Art/Character/IMG_0940";
-        [Tooltip("\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d Prefab \u7684 Resources \u8def\u5f84\uff1b\u8fd0\u884c\u65f6\u5b9e\u4f8b\u5316\u4e3a\u5f53\u524d CityPointView \u5efa\u7b51\u7269\u4f53\u7684\u5b50\u7269\u4f53\u3002")]
-        [SerializeField] private string portraitPrefabResourcePath = "Prefabs/UI/\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d";
+        [Tooltip("\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d\u4e0b\u7684\u201c\u4e8b\u4ef6\u63d0\u793a\u201d\u5b50\u7269\u4f53\uff1b\u4ec5\u5f53\u5f53\u524d\u70b9\u4f4d\u6709\u53ef\u89e6\u53d1\u4e8b\u4ef6\u65f6\u663e\u793a\uff0c\u65e0\u4e8b\u4ef6\u65f6\u5fc5\u987b\u5173\u95ed\u3002")]
+        [SerializeField] private Transform eventPrompt;
         [Tooltip("\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d\u76f8\u5bf9\u5efa\u7b51\u5305\u56f4\u76d2\u9876\u90e8\u7684\u504f\u79fb\uff1b\u6570\u503c\u8fc7\u9ad8\u4f1a\u8ba9\u70b9\u4f4d\u6f02\u5728\u7a7a\u4e2d\u3002")]
         [SerializeField] private Vector3 portraitLocalOffset = new Vector3(0f, -0.15f, 0f);
         [Tooltip("\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d\u751f\u6210\u65f6\u5f3a\u5236\u4f7f\u7528\u7684 Y \u8f74\u504f\u79fb\uff1b\u4f18\u5148\u7ea7\u9ad8\u4e8e\u65e7\u7248\u504f\u79fb\u5b57\u6bb5\uff0c\u7528\u4e8e\u4fdd\u8bc1\u70b9\u4f4d\u76f8\u5bf9\u5efa\u7b51\u9876\u90e8\u4e0b\u79fb 0.4\u3002")]
@@ -39,8 +42,6 @@ namespace TwelveMoons.City
         [SerializeField] private Vector3 portraitLocalScale = Vector3.one;
         [Tooltip("\u517c\u5bb9\u65e7\u6570\u636e\u7684\u989d\u5916\u538b\u7f29\u500d\u7387\uff1b\u5f53\u524d\u8fd0\u884c\u65f6\u4e0d\u518d\u4f7f\u7528\u3002")]
         [SerializeField, Range(0.01f, 1f)] private float portraitMapScaleMultiplier = 1f;
-        [Tooltip("\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d\u6e32\u67d3\u6392\u5e8f\uff1b\u6570\u503c\u8d8a\u5927\u8d8a\u9760\u524d\u3002")]
-        [SerializeField] private int portraitSortingOrder = 50;
         [Tooltip("\u542f\u7528\u540e\uff0c\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d\u4f1a\u5728\u6bcf\u5e27\u9762\u5411\u5f53\u524d\u4e3b\u6444\u50cf\u673a\u3002")]
         [SerializeField] private bool portraitFacesCamera = true;
 
@@ -107,6 +108,7 @@ namespace TwelveMoons.City
         public CityPointDefinition Definition => definition;
         public string ActiveSideEventId => activeSideEventDefinition != null ? activeSideEventDefinition.SideEventId : string.Empty;
         public bool HasActiveSideEvent => activeSideEventDefinition != null;
+        public bool IsEventPromptVisible => eventPrompt != null && eventPrompt.gameObject.activeSelf;
         public bool IsHoverOutlineVisible => isHoverOutlineVisible;
         public bool IsCityInteractionCurrentlyEnabled => IsCityInteractionEnabled();
         public bool IsHoverOutlineRuntimeReady =>
@@ -253,37 +255,29 @@ namespace TwelveMoons.City
         {
             if (!visible || (!showPortrait && !HasActiveSideEvent))
             {
-                if (portraitRenderer == null)
-                {
-                    portraitRenderer = FindExistingPortraitRenderer();
-                }
-
-                if (portraitRenderer != null)
-                {
-                    portraitRenderer.gameObject.SetActive(false);
-                }
-
+                DisablePortraitRenderer();
+                SetEventPromptVisible(false);
                 return;
             }
 
-            var renderer = EnsurePortraitRenderer();
-            if (renderer == null)
+            EnsurePortraitRenderer();
+            DisablePortraitRenderer();
+            SetEventPromptVisible(HasActiveSideEvent);
+        }
+
+        private void DisablePortraitRenderer()
+        {
+            if (portraitRenderer == null)
             {
-                return;
+                portraitRenderer = FindExistingPortraitRenderer();
             }
 
-            var portraitId = HasActiveSideEvent && !string.IsNullOrEmpty(activeSideEventDefinition.DisplayCharacterId)
-                ? activeSideEventDefinition.DisplayCharacterId
-                : portraitResourceId;
-            renderer.gameObject.SetActive(true);
-            renderer.sprite = CharacterPlaceholderPortraitProvider.LoadPortrait(portraitId);
-            renderer.enabled = renderer.sprite != null;
-            renderer.sortingOrder = portraitSortingOrder;
-            var portraitRoot = GetPortraitRootTransform(renderer);
-            portraitRoot.localPosition = GetLocalPositionAboveBounds(GetPortraitPlacementOffset());
-            portraitRoot.localScale = Vector3.one;
-            portraitRoot.localRotation = Quaternion.identity;
-            FacePortraitToCamera();
+            if (portraitRenderer != null)
+            {
+                portraitRenderer.sprite = null;
+                portraitRenderer.enabled = false;
+                portraitRenderer.gameObject.SetActive(false);
+            }
         }
 
         private Vector3 GetPortraitPlacementOffset()
@@ -341,20 +335,27 @@ namespace TwelveMoons.City
         {
             return renderer != null &&
                 (renderer.transform == portraitRenderer?.transform ||
-                 renderer.transform.name == "建筑人物点位" ||
-                 renderer.transform.name == "点位人物立绘");
+                 renderer.transform.name == BuildingActorPointName ||
+                 renderer.transform.name == PointPortraitName ||
+                 renderer.transform.name == EventPromptName ||
+                 renderer.transform.name == LegacyManName);
         }
 
         private SpriteRenderer FindExistingPortraitRenderer()
         {
-            var namedPortraitTransform = transform.Find("建筑人物点位") ?? transform.Find("点位人物立绘");
-            if (namedPortraitTransform != null && namedPortraitTransform.TryGetComponent<SpriteRenderer>(out var namedRenderer))
+            var namedPortraitTransform = transform.Find(BuildingActorPointName) ?? transform.Find(PointPortraitName);
+            if (namedPortraitTransform != null)
             {
-                return namedRenderer;
+                return namedPortraitTransform
+                    .GetComponentsInChildren<SpriteRenderer>(true)
+                    .FirstOrDefault(renderer =>
+                        renderer != null &&
+                        renderer.transform.name != EventPromptName &&
+                        renderer.transform.name != LegacyManName);
             }
 
             return GetComponentsInChildren<SpriteRenderer>(true)
-                .FirstOrDefault(renderer => renderer != null && renderer.transform != transform);
+                .FirstOrDefault(renderer => renderer != null && renderer.transform != transform && !IsPortraitRenderer(renderer));
         }
 
         private SpriteRenderer EnsurePortraitRenderer()
@@ -364,30 +365,45 @@ namespace TwelveMoons.City
                 return portraitRenderer;
             }
 
-            var portraitTransform = transform.Find("建筑人物点位") ?? transform.Find("点位人物立绘");
+            var portraitTransform = transform.Find(BuildingActorPointName) ?? transform.Find(PointPortraitName);
             if (portraitTransform == null)
             {
-                var prefab = string.IsNullOrWhiteSpace(portraitPrefabResourcePath)
-                    ? null
-                    : Resources.Load<GameObject>(portraitPrefabResourcePath);
-                var portraitObject = prefab != null
-                    ? Instantiate(prefab, transform, false)
-                    : new GameObject("建筑人物点位");
-                portraitObject.name = "建筑人物点位";
-                portraitTransform = portraitObject.transform;
-                if (portraitTransform.parent != transform)
-                {
-                    portraitTransform.SetParent(transform, false);
-                }
+                return null;
             }
 
-            portraitRenderer = portraitTransform.GetComponentInChildren<SpriteRenderer>(true);
-            if (portraitRenderer == null)
-            {
-                portraitRenderer = portraitTransform.gameObject.AddComponent<SpriteRenderer>();
-            }
-
+            portraitRenderer = portraitTransform.GetComponentsInChildren<SpriteRenderer>(true)
+                .FirstOrDefault(renderer =>
+                    renderer != null &&
+                    renderer.transform.name != EventPromptName &&
+                    renderer.transform.name != LegacyManName);
             return portraitRenderer;
+        }
+
+        private void SetEventPromptVisible(bool visible)
+        {
+            var prompt = ResolveEventPromptTransform();
+            if (prompt != null && prompt.gameObject.activeSelf != visible)
+            {
+                prompt.gameObject.SetActive(visible);
+            }
+        }
+
+        private Transform ResolveEventPromptTransform()
+        {
+            if (eventPrompt != null)
+            {
+                return eventPrompt;
+            }
+
+            var portraitRoot = transform.Find(BuildingActorPointName) ?? transform.Find(PointPortraitName);
+            eventPrompt = portraitRoot != null ? portraitRoot.Find(EventPromptName) : null;
+            if (eventPrompt == null)
+            {
+                eventPrompt = GetComponentsInChildren<Transform>(true)
+                    .FirstOrDefault(candidate => candidate != null && candidate.name == EventPromptName);
+            }
+
+            return eventPrompt;
         }
 
         private Transform GetPortraitRootTransform(SpriteRenderer renderer)
@@ -408,7 +424,18 @@ namespace TwelveMoons.City
 
         private void FacePortraitToCamera()
         {
-            if (!portraitFacesCamera || portraitRenderer == null || !portraitRenderer.gameObject.activeInHierarchy)
+            if (!portraitFacesCamera)
+            {
+                return;
+            }
+
+            var faceTarget = ResolveBuildingActorPointTransform();
+            if (faceTarget == null && portraitRenderer != null && portraitRenderer.gameObject.activeInHierarchy)
+            {
+                faceTarget = GetPortraitRootTransform(portraitRenderer);
+            }
+
+            if (faceTarget == null || !faceTarget.gameObject.activeInHierarchy)
             {
                 return;
             }
@@ -423,14 +450,24 @@ namespace TwelveMoons.City
                 return;
             }
 
-            var portraitRoot = GetPortraitRootTransform(portraitRenderer);
-            var direction = portraitRoot.position - portraitCamera.transform.position;
+            var direction = portraitCamera.transform.position - faceTarget.position;
             if (direction.sqrMagnitude <= 0.0001f)
             {
                 return;
             }
 
-            portraitRoot.rotation = Quaternion.LookRotation(direction, Vector3.up);
+            faceTarget.rotation = Quaternion.LookRotation(direction, Vector3.up);
+        }
+
+        private Transform ResolveBuildingActorPointTransform()
+        {
+            var marker = transform.Find(BuildingActorPointName);
+            if (marker != null)
+            {
+                return marker;
+            }
+
+            return transform.Find(PointPortraitName);
         }
 
         private void OnMouseEnter()

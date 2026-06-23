@@ -1958,7 +1958,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4135996185885245705}
   - component: {fileID: 7966770155252981860}
-  - component: {fileID: 2229883153895784439}
   - component: {fileID: 7867798744050212359}
   - component: {fileID: 4074076960088735177}
   - component: {fileID: 335091128867315118}
@@ -2002,36 +2001,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4344240126542744959}
   m_CullTransparentMesh: 1
---- !u!114 &2229883153895784439
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4344240126542744959}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.1, g: 0.1, b: 0.095, a: 0.94}
-  m_RaycastTarget: 0
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
 --- !u!114 &7867798744050212359
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2071,6 +2040,7 @@ MonoBehaviour:
   feedbackText: {fileID: 6694862463527815030}
   storyAreaButton: {fileID: 2371352902284689765}
   typewriterCharactersPerSecond: 42
+  openingWorkNarrationDelayBeforeBlackScreen: 1
   dialoguePanel: {fileID: 5094277088042378479}
   leftPortrait: {fileID: 6026828978087732803}
   rightPortrait: {fileID: 2044342069127599425}
@@ -2123,6 +2093,7 @@ MonoBehaviour:
   openingSkeletonActivateRiseDistance: 180
   openingSkeletonActivateDuration: 1.4
   openingSkeletonReturnDuration: 0.9
+  openingSkeletonPeakHoldDuration: 1
   openingSkeletonActivateShakeAmplitude: 16
   openingSkeletonActivateShakeFrequency: 22
   openingSkeletonSnapshot: "\u5F00\u573A\u9AB7\u9AC5\uFF1A\u7B49\u5F85 S0001"

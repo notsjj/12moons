@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Linq;
 using TwelveMoons.Core.Config;
 using TwelveMoons.Core.Runtime;
@@ -86,6 +86,12 @@ namespace TwelveMoons.Editor.Runtime
                 throw new InvalidDataException("The first round plot task must queue S0001 so the game opens with the opening story.");
             }
 
+            ValidateStoryConfigScheduleFields(storyTable);
+            ValidateOpeningRoundStoryTriggers(storyTable, csvProvider.LoadTable("SideEventConfig"));
+            ValidateStoryConfigReferences(storyTable, taskTable);
+            ValidateSideEventReferences(csvProvider, storyTable, taskTable);
+            ValidateOpeningStoryBackground(storyTable);
+            ValidateDialogueBackgrounds(dialogueTable);
             ValidateDialoguePortraits(dialogueTable);
             ValidateOpeningSkeletonPresentationCues(dialogueTable);
             ValidateMapSprites();
@@ -118,12 +124,202 @@ namespace TwelveMoons.Editor.Runtime
         {
             var backgroundId = storyTable.Rows
                 .FirstOrDefault(row => row.GetString("StoryId") == "S0001")
-                ?.GetString("背景图片");
-            if (backgroundId != "宝库and占星室")
+                ?.GetString("\u80cc\u666f\u56fe\u7247");
+            if (backgroundId != "\u5b9d\u5e93and\u5360\u661f\u5ba4")
             {
-                throw new InvalidDataException("S0001 must configure 背景图片=宝库and占星室 in StoryConfig.");
+                throw new InvalidDataException("S0001 must configure \u80cc\u666f\u56fe\u7247=\u5b9d\u5e93and\u5360\u661f\u5ba4 in StoryConfig.");
             }
         }
+
+        private static void ValidateStoryConfigScheduleFields(ConfigTable storyTable)
+        {
+            var openingStory = storyTable.Rows.FirstOrDefault(row => row.GetString("StoryId") == "S0001");
+            if (openingStory == null ||
+                openingStory.GetString("\u89e6\u53d1\u5355\u4f4did") != "\u516c\u6587\u524d" ||
+                openingStory.GetInt("\u56de\u5408\u6570") != 1)
+            {
+                throw new InvalidDataException("StoryConfig S0001 must configure \u89e6\u53d1\u5355\u4f4did=\u516c\u6587\u524d and \u56de\u5408\u6570=1.");
+            }
+
+            var cityIntroStory = storyTable.Rows.FirstOrDefault(row => row.GetString("StoryId") == "S0003");
+            if (cityIntroStory == null ||
+                cityIntroStory.GetString("\u89e6\u53d1\u5355\u4f4did") != "\u63a2\u7d22\u524d" ||
+                cityIntroStory.GetInt("\u56de\u5408\u6570") != 1)
+            {
+                throw new InvalidDataException("StoryConfig S0003 must configure the round 1 \u63a2\u7d22\u524d trigger.");
+            }
+
+            var upperCityPoint = storyTable.Rows.FirstOrDefault(row => row.GetString("StoryId") == "S0034");
+            if (upperCityPoint == null || upperCityPoint.GetString("\u89e6\u53d1\u5355\u4f4did") != "P0009|P0011|P0012")
+            {
+                throw new InvalidDataException("Upper-city scheduled stories must use the P0009|P0011|P0012 random point pool.");
+            }
+        }
+
+        private static void ValidateOpeningRoundStoryTriggers(ConfigTable storyTable, ConfigTable sideEventTable)
+        {
+            AssertStoryTrigger(storyTable, "S0001", "公文前", 1);
+            AssertStoryTrigger(storyTable, "S0002", "公文1", 1);
+            AssertStoryTrigger(storyTable, "S0003", "探索前", 1);
+            AssertStoryTrigger(storyTable, "S0004", "P0013", 1);
+            AssertStoryTrigger(storyTable, "S0005", "P0003", 1);
+            AssertStoryTrigger(storyTable, "S0006", "P0004", 1);
+
+            var firstPointStories = new[] { "S0004", "S0005", "S0006" };
+            var sideEventStoryIds = sideEventTable.Rows
+                .Where(row => row.GetInt("Round") <= 1 && row.GetInt("ExpireRound", 1) >= 1)
+                .Select(row => row.GetString("StoryId"))
+                .ToHashSet();
+            if (!sideEventStoryIds.Contains("S0004"))
+            {
+                throw new InvalidDataException("Opening round S0004 must be reachable through SideEventConfig SE0001 at P0013.");
+            }
+
+            foreach (var storyId in firstPointStories.Where(storyId => storyId != "S0004"))
+            {
+                var row = storyTable.Rows.FirstOrDefault(candidate => candidate.GetString("StoryId") == storyId);
+                if (row == null || string.IsNullOrEmpty(row.GetString("触发单位id")))
+                {
+                    throw new InvalidDataException($"Opening round point story {storyId} must keep a StoryConfig point trigger so CitySideEventService can synthesize it.");
+                }
+            }
+        }
+
+        private static void AssertStoryTrigger(ConfigTable storyTable, string storyId, string triggerUnitId, int roundNumber)
+        {
+            var row = storyTable.Rows.FirstOrDefault(candidate => candidate.GetString("StoryId") == storyId);
+            if (row == null ||
+                row.GetString("触发单位id") != triggerUnitId ||
+                row.GetInt("回合数") != roundNumber)
+            {
+                throw new InvalidDataException($"StoryConfig {storyId} must configure {triggerUnitId} at round {roundNumber} for the opening six-story flow.");
+            }
+        }
+
+        private static void ValidateStoryConfigReferences(ConfigTable storyTable, ConfigTable taskTable)
+        {
+            var taskIds = taskTable.Rows
+                .Select(row => row.GetString("TaskId"))
+                .Where(IsTaskId)
+                .ToHashSet();
+
+            foreach (var row in storyTable.Rows.Where(row => IsStoryId(row.GetString("StoryId"))))
+            {
+                var story = new StoryDefinition(row);
+                if (story.StoryType != StoryType.Dialogue)
+                {
+                    throw new InvalidDataException($"StoryConfig {story.StoryId} must use StoryType=Dialogue.");
+                }
+
+                if (string.IsNullOrEmpty(story.StoryContentAssetId) ||
+                    !File.Exists(Path.Combine(PlotConfigDirectory, story.StoryContentAssetId + ".csv")))
+                {
+                    throw new FileNotFoundException($"StoryConfig {story.StoryId} references missing dialogue CSV: {story.StoryContentAssetId}.");
+                }
+
+                if (string.IsNullOrEmpty(story.BackgroundImageId) ||
+                    !StoryImageResourceProvider.TryLoadSprite(story.BackgroundImageId, MapRoots, out _))
+                {
+                    throw new InvalidDataException($"StoryConfig {story.StoryId} references missing background sprite: {story.BackgroundImageId}.");
+                }
+
+                if (!string.IsNullOrEmpty(story.TriggerTaskId) && !taskIds.Contains(story.TriggerTaskId))
+                {
+                    throw new InvalidDataException($"StoryConfig {story.StoryId} TriggerTaskId is missing from TaskConfig: {story.TriggerTaskId}.");
+                }
+            }
+        }
+
+        private static void ValidateSideEventReferences(CsvConfigProvider csvProvider, ConfigTable storyTable, ConfigTable taskTable)
+        {
+            var sideEventTable = csvProvider.LoadTable("SideEventConfig");
+            var pointTable = csvProvider.LoadTable("CityPointConfig");
+            var characterTable = csvProvider.LoadTable("CharacterConfig");
+
+            var storyIds = storyTable.Rows.Select(row => row.GetString("StoryId")).Where(IsStoryId).ToHashSet();
+            var taskIds = taskTable.Rows.Select(row => row.GetString("TaskId")).Where(IsTaskId).ToHashSet();
+            var pointIds = pointTable.Rows.Select(row => row.GetString("PointId")).Where(IsPointId).ToHashSet();
+            var characterIds = characterTable.Rows.Select(row => row.GetString("CharacterId")).Where(IsCharacterId).ToHashSet();
+
+            foreach (var row in sideEventTable.Rows.Where(row => IsSideEventId(row.GetString("SideEventId"))))
+            {
+                var sideEventId = row.GetString("SideEventId");
+                var storyId = row.GetString("StoryId");
+                var pointId = row.GetString("PointId");
+                var characterId = row.GetString("DisplayCharacterId");
+                var requiredTaskId = row.GetString("RequiredTaskId");
+
+                if (!storyIds.Contains(storyId))
+                {
+                    throw new InvalidDataException($"SideEventConfig {sideEventId} references missing StoryId: {storyId}.");
+                }
+
+                if (!pointIds.Contains(pointId))
+                {
+                    throw new InvalidDataException($"SideEventConfig {sideEventId} references missing PointId: {pointId}.");
+                }
+
+                if (!characterIds.Contains(characterId))
+                {
+                    throw new InvalidDataException($"SideEventConfig {sideEventId} references missing DisplayCharacterId: {characterId}.");
+                }
+
+                if (!string.IsNullOrEmpty(requiredTaskId) && !taskIds.Contains(requiredTaskId))
+                {
+                    throw new InvalidDataException($"SideEventConfig {sideEventId} references missing RequiredTaskId: {requiredTaskId}.");
+                }
+            }
+        }
+
+        private static bool IsStoryId(string value)
+        {
+            return HasPrefixedFourDigitId(value, 'S');
+        }
+
+        private static bool IsTaskId(string value)
+        {
+            return HasPrefixedFourDigitId(value, 'T');
+        }
+
+        private static bool IsPointId(string value)
+        {
+            return HasPrefixedFourDigitId(value, 'P');
+        }
+
+        private static bool IsCharacterId(string value)
+        {
+            return HasPrefixedFourDigitId(value, 'C');
+        }
+
+        private static bool IsSideEventId(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value) &&
+                   value.Length == 6 &&
+                   value.StartsWith("SE", System.StringComparison.Ordinal) &&
+                   value.Skip(2).All(char.IsDigit);
+        }
+
+        private static bool HasPrefixedFourDigitId(string value, char prefix)
+        {
+            return !string.IsNullOrWhiteSpace(value) &&
+                   value.Length == 5 &&
+                   value[0] == prefix &&
+                   value.Skip(1).All(char.IsDigit);
+        }
+        private static void ValidateDialogueBackgrounds(ConfigTable dialogueTable)
+        {
+            var missingBackgrounds = dialogueTable.Rows
+                .Select(row => row.GetString("\u80cc\u666fID", row.GetString("BackgroundImageId")))
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Distinct()
+                .Where(id => !StoryImageResourceProvider.TryLoadSprite(id, MapRoots, out _))
+                .ToList();
+            if (missingBackgrounds.Count > 0)
+            {
+                throw new InvalidDataException("Plot dialogue backgrounds without map sprite resources: " + string.Join(", ", missingBackgrounds));
+            }
+        }
+
         private static void ValidateDialoguePortraits(ConfigTable dialogueTable)
         {
             var missingCharacters = dialogueTable.Rows
@@ -194,4 +390,3 @@ namespace TwelveMoons.Editor.Runtime
 
     }
 }
-

@@ -17,6 +17,8 @@ namespace TwelveMoons.EditorTools.Runtime
             ValidateS0001DoesNotAutoAdvanceToS0002();
             ValidateS0001EndsBackAtDeskAndShowsBeforeDocumentActor();
             ValidateOpeningTutorialHandlesBeforeGenericBlackFade();
+            ValidateExploreBeforeWaitsForCityCameraCompletion();
+            ValidateCityEntryCoroutineRunnerSurvivesDeskHide();
 
             Debug.Log("Opening desk flow smoke test passed. S0001 returns to the desk, waits for the before-document actor click, then proceeds to S0002, document flow, and city entry in order.");
         }
@@ -98,6 +100,63 @@ namespace TwelveMoons.EditorTools.Runtime
             if (openingIndex < 0 || genericFadeIndex < 0 || openingIndex > genericFadeIndex)
             {
                 throw new InvalidDataException("S0001 结束时必须先由开场教学流程接管，再进入普通剧情黑场判断，否则剧情人物不会弹出。");
+            }
+        }
+
+        private static void ValidateExploreBeforeWaitsForCityCameraCompletion()
+        {
+            const string sourcePath = "Assets/Scripts/UI/DeskLoopController.cs";
+            var source = File.ReadAllText(sourcePath);
+            var cameraWaitIndex = source.IndexOf("while (!isFinished || !isCameraFinished)", System.StringComparison.Ordinal);
+            var exploreBeforeIndex = source.IndexOf("yield return PlayScheduledExploreBeforeStoryAfterCityEntry();", System.StringComparison.Ordinal);
+            if (cameraWaitIndex < 0 || exploreBeforeIndex < 0 || exploreBeforeIndex < cameraWaitIndex)
+            {
+                throw new InvalidDataException("Explore-before stories must trigger after the city transition and camera move have both finished.");
+            }
+
+            var methodIndex = source.IndexOf("private IEnumerator PlayScheduledExploreBeforeStoryAfterCityEntry()", System.StringComparison.Ordinal);
+            var delayIndex = source.IndexOf("new WaitForSecondsRealtime(1f)", System.StringComparison.Ordinal);
+            if (methodIndex < 0 || delayIndex < methodIndex)
+            {
+                throw new InvalidDataException("Explore-before stories must wait 1 second after the city camera stops.");
+            }
+
+            if (!source.Contains("var runner = GetActiveCoroutineRunner()") ||
+                source.Contains("StartCoroutine(PlayEnterCityTransition") ||
+                source.Contains("StartCoroutine(PlayEnterCityCameraOnlyTransition"))
+            {
+                throw new InvalidDataException("City-entry coroutines must run on an active runner and must not be interrupted when the desk object is hidden.");
+            }
+        }
+
+        private static void ValidateCityEntryCoroutineRunnerSurvivesDeskHide()
+        {
+            var deskObject = new GameObject("OpeningDeskFlow_DeskRunnerTest");
+            var bootstrapObject = new GameObject("OpeningDeskFlow_BootstrapRunnerTest");
+            try
+            {
+                var controller = deskObject.AddComponent<DeskLoopController>();
+                var bootstrap = bootstrapObject.AddComponent<BaseSceneUIBootstrap>();
+                SetPrivateField(controller, "uiBootstrap", bootstrap);
+
+                var method = typeof(DeskLoopController).GetMethod(
+                    "GetActiveCoroutineRunner",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                if (method == null)
+                {
+                    throw new InvalidDataException("DeskLoopController ?????????????????");
+                }
+
+                var runner = method.Invoke(controller, null);
+                if (!ReferenceEquals(runner, bootstrap))
+                {
+                    throw new InvalidDataException("????????????? BaseSceneUIBootstrap ???? ShowCity ?? DeskPanel ???????????");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(deskObject);
+                Object.DestroyImmediate(bootstrapObject);
             }
         }
 

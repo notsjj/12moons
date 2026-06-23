@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using TwelveMoons.City;
 using TwelveMoons.Core;
@@ -17,6 +19,7 @@ namespace TwelveMoons.EditorTools.Runtime
 
             try
             {
+                ValidateBaseSceneHasAllPlotPointViews();
                 var configManager = root.AddComponent<ConfigManager>();
                 ConfigureConfigManager(configManager);
                 configManager.BuildDefaultProviders();
@@ -56,12 +59,43 @@ namespace TwelveMoons.EditorTools.Runtime
 
                 ValidatePointHoverOutlineApi();
                 ValidatePointInteractionRequiresCityEntry();
+                ValidatePointEventPromptVisibility();
+                ValidateBuildingActorPointFacesCamera();
+                ValidateNoRuntimeMarkerGeneration();
 
                 Debug.Log("City point smoke test passed. All P0001-P0014 CityPointConfig ids match CityPointView instances, with no missing or duplicate point ids.");
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        private static void ValidateBaseSceneHasAllPlotPointViews()
+        {
+            var providerRoot = Path.Combine(Application.dataPath, "StreamingAssets", "Configs", "Plot");
+            var csvProvider = new CsvConfigProvider(providerRoot);
+            var pointTable = csvProvider.LoadTable("CityPointConfig");
+            var requiredPointIds = pointTable.Rows
+                .Select(row => row.GetString("PointId"))
+                .Where(IsPointId)
+                .OrderBy(id => id)
+                .ToArray();
+            var sceneText = File.ReadAllText("Assets/Scenes/BaseScene.unity");
+            var missingIds = requiredPointIds
+                .Where(pointId => !sceneText.Contains($"pointId: {pointId}"))
+                .ToArray();
+            if (missingIds.Length > 0)
+            {
+                throw new InvalidOperationException("BaseScene is missing CityPointView point ids from Plot CityPointConfig: " + string.Join(", ", missingIds));
+            }
+
+            var duplicateIds = requiredPointIds
+                .Where(pointId => sceneText.Split(new[] { $"pointId: {pointId}" }, StringSplitOptions.None).Length - 1 != 1)
+                .ToArray();
+            if (duplicateIds.Length > 0)
+            {
+                throw new InvalidOperationException("BaseScene must contain exactly one CityPointView for each Plot CityPointConfig id: " + string.Join(", ", duplicateIds));
             }
         }
 
@@ -90,6 +124,108 @@ namespace TwelveMoons.EditorTools.Runtime
             }
         }
 
+
+        private static void ValidatePointEventPromptVisibility()
+        {
+            var root = new GameObject("CityPointEventPromptRoot");
+            try
+            {
+                var pointView = root.AddComponent<CityPointView>();
+                pointView.Configure("P0001");
+                var portraitRoot = new GameObject("\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d");
+                portraitRoot.transform.SetParent(root.transform, false);
+                var model = new GameObject("Man", typeof(SpriteRenderer));
+                model.transform.SetParent(portraitRoot.transform, false);
+                var modelRenderer = model.GetComponent<SpriteRenderer>();
+                modelRenderer.enabled = true;
+                var prompt = new GameObject("\u4e8b\u4ef6\u63d0\u793a", typeof(SpriteRenderer));
+                prompt.transform.SetParent(portraitRoot.transform, false);
+                prompt.SetActive(true);
+
+                pointView.RefreshPortraitDisplay();
+                if (pointView.IsEventPromptVisible || prompt.activeSelf)
+                {
+                    throw new InvalidOperationException("CityPointView must keep the event prompt hidden when no event is bound.");
+                }
+
+                pointView.BindSideEvent(CreateSideEventDefinition("SE_TEST", "P0001", "S0001"), null);
+                if (!pointView.IsEventPromptVisible || !prompt.activeSelf)
+                {
+                    throw new InvalidOperationException("CityPointView must show the event prompt when an event is bound.");
+                }
+
+                if (!model.activeSelf || !modelRenderer.enabled)
+                {
+                    throw new InvalidOperationException("CityPointView must keep the building actor point model visible while only hiding generated character portrait sprites.");
+                }
+
+                pointView.ClearSideEventBinding();
+                if (pointView.IsEventPromptVisible || prompt.activeSelf)
+                {
+                    throw new InvalidOperationException("CityPointView must hide the event prompt after the event binding is cleared.");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        private static void ValidateBuildingActorPointFacesCamera()
+        {
+            var root = new GameObject("CityPointBuildingActorBillboardRoot");
+            var cameraObject = new GameObject("CityPointBuildingActorBillboardCamera", typeof(Camera));
+            try
+            {
+                cameraObject.tag = "MainCamera";
+                cameraObject.transform.position = new Vector3(0f, 0f, -10f);
+
+                var pointView = root.AddComponent<CityPointView>();
+                pointView.Configure("P0001");
+
+                var marker = new GameObject("\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d");
+                marker.transform.SetParent(root.transform, false);
+                marker.transform.position = Vector3.zero;
+                marker.transform.rotation = Quaternion.identity;
+
+                var model = new GameObject("Man", typeof(SpriteRenderer));
+                model.transform.SetParent(marker.transform, false);
+
+                typeof(CityPointView)
+                    .GetMethod("LateUpdate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    ?.Invoke(pointView, null);
+
+                var expected = Quaternion.LookRotation(cameraObject.transform.position - marker.transform.position, Vector3.up);
+                if (Quaternion.Angle(marker.transform.rotation, expected) > 0.1f)
+                {
+                    throw new InvalidOperationException("CityPointView must rotate the building actor point root toward MainCamera even when no generated portrait renderer exists.");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+                UnityEngine.Object.DestroyImmediate(cameraObject);
+            }
+        }
+
+        private static void ValidateNoRuntimeMarkerGeneration()
+        {
+            var root = new GameObject("CityPointNoRuntimeMarkerGenerationRoot");
+            try
+            {
+                var pointView = root.AddComponent<CityPointView>();
+                pointView.Configure("P0001");
+                pointView.BindSideEvent(CreateSideEventDefinition("SE_TEST", "P0001", "S0001"), null);
+                if (root.transform.Find("\u5efa\u7b51\u4eba\u7269\u70b9\u4f4d") != null)
+                {
+                    throw new InvalidOperationException("CityPointView must not create building actor point children at runtime; they must be placed in the scene for manual adjustment.");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
 
         private static void ValidatePointInteractionRequiresCityEntry()
         {
@@ -129,6 +265,33 @@ namespace TwelveMoons.EditorTools.Runtime
                 UnityEngine.Object.DestroyImmediate(root);
                 UnityEngine.Object.DestroyImmediate(pointObject);
             }
+        }
+
+        private static SideEventDefinition CreateSideEventDefinition(string sideEventId, string pointId, string storyId)
+        {
+            return new SideEventDefinition(new ConfigRow(new Dictionary<string, string>
+            {
+                { "SideEventId", sideEventId },
+                { "Round", "1" },
+                { "PointId", pointId },
+                { "DisplayCharacterId", "C0001" },
+                { "StoryId", storyId },
+                { "ExpireRound", "1" },
+                { "IsOneTime", "1" },
+                { "RequiredTaskId", string.Empty },
+                { "RequiredTaskState", string.Empty },
+                { "RequiredItemId", string.Empty },
+                { "RequiredItemCount", "0" },
+                { "Remark", string.Empty }
+            }));
+        }
+
+        private static bool IsPointId(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value) &&
+                   value.Length == 5 &&
+                   value[0] == 'P' &&
+                   value.Skip(1).All(char.IsDigit);
         }
 
         private static void SetGameEntryRoots(GameEntry entry, GameObject deskRoot, GameObject cityRoot)

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using DG.Tweening;
@@ -50,6 +50,8 @@ namespace TwelveMoons.UI
 
         [Header("对话面板：显示角色、对白、继续按钮和选项")]
         [SerializeField] private GameObject dialoguePanel;
+        [Tooltip("\u5bf9\u8bdd\u9762\u677f\u81ea\u8eab\u7684 Image\uff1b\u5267\u60c5\u884c\u7684\u80cc\u666fID \u4f1a\u4f18\u5148\u66ff\u6362\u8fd9\u5f20\u56fe\u7247\uff0c\u672a\u62d6\u5f15\u7528\u65f6\u81ea\u52a8\u8bfb\u53d6\u5bf9\u8bdd\u9762\u677f\u4e0a\u7684 Image\u3002")]
+        [SerializeField] private Image dialogueBackgroundImage;
         [SerializeField] private Image leftPortrait;
         [SerializeField] private Image rightPortrait;
         [SerializeField] private Image speakerExpressionImage;
@@ -196,6 +198,7 @@ namespace TwelveMoons.UI
                 }
             }
 
+            ResolveDialogueBackgroundImage();
             CacheOriginalPortraitMaterials();
             EnsureStoryAreaButtonBinding();
         }
@@ -249,6 +252,14 @@ namespace TwelveMoons.UI
             DestroyRuntimeMaterial(ref leftPortraitOutlineMaterial);
             DestroyRuntimeMaterial(ref rightPortraitOutlineMaterial);
             DestroyRuntimeMaterial(ref speakerExpressionOutlineMaterial);
+        }
+
+        private void ResolveDialogueBackgroundImage()
+        {
+            if (dialogueBackgroundImage == null && dialoguePanel != null)
+            {
+                dialogueBackgroundImage = dialoguePanel.GetComponent<Image>();
+            }
         }
 
         private void CacheOriginalPortraitMaterials()
@@ -483,16 +494,30 @@ namespace TwelveMoons.UI
 
         private void ApplyStoryBackground(StoryDefinition story)
         {
-            if (rootBackgroundImage == null)
+            ApplyBackgroundImage(story == null ? string.Empty : story.BackgroundImageId);
+        }
+
+        private void ApplyDialogueBackground(StoryDefinition story, DialogueLineDefinition line)
+        {
+            var backgroundId = line != null && !string.IsNullOrEmpty(line.BackgroundImageId)
+                ? line.BackgroundImageId
+                : story == null ? string.Empty : story.BackgroundImageId;
+            ApplyBackgroundImage(backgroundId);
+        }
+
+        private void ApplyBackgroundImage(string backgroundId)
+        {
+            ResolveDialogueBackgroundImage();
+            var targetBackgroundImage = dialogueBackgroundImage != null ? dialogueBackgroundImage : rootBackgroundImage;
+            if (targetBackgroundImage == null)
             {
                 return;
             }
 
-            var backgroundId = story == null ? string.Empty : story.BackgroundImageId;
             var sprite = string.IsNullOrEmpty(backgroundId) ? null : StoryImageResourceProvider.LoadSprite(backgroundId);
-            rootBackgroundImage.sprite = sprite;
-            rootBackgroundImage.enabled = true;
-            rootBackgroundImage.color = sprite == null ? Color.black : Color.white;
+            targetBackgroundImage.sprite = sprite;
+            targetBackgroundImage.enabled = true;
+            targetBackgroundImage.color = sprite == null ? Color.black : Color.white;
         }
 
         private bool TryResolveSkeletonPresentationPoint(out Vector2 anchoredPosition)
@@ -538,6 +563,7 @@ namespace TwelveMoons.UI
             var line = playback.CurrentLine;
             if (line == null)
             {
+                ApplyDialogueBackground(playback.Story, null);
                 currentDialogueLineNumber = 0;
                 SetText(speakerNameText, "");
                 SetText(dialogueText, "");
@@ -547,6 +573,7 @@ namespace TwelveMoons.UI
                 return;
             }
 
+            ApplyDialogueBackground(playback.Story, line);
             currentDialogueLineNumber = GetDialogueLineNumber(line.LineId);
             UpdateDialogueCharacter(line);
             var speakerCharacterId = GetCurrentSpeakerCharacterId(line);

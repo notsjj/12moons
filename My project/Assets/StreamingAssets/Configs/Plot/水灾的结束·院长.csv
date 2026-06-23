@@ -1,4 +1,4 @@
-﻿LineId,StoryId,NextLineId,SpeakerCharacterId,Content,Position,IsChoice,RequiredItemIds,RequiredItemCounts,ConsumeItems,AddItemIds,AddItemCounts,Remark
-S0028_001,S0028,S0028_002,,伴随着新建成的排水系统完工，原本一窝蜂的涌入下城区的水流被源源不断的分流至学院之中。,0,false,,,,,,此事件为结算事件，目的为结算救灾情况：根据选择的不同，最后的描述与结果各不相同，根据小任务的完成情况与最后势力任务是否完成决定最后下城区的完成情况。
-S0028_002,S0028,S0028_003,,一个个新兴的工坊开始建立，最新的蒸汽动力机械开始推动着巨锤落下，催动着传送带运作。,0,false,,,,,,
-S0028_003,S0028,END,,在暴雨过后，下城区开始不断冒出生活用水被学院分走的小噪音，但是都被淹没在了蒸汽与工坊的轰鸣之中。,0,false,,,,,,
+﻿LineId,StoryId,NextLineId,SpeakerCharacterId,Content,Position,IsChoice,RequiredItemIds,RequiredItemCounts,ConsumeItems,AddItemIds,AddItemCounts,背景ID,Remark,演出
+S0028_001,S0028,S0028_002,,伴随着新建成的排水系统完工，原本一窝蜂的涌入下城区的水流被源源不断的分流至学院之中。,0,false,,,,,,学院背景,此事件为结算事件，目的为结算救灾情况：根据选择的不同，最后的描述与结果各不相同，根据小任务的完成情况与最后势力任务是否完成决定最后下城区的完成情况。,
+S0028_002,S0028,S0028_003,,一个个新兴的工坊开始建立，最新的蒸汽动力机械开始推动着巨锤落下，催动着传送带运作。,0,false,,,,,,学院背景,,
+S0028_003,S0028,END,,在暴雨过后，下城区开始不断冒出生活用水被学院分走的小噪音，但是都被淹没在了蒸汽与工坊的轰鸣之中。,0,false,,,,,,学院背景,,

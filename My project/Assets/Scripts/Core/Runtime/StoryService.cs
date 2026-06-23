@@ -722,8 +722,12 @@ namespace TwelveMoons.Core.Runtime
                     return 0;
                 case RuntimeStoryQueueTiming.StageStart:
                     return 1;
-                case RuntimeStoryQueueTiming.BeforeDocument:
+                case RuntimeStoryQueueTiming.ExploreBefore:
                     return 2;
+                case RuntimeStoryQueueTiming.BeforeDocument:
+                    return 3;
+                case RuntimeStoryQueueTiming.ExploreAfter:
+                    return 4;
                 default:
                     return 99;
             }

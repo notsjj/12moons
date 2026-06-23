@@ -313,11 +313,6 @@ namespace TwelveMoons.UI
 
         private MonoBehaviour GetActiveCoroutineRunner()
         {
-            if (isActiveAndEnabled)
-            {
-                return this;
-            }
-
             if (uiBootstrap != null && uiBootstrap.isActiveAndEnabled)
             {
                 return uiBootstrap;
@@ -329,11 +324,25 @@ namespace TwelveMoons.UI
             }
 
             var context = FindFirstObjectByType<BaseSceneUIContext>(FindObjectsInactive.Include);
-            return context != null && context.isActiveAndEnabled ? context : null;
+            if (context != null && context.isActiveAndEnabled)
+            {
+                return context;
+            }
+
+            return isActiveAndEnabled ? this : null;
         }
 
         private IEnumerator PlayEndRoundTransition()
         {
+            if (QueueAndStartScheduledStories(StoryTriggerUnitIds.ExploreAfter, RuntimeStoryQueueTiming.ExploreAfter))
+            {
+                RefreshButtons();
+                while (HasActiveStory() || HasQueuedStories(RuntimeStoryQueueTiming.ExploreAfter))
+                {
+                    yield return null;
+                }
+            }
+
             var blackPanel = uiBootstrap != null ? uiBootstrap.ShowBlackScreenPanel() : null;
             if (blackPanel != null)
             {
@@ -412,7 +421,15 @@ namespace TwelveMoons.UI
 
             newspaperPanel?.Hide();
             HideInventoryPanelForCity();
-            StartCoroutine(PlayCityButtonMaskRevealThenEnterCityTransition());
+            var runner = GetActiveCoroutineRunner();
+            if (runner == null)
+            {
+                SetStatus("\u7f3a\u5c11\u6fc0\u6d3b\u7684\u534f\u7a0b\u627f\u8f7d\u5bf9\u8c61\uff0c\u65e0\u6cd5\u8fdb\u5165\u57ce\u533a\u3002");
+                RefreshButtons();
+                return;
+            }
+
+            runner.StartCoroutine(PlayCityButtonMaskRevealThenEnterCityTransition());
         }
 
         private IEnumerator PlayCityButtonMaskRevealThenEnterCityTransition()
@@ -424,11 +441,11 @@ namespace TwelveMoons.UI
             var loadingPanel = uiBootstrap?.ShowLoadingPanel();
             if (loadingPanel == null)
             {
-                StartCoroutine(PlayEnterCityCameraOnlyTransition());
+                yield return PlayEnterCityCameraOnlyTransition();
                 yield break;
             }
 
-            StartCoroutine(PlayEnterCityTransition(loadingPanel));
+            yield return PlayEnterCityTransition(loadingPanel);
         }
 
         public void HideNewspaper()
@@ -452,6 +469,8 @@ namespace TwelveMoons.UI
             ResolveDependencies();
             isEnteringCityWithTransition = false;
             taskService?.ProcessCurrentRoundStart();
+            QueueScheduledStoriesForCurrentRound(StoryTriggerUnitIds.RoundStart, RuntimeStoryQueueTiming.StageStart);
+            QueueScheduledDocumentStoriesForCurrentRound();
             documentService?.GenerateCurrentRoundDocumentQueue();
             if (HasQueuedStories(RuntimeStoryQueueTiming.StageStart))
             {
@@ -463,6 +482,87 @@ namespace TwelveMoons.UI
                 ? $"第 {runtimeDataService.Data.CurrentRound} 回合：先播放剧情，再处理公文。"
                 : "桌面流程已准备。");
             TryShowBeforeDocumentActor();
+        }
+
+        private IEnumerator PlayScheduledExploreBeforeStoryAfterCityEntry()
+        {
+            yield return new WaitForSecondsRealtime(1f);
+            QueueAndStartScheduledStories(StoryTriggerUnitIds.ExploreBefore, RuntimeStoryQueueTiming.ExploreBefore);
+        }
+
+        private void QueueScheduledDocumentStoriesForCurrentRound()
+        {
+            for (var slotIndex = 1; slotIndex <= 6; slotIndex++)
+            {
+                QueueScheduledStoriesForCurrentRound(
+                    StoryTriggerUnitIds.GetDocumentSlot(slotIndex),
+                    RuntimeStoryQueueTiming.BeforeDocument);
+            }
+        }
+
+        private bool QueueAndStartScheduledStories(string triggerUnitId, RuntimeStoryQueueTiming timing)
+        {
+            QueueScheduledStoriesForCurrentRound(triggerUnitId, timing);
+            if (!HasQueuedStories(timing))
+            {
+                return false;
+            }
+
+            var started = storyService != null && storyService.StartNextQueuedStory(timing);
+            if (started)
+            {
+                uiBootstrap?.ShowStory();
+            }
+
+            return started;
+        }
+
+        private void QueueScheduledStoriesForCurrentRound(string triggerUnitId, RuntimeStoryQueueTiming timing)
+        {
+            if (runtimeDataService == null || storyService == null || string.IsNullOrEmpty(triggerUnitId))
+            {
+                return;
+            }
+
+            var currentRound = runtimeDataService.Data.CurrentRound;
+            foreach (var story in storyService.Stories)
+            {
+                if (story.RoundNumber != currentRound || story.TriggerUnitId != triggerUnitId)
+                {
+                    continue;
+                }
+
+                var storyId = ResolveScheduledStoryId(story, timing);
+                if (string.IsNullOrEmpty(storyId))
+                {
+                    continue;
+                }
+
+                runtimeDataService.Data.QueueStory(
+                    storyId,
+                    string.Empty,
+                    string.Empty,
+                    currentRound,
+                    timing);
+            }
+        }
+
+        private string ResolveScheduledStoryId(StoryDefinition story, RuntimeStoryQueueTiming timing)
+        {
+            if (story == null)
+            {
+                return string.Empty;
+            }
+
+            if (timing == RuntimeStoryQueueTiming.ExploreAfter &&
+                FloodEndingStoryResolver.IsFloodEndingStoryId(story.StoryId))
+            {
+                return story.StoryId == FloodEndingStoryResolver.ResolveStoryId(runtimeDataService?.Data)
+                    ? story.StoryId
+                    : string.Empty;
+            }
+
+            return story.StoryId;
         }
 
         private void RefreshButtons()
@@ -694,6 +794,7 @@ namespace TwelveMoons.UI
                 yield return null;
             }
 
+            yield return PlayScheduledExploreBeforeStoryAfterCityEntry();
             isEnteringCityWithTransition = false;
             RefreshButtons();
         }
@@ -730,6 +831,7 @@ namespace TwelveMoons.UI
                 yield return null;
             }
 
+            yield return PlayScheduledExploreBeforeStoryAfterCityEntry();
             isEnteringCityWithTransition = false;
             RefreshButtons();
         }
@@ -961,6 +1063,18 @@ namespace TwelveMoons.UI
             if (!waitingToAdvanceAfterEndStories && HasQueuedStories(RuntimeStoryQueueTiming.StageStart))
             {
                 storyService?.StartNextQueuedStory(RuntimeStoryQueueTiming.StageStart);
+                return true;
+            }
+
+            if (HasQueuedStories(RuntimeStoryQueueTiming.ExploreBefore))
+            {
+                storyService?.StartNextQueuedStory(RuntimeStoryQueueTiming.ExploreBefore);
+                return true;
+            }
+
+            if (HasQueuedStories(RuntimeStoryQueueTiming.ExploreAfter))
+            {
+                storyService?.StartNextQueuedStory(RuntimeStoryQueueTiming.ExploreAfter);
                 return true;
             }
 
