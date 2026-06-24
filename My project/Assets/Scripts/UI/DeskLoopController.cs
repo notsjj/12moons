@@ -25,6 +25,8 @@ namespace TwelveMoons.UI
         [SerializeField] private StoryService storyService;
         [Tooltip("公文服务；用于生成并读取当前回合公文队列。")]
         [SerializeField] private DocumentService documentService;
+        [Tooltip("城区建筑服务；用于结束城区回合时自动结算未手动领取的建筑产出。为空时运行时自动查找。")]
+        [SerializeField] private CityBuildingService cityBuildingService;
         [Header("场景切换：处理完公文后进入城区")]
         [Tooltip("游戏入口对象；用于在当前回合公文全部处理完后，从桌面切换到城区界面。")]
         [SerializeField] private GameEntry gameEntry;
@@ -354,6 +356,8 @@ namespace TwelveMoons.UI
             gameEntry?.ShowDesk();
 
             var endingRound = runtimeDataService.Data.CurrentRound;
+            var buildingSettlementText = CollectCityBuildingSettlementText(endingRound);
+            var documentRewardText = BuildDocumentRewardSettlementText(endingRound);
             runtimeDataService.Data.EnsureNewspaperEntry(endingRound, "本回合事务已结算。");
 
             var advanced = roundService.NextRound();
@@ -374,8 +378,59 @@ namespace TwelveMoons.UI
                 yield return blackPanel.FadeOut(0.3f);
                 uiBootstrap?.HideBlackScreenPanel();
             }
+
+            if (advanced)
+            {
+                ShowSettlementPanel(buildingSettlementText, documentRewardText);
+            }
         }
 
+
+        private string CollectCityBuildingSettlementText(int endingRound)
+        {
+            if (cityBuildingService == null)
+            {
+                cityBuildingService = FindFirstObjectByType<CityBuildingService>(FindObjectsInactive.Include);
+            }
+
+            var results = cityBuildingService?.CollectAvailableOutputsForSettlement();
+            if (results == null || results.Count == 0)
+            {
+                return "本回合没有可领取的建筑产出";
+            }
+
+            foreach (var result in results)
+            {
+                runtimeDataService?.Data.EnsureNewspaperEntry(endingRound, $"建筑产出：{result}");
+            }
+
+            return string.Join("\n", results);
+        }
+
+        private string BuildDocumentRewardSettlementText(int endingRound)
+        {
+            if (runtimeDataService == null || !runtimeDataService.Data.TryGetNewspaper(endingRound, out var newspaper))
+            {
+                return "本回合公文无直接奖励";
+            }
+
+            var rewards = newspaper.Entries
+                .Where(entry => !string.IsNullOrWhiteSpace(entry) && entry.StartsWith("公文奖励：", StringComparison.Ordinal))
+                .ToList();
+            return rewards.Count > 0 ? string.Join("\n", rewards) : "本回合公文无直接奖励";
+        }
+
+        private void ShowSettlementPanel(string buildingSettlementText, string documentRewardText)
+        {
+            if (uiBootstrap != null)
+            {
+                uiBootstrap.ShowSettlementPanel(buildingSettlementText, documentRewardText);
+                return;
+            }
+
+            var panel = FindFirstObjectByType<SettlementPanelView>(FindObjectsInactive.Include);
+            panel?.Show(buildingSettlementText, documentRewardText);
+        }
 
         private void ResetCityCameraToGlobalView()
         {

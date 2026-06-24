@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using TwelveMoons.City;
 using UnityEngine;
 using UnityEngine.UI;
@@ -65,6 +65,7 @@ namespace TwelveMoons.UI.City
                 Debug.LogWarning($"[城区按钮] ✗ Button.interactable=false，按钮不可交互: {displayName}", this);
             }
 
+            GameAudioBinder.PlayCitySwitch();
             if (string.IsNullOrEmpty(targetViewId))
             {
                 RefreshBindingSnapshot("点击：回到默认全局视角");

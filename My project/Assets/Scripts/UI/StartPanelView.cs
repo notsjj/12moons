@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
@@ -104,6 +104,8 @@ namespace TwelveMoons.UI
                 return;
             }
 
+            isStarting = true;
+            GameAudioBinder.PlayStartPanelGlow();
             EnsureVideoOutput();
             if (videoPlayer == null || videoPlayer.clip == null)
             {
@@ -112,7 +114,6 @@ namespace TwelveMoons.UI
                 return;
             }
 
-            isStarting = true;
             SetButtonsInteractable(false);
             videoPlayer.loopPointReached -= HandleVideoFinished;
             videoPlayer.loopPointReached += HandleVideoFinished;

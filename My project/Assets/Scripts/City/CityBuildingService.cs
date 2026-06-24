@@ -121,6 +121,32 @@ namespace TwelveMoons.City
                    runtimeDataService.Data.CurrentRound - state.LastCollectedRound >= cooldownRound;
         }
 
+        public IReadOnlyList<string> CollectAvailableOutputsForSettlement()
+        {
+            ResolveDependencies();
+            LoadDefinitions();
+            EnsureRuntimeBuildingStates();
+
+            var results = new List<string>();
+            foreach (var definition in definitions)
+            {
+                if (definition == null || string.IsNullOrEmpty(definition.BuildingId) || !CanCollect(definition.BuildingId))
+                {
+                    continue;
+                }
+
+                if (TryCollect(definition.BuildingId, out var resultMessage) && !string.IsNullOrWhiteSpace(resultMessage))
+                {
+                    var buildingName = string.IsNullOrWhiteSpace(definition.BuildingName)
+                        ? definition.BuildingId
+                        : definition.BuildingName;
+                    results.Add($"{buildingName}：{resultMessage.Trim()}");
+                }
+            }
+
+            return results;
+        }
+
         public bool TryCollect(string buildingId, out string resultMessage)
         {
             resultMessage = string.Empty;

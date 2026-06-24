@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using System;
 using DG.Tweening;
 using UnityEngine;
@@ -161,6 +161,7 @@ namespace TwelveMoons.UI
             proposerFeedbackText.text = feedbackTypewriterFullText;
             proposerFeedbackText.maxVisibleCharacters = 0;
             isFeedbackTypewriterPlaying = true;
+            GameAudioBinder.PlayTypewriter();
             var visibleCount = feedbackTypewriterFullText.Length;
             var duration = visibleCount / Mathf.Max(1f, charactersPerSecond);
             feedbackTypewriterTween = DOTween
@@ -177,6 +178,7 @@ namespace TwelveMoons.UI
         {
             feedbackTypewriterTween?.Kill();
             feedbackTypewriterTween = null;
+            GameAudioBinder.StopTypewriter();
 
             if (proposerFeedbackText != null)
             {
@@ -348,6 +350,7 @@ namespace TwelveMoons.UI
         {
             feedbackTypewriterTween?.Kill();
             feedbackTypewriterTween = null;
+            GameAudioBinder.StopTypewriter();
             feedbackTypewriterCompleteCallback = null;
             isFeedbackTypewriterPlaying = false;
         }

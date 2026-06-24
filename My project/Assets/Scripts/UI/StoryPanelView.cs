@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using DG.Tweening;
@@ -225,6 +225,7 @@ namespace TwelveMoons.UI
             if (visibleTypewriterCharacters >= targetTypewriterText.Length)
             {
                 isTypewriting = false;
+                GameAudioBinder.StopTypewriter();
             }
         }
 
@@ -976,6 +977,10 @@ namespace TwelveMoons.UI
                 visibleTypewriterCharacters = 0;
                 typewriterTimer = 0f;
                 isTypewriting = value.Length > 0;
+                if (isTypewriting)
+                {
+                    GameAudioBinder.PlayTypewriter();
+                }
             }
 
             if (!isTypewriting && visibleTypewriterCharacters <= 0)
@@ -1014,6 +1019,7 @@ namespace TwelveMoons.UI
             visibleTypewriterCharacters = targetTypewriterText.Length;
             typewriterTimer = targetTypewriterText.Length;
             isTypewriting = false;
+            GameAudioBinder.StopTypewriter();
             ApplyTypewriterText();
             return true;
         }
@@ -1025,6 +1031,7 @@ namespace TwelveMoons.UI
             visibleTypewriterCharacters = 0;
             typewriterTimer = 0f;
             isTypewriting = false;
+            GameAudioBinder.StopTypewriter();
         }
 
         private void ResetFinalContinue()

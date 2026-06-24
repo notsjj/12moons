@@ -89,10 +89,13 @@ namespace TwelveMoons.Editor.Runtime
             ValidateStoryConfigScheduleFields(storyTable);
             ValidateOpeningRoundStoryTriggers(storyTable, csvProvider.LoadTable("SideEventConfig"));
             ValidateStoryConfigReferences(storyTable, taskTable);
+            ValidateDocumentConfigFollowUps(csvProvider.LoadTable("DocumentConfig"));
             ValidateSideEventReferences(csvProvider, storyTable, taskTable);
             ValidateOpeningStoryBackground(storyTable);
             ValidateDialogueBackgrounds(dialogueTable);
             ValidateDialoguePortraits(dialogueTable);
+            ValidateCharacterConfigPortraits(csvProvider.LoadTable("CharacterConfig"));
+            ValidateStorySubtablePortraits(csvProvider);
             ValidateOpeningSkeletonPresentationCues(dialogueTable);
             ValidateMapSprites();
             ValidateSpeakerDisplayNames();
@@ -128,6 +131,25 @@ namespace TwelveMoons.Editor.Runtime
             if (backgroundId != "\u5b9d\u5e93and\u5360\u661f\u5ba4")
             {
                 throw new InvalidDataException("S0001 must configure \u80cc\u666f\u56fe\u7247=\u5b9d\u5e93and\u5360\u661f\u5ba4 in StoryConfig.");
+            }
+        }
+
+        private static void ValidateDocumentConfigFollowUps(ConfigTable documentTable)
+        {
+            foreach (var row in documentTable.Rows)
+            {
+                var documentId = row.GetString("DocumentId");
+                if (string.IsNullOrEmpty(documentId))
+                {
+                    continue;
+                }
+
+                var optionANextDocumentId = row.GetString("OptionA_NextDocumentId");
+                var optionBNextDocumentId = row.GetString("OptionB_NextDocumentId");
+                if (optionANextDocumentId == documentId || optionBNextDocumentId == documentId)
+                {
+                    throw new InvalidDataException($"DocumentConfig {documentId} must not use itself as an option follow-up document.");
+                }
             }
         }
 
@@ -331,6 +353,56 @@ namespace TwelveMoons.Editor.Runtime
             if (missingCharacters.Count > 0)
             {
                 throw new InvalidDataException("Plot dialogue speakers without portrait resources: " + string.Join(", ", missingCharacters));
+            }
+        }
+
+        private static void ValidateCharacterConfigPortraits(ConfigTable characterTable)
+        {
+            var missingPortraits = characterTable.Rows
+                .Select(row => row.GetString("PortraitId"))
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Distinct()
+                .Where(id => !StoryImageResourceProvider.TryLoadSprite(id, CharacterRoots, out _))
+                .ToList();
+            if (missingPortraits.Count > 0)
+            {
+                throw new InvalidDataException("CharacterConfig portraits without sprite resources: " + string.Join(", ", missingPortraits));
+            }
+        }
+
+        private static void ValidateStorySubtablePortraits(CsvConfigProvider csvProvider)
+        {
+            var aggregateTables = new[]
+            {
+                "BuildingConfig.csv",
+                "CharacterConfig.csv",
+                "CityPointConfig.csv",
+                "DialogueConfig.csv",
+                "DocumentConfig.csv",
+                "FactionConfig.csv",
+                "ItemConfig.csv",
+                "NewspaperConfig.csv",
+                "SideEventConfig.csv",
+                "StoryConfig.csv",
+                "TaskConfig.csv",
+                "TaskStageConfig.csv"
+            };
+
+            foreach (var path in Directory.GetFiles(PlotConfigDirectory, "*.csv")
+                         .Where(path => !aggregateTables.Contains(Path.GetFileName(path))))
+            {
+                var tableName = Path.GetFileNameWithoutExtension(path);
+                var table = csvProvider.LoadTable(tableName);
+                var missingSpeakers = table.Rows
+                    .Select(row => row.GetString("SpeakerCharacterId"))
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Distinct()
+                    .Where(id => !StoryImageResourceProvider.TryLoadSprite(id, CharacterRoots, out _))
+                    .ToList();
+                if (missingSpeakers.Count > 0)
+                {
+                    throw new InvalidDataException($"Plot story subtable {tableName} has speakers without portrait resources: " + string.Join(", ", missingSpeakers));
+                }
             }
         }
 

@@ -15,6 +15,6 @@ MonoBehaviour:
   characterId: C0020
   characterName: "\u62A4\u6559\u519B\u9886\u8896"
   factionId: F0003
-  portraitId: "\u62A4\u6559\u6B63\u5E38"
+  portraitId: "\u62A4\u6559\u9886\u519B\u6B63\u5E38"
   description: 
   expressionPortraitIds: []

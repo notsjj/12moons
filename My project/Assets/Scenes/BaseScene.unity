@@ -1,4 +1,4 @@
-%YAML 1.1
+﻿%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!29 &1
 OcclusionCullingSettings:
@@ -350,7 +350,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f61dda601f4a92b419729d54d8bd4281, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::PanelManager
 --- !u!114 &95499538
 MonoBehaviour:
@@ -362,7 +362,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 237e37aff25b39e439646414a5818d37, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
   mainCanvas: {fileID: 838051985}
 --- !u!114 &95499539
@@ -375,12 +375,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6063d78a596b30546883624da71ad98d, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.UI.BaseSceneUIBootstrap
   uiContext: {fileID: 95499540}
   uiManager: {fileID: 95499538}
   showDebugControlsOnStart: 0
-  showTaskPanelWhenSharedHudOpens: 0
+  showTaskPanelWhenSharedHudOpens: 1
   enableLoadingPanelDebugHotkey: 1
 --- !u!114 &95499540
 MonoBehaviour:
@@ -392,7 +392,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1b91b6642438e2d4c9486a9f62f687bb, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.UI.BaseSceneUIContext
   gameEntry: {fileID: 1183544578}
   runtimeDataService: {fileID: 1183544582}
@@ -688,7 +688,7 @@ Transform:
   m_GameObject: {fileID: 212861032}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.0000000017881393, y: 0.04026458, z: -0.0000000023841857}
+  m_LocalPosition: {x: -0.0000000017881393, y: 0.061, z: -0.0000000023841857}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1015,7 +1015,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0007
   drawSceneGizmo: 1
@@ -1041,15 +1041,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &292904913
 GameObject:
   m_ObjectHideFlags: 0
@@ -1167,7 +1167,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0013
   drawSceneGizmo: 1
@@ -1193,15 +1193,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &399654882
 GameObject:
   m_ObjectHideFlags: 0
@@ -2035,10 +2035,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 07dddf0d88b845dd87f781865c95c651, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityBuildingView
-  buildingId: 
-  pointId: 
+  buildingId:
+  pointId:
   visualRoot: {fileID: 0}
   clickableCollider: {fileID: 0}
   allowMouseClick: 1
@@ -2061,14 +2061,14 @@ MonoBehaviour:
   allowHoverOutlineWhenUnbound: 1
   autoFitHoverColliderToRenderers: 1
   inspectorIsMatched: 0
-  inspectorBuildingName: 
-  inspectorCityAreaId: 
-  inspectorConfigPointId: 
-  inspectorEffectType: 
+  inspectorBuildingName:
+  inspectorCityAreaId:
+  inspectorConfigPointId:
+  inspectorEffectType:
   inspectorIsUnlocked: 0
   inspectorCanCollect: 0
-  inspectorSummary: 
-  inspectorHoverOutlineBindingSnapshot: 
+  inspectorSummary:
+  inspectorHoverOutlineBindingSnapshot:
 --- !u!114 &644112469
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2079,7 +2079,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0014
   drawSceneGizmo: 1
@@ -2105,15 +2105,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &660754886
 GameObject:
   m_ObjectHideFlags: 0
@@ -2372,7 +2372,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0010
   drawSceneGizmo: 1
@@ -2398,15 +2398,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!4 &691683118 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -557200591203835792, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
@@ -3106,7 +3106,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -3216,7 +3216,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
   m_IgnoreReversedGraphics: 1
   m_BlockingObjects: 0
@@ -3233,7 +3233,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
@@ -3465,6 +3465,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: "\u5EFA\u7B51\u4EBA\u7269\u70B9\u4F4D"
       objectReference: {fileID: 0}
+    - target: {fileID: 1841394908902567836, guid: e2b06622f7f707d4ba1540b39c015141, type: 3}
+      propertyPath: m_SortingOrder
+      value: 50
+      objectReference: {fileID: 0}
     - target: {fileID: 2647067359804458907, guid: e2b06622f7f707d4ba1540b39c015141, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -3529,6 +3533,11 @@ PrefabInstance:
 --- !u!4 &903459831 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4281438901356552515, guid: e2b06622f7f707d4ba1540b39c015141, type: 3}
+  m_PrefabInstance: {fileID: 903459830}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &903459832 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5821780082726458642, guid: e2b06622f7f707d4ba1540b39c015141, type: 3}
   m_PrefabInstance: {fileID: 903459830}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &913373343
@@ -3654,7 +3663,7 @@ Transform:
   m_GameObject: {fileID: 936100177}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.0637, y: 0.0499, z: -0.0000000023841857}
+  m_LocalPosition: {x: -0.063, y: 0.0154, z: -0.138}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3884,7 +3893,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0003
   drawSceneGizmo: 1
@@ -3892,7 +3901,7 @@ MonoBehaviour:
   matchedGizmoColor: {r: 0.25, g: 0.85, b: 0.55, a: 0.9}
   unmatchedGizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.9}
   showPortrait: 1
-  eventPrompt: {fileID: 0}
+  eventPrompt: {fileID: 903459832}
   portraitLocalOffset: {x: 0, y: 1.2, z: 0}
   portraitBoundsYOffset: -0.4
   portraitLocalScale: {x: 0.058333, y: 0.058333, z: 0.058333}
@@ -3910,15 +3919,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &1053315841 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2183391444791061480, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
@@ -3934,7 +3943,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0005
   drawSceneGizmo: 1
@@ -3960,15 +3969,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &1064704345
 GameObject:
   m_ObjectHideFlags: 0
@@ -4064,7 +4073,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0002
   drawSceneGizmo: 1
@@ -4090,15 +4099,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &1122726638
 GameObject:
   m_ObjectHideFlags: 0
@@ -4256,7 +4265,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5fa28664351d40f42b56a8efe663491c, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.GameEntry
   deskRoot: {fileID: 0}
   cityRoot: {fileID: 0}
@@ -4286,7 +4295,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 166ff21d96214b169f289f607f9171cc, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Config.ConfigManager
   relativeConfigDirectory: Configs/Plot
   loadOnAwake: 1
@@ -4301,7 +4310,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 21ff8c285b8109241b0e8de67f49f3d3, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.InventoryService
   configManager: {fileID: 1183544580}
   runtimeDataService: {fileID: 1183544582}
@@ -4315,7 +4324,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4bac5a211a5d4c1490bcc7520fe32d21, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.RuntimeDataService
   configManager: {fileID: 1183544580}
   createNewGameOnAwake: 1
@@ -4334,13 +4343,13 @@ MonoBehaviour:
   initialMoneyMinimumCount: 10
   initialFoodMinimumCount: 10
   autoRefreshInspectorSnapshot: 1
-  inspectorRoundSummary: 
+  inspectorRoundSummary:
   inspectorCurrentRoundDocuments: []
   inspectorPendingFollowUpDocuments: []
   inspectorRuntimeTasks: []
   inspectorConfiguredTasks: []
   inspectorCurrentRoundStories: []
-  inspectorCurrentStorySummary: 
+  inspectorCurrentStorySummary:
   inspectorRuntimeBuildings: []
   inspectorRuntimeSideEvents: []
 --- !u!114 &1183544583
@@ -4353,7 +4362,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4dd965a0d3434d0ba7f771810756bc5c, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.FactionService
   configManager: {fileID: 1183544580}
   runtimeDataService: {fileID: 1183544582}
@@ -4368,7 +4377,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fcb7a280b32049c3a8b31ca0f55ba029, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.RoundService
   configManager: {fileID: 1183544580}
   runtimeDataService: {fileID: 1183544582}
@@ -4382,7 +4391,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9eead675191a9e04785f769328e3f987, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.TaskService
   configManager: {fileID: 1183544580}
   runtimeDataService: {fileID: 1183544582}
@@ -4397,7 +4406,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 59e4919ba866bde4da3d7f506309f792, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.StoryService
   configManager: {fileID: 1183544580}
   runtimeDataService: {fileID: 1183544582}
@@ -4414,7 +4423,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d0939a20af64c149a409fead1b884d4, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.LetterService
   configManager: {fileID: 1183544580}
   runtimeDataService: {fileID: 1183544582}
@@ -4428,7 +4437,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 80eb02d43b3c4e3580fed1c579cdf22a, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.Core.Runtime.DocumentService
   configManager: {fileID: 1183544580}
   runtimeDataService: {fileID: 1183544582}
@@ -4485,7 +4494,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0004
   drawSceneGizmo: 1
@@ -4511,15 +4520,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &1207715714
 GameObject:
   m_ObjectHideFlags: 0
@@ -4848,7 +4857,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0009
   drawSceneGizmo: 1
@@ -4874,15 +4883,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &1386056778
 GameObject:
   m_ObjectHideFlags: 0
@@ -5336,7 +5345,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
   m_RenderShadows: 1
   m_RequiresDepthTextureOption: 2
@@ -5380,7 +5389,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c77e10b3f40e43a89b76d8d1fbb6c47c, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityCameraController
   cityCamera: {fileID: 1543994031}
   defaultViewPoint: {fileID: 152211877}
@@ -5440,11 +5449,11 @@ MonoBehaviour:
   maxPositionZ: 4
   minPositionY: 3
   maxPositionY: 9
-  inspectorCurrentViewId: 
-  inspectorCurrentViewName: 
+  inspectorCurrentViewId:
+  inspectorCurrentViewName:
   inspectorIsMoving: 0
-  inspectorTargetSummary: 
-  inspectorCameraBindingSnapshot: 
+  inspectorTargetSummary:
+  inspectorCameraBindingSnapshot:
   enableEntryCinematic: 1
   entryOrbitDuration: 0.8
   entryCinematicEndObjectName: GlobalViewPoint (1)
@@ -5776,7 +5785,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0012
   drawSceneGizmo: 1
@@ -5802,15 +5811,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &1693313110
 GameObject:
   m_ObjectHideFlags: 0
@@ -5888,7 +5897,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0001
   drawSceneGizmo: 1
@@ -5914,15 +5923,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &1704211837 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -4225808938480771447, guid: b4b21b8c39eb1e040ad8cf7eaca4f7f6, type: 3}
@@ -5938,7 +5947,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0011
   drawSceneGizmo: 1
@@ -5964,15 +5973,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &1731711860
 GameObject:
   m_ObjectHideFlags: 0
@@ -6233,7 +6242,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.EventSystem
   m_FirstSelected: {fileID: 0}
   m_sendNavigationEvents: 1
@@ -6263,7 +6272,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 01614664b831546d2ae94a42149d80ac, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.UI.InputSystemUIInputModule
   m_SendPointerHoverToParent: 1
   m_MoveRepeatDelay: 0.5
@@ -6712,7 +6721,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0006
   drawSceneGizmo: 1
@@ -6738,15 +6747,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &1827600511
 GameObject:
   m_ObjectHideFlags: 0
@@ -7156,7 +7165,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8ca49052235b284ca7fc769000e4dcf, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::TwelveMoons.City.CityPointView
   pointId: P0008
   drawSceneGizmo: 1
@@ -7182,15 +7191,15 @@ MonoBehaviour:
   storyService: {fileID: 0}
   inspectorCityInteractionEnabled: 0
   inspectorIsMatched: 0
-  inspectorPointName: 
-  inspectorAreaId: 
-  inspectorPointType: 
-  inspectorDescription: 
-  inspectorMatchSummary: 
-  inspectorActiveSideEventId: 
-  inspectorActiveSideEventStoryId: 
-  inspectorActiveSideEventCharacterId: 
-  inspectorActiveSideEventClickResult: 
+  inspectorPointName:
+  inspectorAreaId:
+  inspectorPointType:
+  inspectorDescription:
+  inspectorMatchSummary:
+  inspectorActiveSideEventId:
+  inspectorActiveSideEventStoryId:
+  inspectorActiveSideEventCharacterId:
+  inspectorActiveSideEventClickResult:
 --- !u!1 &1983145899
 GameObject:
   m_ObjectHideFlags: 0
@@ -7417,6 +7426,82 @@ Transform:
   - {fileID: 1486572349}
   m_Father: {fileID: 1471273755}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+
+--- !u!1 &2147000000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147000001}
+  - component: {fileID: 2147000002}
+  - component: {fileID: 2147000003}
+  m_Layer: 0
+  m_Name: AudioManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147000001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147000000}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2147000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80b0958b1c4fa9349b91b7b5d9dcc73e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::AudioManager
+  sounds: []
+  resourcesSfxPath: Audio/SFX
+  loadResourcesSfxOnStart: 0
+  resourcesSfxVolume: 0.75
+  resourcesBgmPath: Audio/BGM
+  loadResourcesBgmOnStart: 0
+  playDefaultBgmOnStart: 0
+  defaultBgmName: cultivation_bgm_fast_02
+  resourcesBgmVolume: 0.35
+--- !u!114 &2147000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7eccf239470d94e8cfdeb81c009ab3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::GameAudioBinder
+  audioManager: {fileID: 2147000002}
+  roundService: {fileID: 0}
+  registerResourcesSfxOnStart: 1
+  registerResourcesBgmOnStart: 1
+  playRainByDisasterStage: 1
+  activeEnvironmentClipName:
+  bindButtonClickSfx: 1
+  buttonScanInterval: 0.5
+  boundButtonCountSnapshot: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -7429,3 +7514,4 @@ SceneRoots:
   - {fileID: 1872285472}
   - {fileID: 399654883}
   - {fileID: 1812713527}
+  - {fileID: 2147000001}

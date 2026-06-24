@@ -5,7 +5,7 @@ namespace TwelveMoons.UI
 {
     public static class CharacterPlaceholderPortraitProvider
     {
-        private const string PlaceholderResource = "Art/Art/Character/IMG_0940";
+        private const string PlaceholderResource = "Art/Art/Character/后勤正常";
         private static readonly string[] CharacterRoots =
         {
             string.Empty,

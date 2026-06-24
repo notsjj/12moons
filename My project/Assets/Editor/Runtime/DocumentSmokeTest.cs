@@ -20,6 +20,9 @@ namespace TwelveMoons.EditorTools.Runtime
         [MenuItem("Twelve Moons/Tests/Run Document Smoke Test")]
         public static void Run()
         {
+            RunPlotConfiguredFactionSuspicionFlow();
+            RunPlotExplorationDocumentDoesNotRequeueItselfFlow();
+            RunPlotDocumentQueueDeduplicatesAcrossSourcesFlow();
             RunCurrentRoundDrawFlow();
             RunCurrentRoundQueueExhaustionFlow();
             ValidateActorTransitionApi();
@@ -32,6 +35,115 @@ namespace TwelveMoons.EditorTools.Runtime
             Debug.Log("Document flow smoke test passed. DocumentConfig loads and each round queues 3-4 random empty-disaster-stage documents without duplicates, while document UI support APIs remain wired.");
         }
 
+        private static void RunPlotConfiguredFactionSuspicionFlow()
+        {
+            var context = CreateContext("DocumentSmokeTest_PlotFactionSuspicion", "Configs/Plot");
+            try
+            {
+                context.ConfigManager.BuildDefaultProviders();
+                context.RuntimeDataService.CreateNewGame("disaster_flood_01");
+                context.InventoryService.Refresh();
+                context.FactionService.Refresh();
+                context.RoundService.Refresh();
+                context.TaskService.Refresh();
+                context.DocumentService.Refresh();
+
+                var beforeCivilianSuspicion = context.FactionService.GetSuspicion("F0001");
+                var entry = context.DocumentService.QueueDocument("document_market_roster");
+                var result = context.DocumentService.ResolveDocument(entry, DocumentOptionType.A);
+
+                if (!result.Success)
+                {
+                    throw new InvalidDataException($"Plot document option A failed: {result.Message}");
+                }
+
+                if (beforeCivilianSuspicion != 50 ||
+                    context.FactionService.GetSuspicion("F0001") != 49 ||
+                    result.FeedbackFactionId != "F0001" ||
+                    result.MostAffectedFactionId != "F0001")
+                {
+                    throw new InvalidDataException("Plot document option A must apply civilian suspicion change to configured faction F0001 and return F0001 for feedback/pointer targeting.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(context.Root);
+            }
+        }
+
+        private static void RunPlotExplorationDocumentDoesNotRequeueItselfFlow()
+        {
+            var context = CreateContext("DocumentSmokeTest_PlotExplorationSelfFollowUp", "Configs/Plot");
+            try
+            {
+                context.ConfigManager.BuildDefaultProviders();
+                context.RuntimeDataService.CreateNewGame("DI0001");
+                context.InventoryService.Refresh();
+                context.FactionService.Refresh();
+                context.RoundService.Refresh();
+                context.TaskService.Refresh();
+                context.DocumentService.Refresh();
+
+                foreach (var queuedEntry in context.RuntimeDataService.Data.DocumentQueue.ToArray())
+                {
+                    context.RuntimeDataService.Data.RemoveDocumentQueueEntry(queuedEntry);
+                }
+
+                var entry = context.DocumentService.QueueDocument("D0068");
+                var result = context.DocumentService.ResolveDocument(entry, DocumentOptionType.A);
+
+                if (!result.Success)
+                {
+                    throw new InvalidDataException($"D0068 option A failed: {result.Message}");
+                }
+
+                if (context.RuntimeDataService.Data.DocumentQueue.Any(candidate => candidate.DocumentId == "D0068") ||
+                    context.RuntimeDataService.Data.FollowUpDocuments.Any(candidate => candidate.DocumentId == "D0068"))
+                {
+                    throw new InvalidDataException("D0068 must not queue itself again after option A is resolved.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(context.Root);
+            }
+        }
+
+        private static void RunPlotDocumentQueueDeduplicatesAcrossSourcesFlow()
+        {
+            var context = CreateContext("DocumentSmokeTest_PlotD0001Deduplicate", "Configs/Plot");
+            try
+            {
+                context.ConfigManager.BuildDefaultProviders();
+                context.RuntimeDataService.CreateNewGame("DI0001");
+                context.RuntimeDataService.Data.SetCurrentRound(8);
+                context.InventoryService.Refresh();
+                context.FactionService.Refresh();
+                context.RoundService.Refresh();
+                context.TaskService.Refresh();
+                context.DocumentService.Refresh();
+
+                foreach (var queuedEntry in context.RuntimeDataService.Data.DocumentQueue.ToArray())
+                {
+                    context.RuntimeDataService.Data.RemoveDocumentQueueEntry(queuedEntry);
+                }
+
+                context.DocumentService.QueueDocument("D0001", "T0003", "TS0003");
+                context.DocumentService.GenerateCurrentRoundDocumentQueue();
+
+                var dueD0001Count = context.RuntimeDataService.Data.DocumentQueue.Count(candidate =>
+                    candidate.DocumentId == "D0001" &&
+                    candidate.QueuedRound <= context.RuntimeDataService.Data.CurrentRound);
+                if (dueD0001Count != 1)
+                {
+                    throw new InvalidDataException($"D0001 must appear only once in the current pending document queue, got {dueD0001Count}.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(context.Root);
+            }
+        }
 
         private static void ValidateSingleDocumentTutorialApi()
         {
@@ -599,6 +711,11 @@ namespace TwelveMoons.EditorTools.Runtime
 
         private static TestContext CreateContext(string name)
         {
+            return CreateContext(name, "Configs/Demo");
+        }
+
+        private static TestContext CreateContext(string name, string relativeConfigDirectory)
+        {
             var root = new GameObject(name);
             var configManager = root.AddComponent<ConfigManager>();
             var runtimeDataService = root.AddComponent<RuntimeDataService>();
@@ -608,7 +725,7 @@ namespace TwelveMoons.EditorTools.Runtime
             var taskService = root.AddComponent<TaskService>();
             var documentService = root.AddComponent<DocumentService>();
 
-            ConfigureConfigManager(configManager);
+            ConfigureConfigManager(configManager, relativeConfigDirectory);
             ConfigureRuntimeDataService(runtimeDataService, configManager);
             ConfigureInventoryService(inventoryService, configManager, runtimeDataService);
             ConfigureFactionService(factionService, configManager, runtimeDataService);
@@ -710,8 +827,13 @@ namespace TwelveMoons.EditorTools.Runtime
 
         private static void ConfigureConfigManager(ConfigManager configManager)
         {
+            ConfigureConfigManager(configManager, "Configs/Demo");
+        }
+
+        private static void ConfigureConfigManager(ConfigManager configManager, string relativeConfigDirectory)
+        {
             var serializedObject = new SerializedObject(configManager);
-            serializedObject.FindProperty("relativeConfigDirectory").stringValue = "Configs/Demo";
+            serializedObject.FindProperty("relativeConfigDirectory").stringValue = relativeConfigDirectory;
             serializedObject.FindProperty("loadOnAwake").boolValue = false;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }

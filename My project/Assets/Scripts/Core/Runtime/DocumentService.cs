@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using TwelveMoons.City;
 using TwelveMoons.Core.Config;
@@ -473,28 +473,29 @@ namespace TwelveMoons.Core.Runtime
 
         private void ApplySuspicion(DocumentOptionDefinition option)
         {
-            ChangeSuspicion("noble", option.NobleSuspicionChange);
-            ChangeSuspicion("academy", option.AcademySuspicionChange);
-            ChangeSuspicion("church", option.ChurchSuspicionChange);
-            ChangeSuspicion("civilian", option.CivilianSuspicionChange);
+            ChangeSuspicion(FactionRoleIdResolver.NobleRoleId, option.NobleSuspicionChange);
+            ChangeSuspicion(FactionRoleIdResolver.AcademyRoleId, option.AcademySuspicionChange);
+            ChangeSuspicion(FactionRoleIdResolver.ChurchRoleId, option.ChurchSuspicionChange);
+            ChangeSuspicion(FactionRoleIdResolver.CivilianRoleId, option.CivilianSuspicionChange);
         }
 
-        private static string GetFeedbackFactionId(DocumentOptionDefinition option)
+        private string GetFeedbackFactionId(DocumentOptionDefinition option)
         {
-            return !string.IsNullOrEmpty(option.FeedbackFactionId)
+            var factionId = !string.IsNullOrEmpty(option.FeedbackFactionId)
                 ? option.FeedbackFactionId
                 : GetMostAffectedFactionId(option);
+            return ResolveConfiguredFactionId(factionId);
         }
 
-        private static string GetMostAffectedFactionId(DocumentOptionDefinition option)
+        private string GetMostAffectedFactionId(DocumentOptionDefinition option)
         {
             var factionId = string.Empty;
             var maxAbsDelta = 0;
-            SetIfGreater("noble", option.NobleSuspicionChange, ref factionId, ref maxAbsDelta);
-            SetIfGreater("academy", option.AcademySuspicionChange, ref factionId, ref maxAbsDelta);
-            SetIfGreater("church", option.ChurchSuspicionChange, ref factionId, ref maxAbsDelta);
-            SetIfGreater("civilian", option.CivilianSuspicionChange, ref factionId, ref maxAbsDelta);
-            return factionId;
+            SetIfGreater(FactionRoleIdResolver.NobleRoleId, option.NobleSuspicionChange, ref factionId, ref maxAbsDelta);
+            SetIfGreater(FactionRoleIdResolver.AcademyRoleId, option.AcademySuspicionChange, ref factionId, ref maxAbsDelta);
+            SetIfGreater(FactionRoleIdResolver.ChurchRoleId, option.ChurchSuspicionChange, ref factionId, ref maxAbsDelta);
+            SetIfGreater(FactionRoleIdResolver.CivilianRoleId, option.CivilianSuspicionChange, ref factionId, ref maxAbsDelta);
+            return ResolveConfiguredFactionId(factionId);
         }
 
         private static void SetIfGreater(string candidateFactionId, int delta, ref string factionId, ref int maxAbsDelta)
@@ -511,8 +512,13 @@ namespace TwelveMoons.Core.Runtime
         {
             if (delta != 0)
             {
-                factionService?.ChangeSuspicion(factionId, delta);
+                factionService?.ChangeSuspicion(ResolveConfiguredFactionId(factionId), delta);
             }
+        }
+
+        private string ResolveConfiguredFactionId(string factionId)
+        {
+            return FactionRoleIdResolver.ResolveConfiguredFactionId(factionService, factionId);
         }
 
         private void ApplyTaskScore(DocumentDefinition document, DocumentOptionDefinition option)
@@ -559,6 +565,12 @@ namespace TwelveMoons.Core.Runtime
                 return;
             }
 
+            if (string.Equals(option.NextDocumentId, entry.DocumentId, StringComparison.Ordinal))
+            {
+                Debug.LogWarning($"DocumentConfig {entry.DocumentId} points an option follow-up back to itself. The self follow-up was ignored to avoid a document loop.", this);
+                return;
+            }
+
             runtimeDataService.Data.RecordFollowUpDocument(
                 option.NextDocumentId,
                 entry.DocumentId,
@@ -580,6 +592,42 @@ namespace TwelveMoons.Core.Runtime
             runtimeDataService.Data.EnsureNewspaperEntry(
                 runtimeDataService.Data.CurrentRound,
                 $"公文处理：{title} - {resultText}");
+
+            var rewardText = BuildDocumentRewardText(option);
+            if (!string.IsNullOrEmpty(rewardText))
+            {
+                runtimeDataService.Data.EnsureNewspaperEntry(
+                    runtimeDataService.Data.CurrentRound,
+                    $"公文奖励：{title} - {rewardText}");
+            }
+        }
+
+        private static string BuildDocumentRewardText(DocumentOptionDefinition option)
+        {
+            var rewards = new List<string>();
+            AppendPositiveReward(rewards, "金币", option.MoneyChange);
+            AppendPositiveReward(rewards, "建材", option.MaterialChange);
+            AppendPositiveReward(rewards, "食物", option.FoodChange);
+
+            if (!string.IsNullOrEmpty(option.AddItemId) && option.AddItemCount > 0)
+            {
+                rewards.Add($"{option.AddItemId} x{option.AddItemCount}");
+            }
+
+            if (!string.IsNullOrEmpty(option.UnlockBuildingId))
+            {
+                rewards.Add($"解锁建筑 {option.UnlockBuildingId}");
+            }
+
+            return rewards.Count > 0 ? string.Join("、", rewards) : string.Empty;
+        }
+
+        private static void AppendPositiveReward(ICollection<string> rewards, string displayName, int value)
+        {
+            if (value > 0)
+            {
+                rewards.Add($"{displayName} x{value}");
+            }
         }
 
         private int QueueCurrentTaskDocuments()
@@ -729,7 +777,7 @@ namespace TwelveMoons.Core.Runtime
                 return false;
             }
 
-            if (HasQueuedDocument(definition.DocumentId, taskId, taskStageId))
+            if (HasQueuedDocument(definition.DocumentId))
             {
                 return false;
             }
@@ -743,13 +791,11 @@ namespace TwelveMoons.Core.Runtime
             return true;
         }
 
-        private bool HasQueuedDocument(string documentId, string taskId, string taskStageId)
+        private bool HasQueuedDocument(string documentId)
         {
             foreach (var entry in runtimeDataService.Data.DocumentQueue)
             {
-                if (entry.DocumentId == documentId &&
-                    entry.TaskId == (taskId ?? string.Empty) &&
-                    entry.TaskStageId == (taskStageId ?? string.Empty))
+                if (entry.DocumentId == documentId)
                 {
                     return true;
                 }
@@ -826,7 +872,7 @@ namespace TwelveMoons.Core.Runtime
                 return $"{drawSource}:{round}:{definition.DocumentId}";
             }
 
-            return $"{drawSource}:{definition.DocumentId}";
+            return $"Document:{definition.DocumentId}";
         }
 
         private ItemDefinition FindItemDefinition(InventoryItemType itemType)

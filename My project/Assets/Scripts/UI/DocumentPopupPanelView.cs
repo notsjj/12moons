@@ -549,6 +549,7 @@ namespace TwelveMoons.UI
 
             if (result.Success)
             {
+                GameAudioBinder.PlayDocumentResult();
                 if (requiredItemAlreadySubmitted)
                 {
                     submitSlot?.MarkAcceptedItemCommitted();
@@ -688,6 +689,7 @@ namespace TwelveMoons.UI
 
         private void CompleteDragExit()
         {
+            GameAudioBinder.PlayDocumentOpenClose();
             KillDragReturnTween();
             KillScrollTweens();
             HideExitHint();
@@ -748,6 +750,7 @@ namespace TwelveMoons.UI
         private void StartBodyTypewriter()
         {
             KillBodyTypewriterTween();
+            GameAudioBinder.PlayTypewriter();
             if (bodyText == null || string.IsNullOrEmpty(bodyTypewriterFullText) || bodyTypewriterCharactersPerSecond <= 0f)
             {
                 CompleteBodyTypewriter();
@@ -772,6 +775,7 @@ namespace TwelveMoons.UI
         private void CompleteBodyTypewriter()
         {
             KillBodyTypewriterTween();
+            GameAudioBinder.StopTypewriter();
             isBodyTypewriterPlaying = false;
             startBodyTypewriterWhenOpened = false;
             if (bodyText != null)
@@ -1029,6 +1033,7 @@ namespace TwelveMoons.UI
 
         private void OpenScroll()
         {
+            GameAudioBinder.PlayDocumentOpenClose();
             EnsureAnimationLayoutCached();
             KillScrollTweens();
             scrollSequence = DOTween.Sequence();
@@ -1323,13 +1328,17 @@ namespace TwelveMoons.UI
         {
             switch (factionId)
             {
-                case "noble":
+                case FactionRoleIdResolver.NobleRoleId:
+                case FactionRoleIdResolver.NobleConfigId:
                     return "贵族";
-                case "academy":
+                case FactionRoleIdResolver.AcademyRoleId:
+                case FactionRoleIdResolver.AcademyConfigId:
                     return "学院";
-                case "church":
+                case FactionRoleIdResolver.ChurchRoleId:
+                case FactionRoleIdResolver.ChurchConfigId:
                     return "教会";
-                case "civilian":
+                case FactionRoleIdResolver.CivilianRoleId:
+                case FactionRoleIdResolver.CivilianConfigId:
                     return "工会";
                 default:
                     return string.Empty;

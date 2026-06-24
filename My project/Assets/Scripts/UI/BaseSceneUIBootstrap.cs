@@ -14,6 +14,7 @@ namespace TwelveMoons.UI
         private static readonly UIType LetterReaderPanel = new UIType("Prefabs/UI/信件阅读面板", UILayer.Popup);
         private static readonly UIType LoadingPanel = new UIType("Prefabs/UI/加载过场面板", UILayer.Overlay);
         private static readonly UIType BlackScreenPanel = new UIType("Prefabs/UI/\u9ed1\u573a\u9762\u677f", UILayer.Overlay);
+        private static readonly UIType SettlementPanel = new UIType("Prefabs/UI/结算面板", UILayer.Popup);
 
         [Header("UI 上下文")]
         [Tooltip("BaseScene 中的 UI 上下文；为空时自动从当前物体或场景中查找。")]
@@ -29,7 +30,7 @@ namespace TwelveMoons.UI
 
         [Header("\u5171\u4eabHUD\u4efb\u52a1\u9762\u677f\uff1a\u9ed8\u8ba4\u663e\u793a\u72b6\u6001")]
         [Tooltip("\u542f\u7528\u540e\uff0c\u5171\u4eabHUD\u6bcf\u6b21\u6253\u5f00\u65f6\u4f1a\u540c\u65f6\u663e\u793a\u4efb\u52a1\u9762\u677f\uff1b\u5173\u95ed\u65f6\u8fdb\u5165\u6e38\u620f\u9ed8\u8ba4\u9690\u85cf\u5171\u4eabHUD\u4e0b\u7684\u4efb\u52a1\u9762\u677f\uff0c\u53ea\u4fdd\u7559\u56de\u5408\u7b49\u57fa\u7840HUD\u3002")]
-        [SerializeField] private bool showTaskPanelWhenSharedHudOpens;
+        [SerializeField] private bool showTaskPanelWhenSharedHudOpens = true;
 
         [Header("LoadingPanel 运行时调试")]
         [Tooltip("启用后，在 Play 模式按 P 键会显示并重播 LoadingPanel 过场；此调试播放不会切换到城区。")]
@@ -212,6 +213,31 @@ namespace TwelveMoons.UI
         public void HideBlackScreenPanel()
         {
             uiManager?.HideUI(BlackScreenPanel);
+        }
+
+        public SettlementPanelView ShowSettlementPanel(string buildingOutputText, string documentRewardText)
+        {
+            var settlementObject = ShowAndPrepare(SettlementPanel);
+            if (settlementObject == null)
+            {
+                return null;
+            }
+
+            BringPopupToFront(settlementObject);
+            var view = settlementObject.GetComponent<SettlementPanelView>() ??
+                settlementObject.GetComponentInChildren<SettlementPanelView>(true);
+            if (view == null)
+            {
+                view = settlementObject.AddComponent<SettlementPanelView>();
+            }
+
+            view.Show(buildingOutputText, documentRewardText);
+            return view;
+        }
+
+        public void HideSettlementPanel()
+        {
+            uiManager?.HideUI(SettlementPanel);
         }
 
         public void HidePopup(UIType type)

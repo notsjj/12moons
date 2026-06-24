@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using TwelveMoons.Core.Runtime;
@@ -34,6 +34,10 @@ namespace TwelveMoons.UI
         [SerializeField] private Ease panelCollapseEase = Ease.OutCubic;
         [Tooltip("运行时快照：当前任务面板是否处于收起状态，仅用于 Inspector 观察。")]
         [SerializeField] private bool isPanelCollapsedSnapshot;
+        [Tooltip("启用后，任务面板第一次显示时默认处于收纳状态，只露出展开标签；玩家点击标签后再弹出或弹入。")]
+        [SerializeField] private bool initialPanelCollapsed = true;
+        [Tooltip("运行时快照：是否已经应用过初始收纳状态，避免每次刷新或重新启用时打断玩家手动展开。")]
+        [SerializeField] private bool hasAppliedInitialPanelCollapsedSnapshot;
         [Tooltip("运行时快照：面板原始展开位置，用于再次点击时恢复到原样。")]
         [SerializeField] private Vector2 panelOpenAnchoredPositionSnapshot;
         [Tooltip("运行时快照：计算这个按钮的左边界碰到屏幕左边界时，任务面板应该移动到的位置。")]
@@ -70,6 +74,7 @@ namespace TwelveMoons.UI
             ResolvePanelCollapseReferences();
             CapturePanelOpenPositionIfNeeded();
             RegisterPanelCollapseButton();
+            ApplyInitialPanelCollapsedIfNeeded();
 
             if (taskService != null)
             {
@@ -117,6 +122,38 @@ namespace TwelveMoons.UI
                 .SetEase(panelCollapseEase)
                 .SetUpdate(true)
                 .OnComplete(() => panelCollapseTween = null);
+        }
+
+        private void ApplyInitialPanelCollapsedIfNeeded()
+        {
+            if (!initialPanelCollapsed || hasAppliedInitialPanelCollapsedSnapshot)
+            {
+                return;
+            }
+
+            ApplyPanelCollapsedInstantly(true);
+            hasAppliedInitialPanelCollapsedSnapshot = true;
+        }
+
+        private void ApplyPanelCollapsedInstantly(bool collapsed)
+        {
+            ResolvePanelCollapseReferences();
+            CapturePanelOpenPositionIfNeeded();
+
+            if (panelMoveRoot == null)
+            {
+                return;
+            }
+
+            var targetPosition = collapsed
+                ? CalculateCollapsedAnchoredPosition()
+                : panelOpenAnchoredPositionSnapshot;
+
+            panelCollapsedAnchoredPositionSnapshot = collapsed ? targetPosition : panelCollapsedAnchoredPositionSnapshot;
+            isPanelCollapsedSnapshot = collapsed;
+
+            KillPanelCollapseTween();
+            panelMoveRoot.anchoredPosition = targetPosition;
         }
 
         public Vector2 EditorCalculateCollapsedAnchoredPosition()

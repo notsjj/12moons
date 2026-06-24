@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
@@ -161,9 +161,11 @@ namespace TwelveMoons.UI
             ApplyOffscreenState();
 
             playingSequence = DOTween.Sequence().SetUpdate(true);
+            GameAudioBinder.PlayCloudGather();
             playingSequence.Append(BuildEnterSequence());
             playingSequence.AppendCallback(() => onCovered?.Invoke());
             playingSequence.AppendInterval(Mathf.Max(0f, coveredHoldDurationOverride));
+            playingSequence.AppendCallback(() => GameAudioBinder.PlayCloudScatter());
             playingSequence.Append(BuildExitSequence());
             playingSequence.OnComplete(() =>
             {
@@ -193,8 +195,13 @@ namespace TwelveMoons.UI
             var synchronizedDuration = Mathf.Max(0.01f, totalTransitionDuration);
             var phaseDuration = synchronizedDuration * 0.5f;
             playingSequence = DOTween.Sequence().SetUpdate(true);
-            playingSequence.AppendCallback(() => onStarted?.Invoke());
+            playingSequence.AppendCallback(() =>
+            {
+                GameAudioBinder.PlayCloudGather();
+                onStarted?.Invoke();
+            });
             playingSequence.Append(BuildEnterSequence(phaseDuration));
+            playingSequence.AppendCallback(() => GameAudioBinder.PlayCloudScatter());
             playingSequence.Append(BuildExitSequence(phaseDuration));
             playingSequence.OnComplete(() =>
             {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using TwelveMoons.UI;
@@ -74,6 +74,7 @@ namespace TwelveMoons.EditorTools.Runtime
             ValidateSharedHudVisibilityApi();
             ValidateSharedHudLayerOrderSource();
             ValidateSharedHudOpeningSource();
+            ValidateBaseSceneShowsTaskPanelWhenSharedHudOpens();
             ValidateLoadingPanelLayerOrderSource();
             ValidateStartPanelOpeningSource();
             ValidateStoryPortraitOutlineApi();
@@ -171,6 +172,21 @@ namespace TwelveMoons.EditorTools.Runtime
                 !source.Contains("ShowSharedHud(true);\n            ShowAndPrepare(CityHudPanel);"))
             {
                 throw new InvalidOperationException("进入城区时必须同时打开共享 HUD 面板和城区 HUD 面板。");
+            }
+        }
+
+        private static void ValidateBaseSceneShowsTaskPanelWhenSharedHudOpens()
+        {
+            const string scenePath = "Assets/Scenes/BaseScene.unity";
+            if (!File.Exists(scenePath))
+            {
+                throw new FileNotFoundException("?? BaseScene ???", scenePath);
+            }
+
+            var scene = File.ReadAllText(scenePath);
+            if (!scene.Contains("showTaskPanelWhenSharedHudOpens: 1"))
+            {
+                throw new InvalidOperationException("BaseScene ? BaseSceneUIBootstrap ???? showTaskPanelWhenSharedHudOpens????? HUD ??????????");
             }
         }
 

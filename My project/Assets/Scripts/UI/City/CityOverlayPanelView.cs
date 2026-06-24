@@ -178,8 +178,9 @@ namespace TwelveMoons.UI.City
 
             for (var index = 0; index < CitySuspicionFactionIds.Length; index++)
             {
-                var factionId = CitySuspicionFactionIds[index];
-                var rowName = GetCitySuspicionRowName(factionId);
+                var roleFactionId = CitySuspicionFactionIds[index];
+                var configuredFactionId = FactionRoleIdResolver.ResolveConfiguredFactionId(factionService, roleFactionId);
+                var rowName = GetCitySuspicionRowName(roleFactionId);
                 var slider = citySuspicionSliders != null && index < citySuspicionSliders.Length
                     ? citySuspicionSliders[index]
                     : null;
@@ -190,10 +191,10 @@ namespace TwelveMoons.UI.City
                     continue;
                 }
 
-                var definition = FindFactionDefinition(factionId);
+                var definition = FindFactionDefinition(configuredFactionId);
                 var initSuspicion = definition != null ? definition.InitSuspicion : 0;
                 var maxSuspicion = Mathf.Max(1, definition != null ? definition.MaxSuspicion : 1);
-                var state = runtimeDataService.Data.GetOrCreateFaction(factionId, initSuspicion);
+                var state = runtimeDataService.Data.GetOrCreateFaction(configuredFactionId, initSuspicion);
                 var value = Mathf.Clamp(state.Suspicion, 0, maxSuspicion);
 
                 slider.minValue = 0;

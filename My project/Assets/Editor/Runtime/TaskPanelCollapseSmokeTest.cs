@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using TwelveMoons.UI;
@@ -44,6 +44,8 @@ namespace TwelveMoons.EditorTools.Runtime
             if (!source.Contains("DG.Tweening") ||
                 !source.Contains("DOAnchorPos") ||
                 !source.Contains("SetUpdate(true)") ||
+                !source.Contains("initialPanelCollapsed") ||
+                !source.Contains("ApplyInitialPanelCollapsedIfNeeded") ||
                 !source.Contains("收起按钮") ||
                 !source.Contains("计算这个按钮的左边界碰到屏幕左边界"))
             {

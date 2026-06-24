@@ -39,7 +39,7 @@ MonoBehaviour:
     consumeItem: 0
     addItemId: 
     addItemCount: 0
-    nextDocumentId: D0068
+    nextDocumentId: 
     nextDocumentDelayRound: 0
     unlockBuildingId: 
     resultText: 
